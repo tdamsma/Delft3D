@@ -15,3 +15,12 @@ f90twtest(test_3d_layer_administration
     LIBRARIES dflowfm_kernel
     VISUAL_STUDIO_PATH engines_gpl/dflowfm/test
 )
+
+f90twtest(test_dambreak
+    CFILES test_dambreak.cpp
+    F90FILES test_dambreak.f90
+    F2HFILES ${CMAKE_CURRENT_SOURCE_DIR}/test_dambreak.f90
+    OUTDIR "${CMAKE_CURRENT_BINARY_DIR}"
+    LIBRARIES dflowfm_kernel
+    VISUAL_STUDIO_PATH engines_gpl/dflowfm/test
+)
