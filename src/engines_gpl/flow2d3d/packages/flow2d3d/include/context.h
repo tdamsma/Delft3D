@@ -505,8 +505,7 @@ class D3dFlowContext
         int         size    // #bytes in var
         );
 
-    void CMapLog(
-        char      * format,     // I: 'fprintf-format' for print
+    void CMapLog(const char *format,  // I: 'fprintf-format' for print
         ...             // I: varargs
         );
 

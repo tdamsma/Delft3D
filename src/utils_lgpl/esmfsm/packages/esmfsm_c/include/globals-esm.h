@@ -153,7 +153,7 @@ InitProcess (
 void
 SetError (
     int     thid,
-    char *  message,
+    const char *  message,
     ...
     );
 
@@ -179,7 +179,7 @@ ESM_Local_Alloc (
     int thid,
     int ci,
     int contextid,
-    char * name,
+    const char * name,
     size_t size
     );
 

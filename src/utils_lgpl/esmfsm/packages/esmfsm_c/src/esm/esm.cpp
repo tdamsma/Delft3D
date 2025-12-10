@@ -155,7 +155,7 @@ InitProcess (
 void
 SetError (
     int     thid,
-    char *  message,
+    const char *  message,
     ...
     ) {
 
@@ -327,7 +327,7 @@ ESM_Delete (
 void *
 ESM_Alloc (
     int     contextid,
-    char *  name,
+    const char *  name,
     size_t  size
     ) {
 
@@ -477,12 +477,12 @@ ESM_ListRegions (
     }
 
 
-char *
+const char *
 ESM_Error (
     void
     ) {
 
-    char *  return_value = "ESM Error";
+    const char *  return_value = "ESM Error";
     int *   thidp;
 
     if ((thidp = (int *) pthread_getspecific (Self)) == NULL)

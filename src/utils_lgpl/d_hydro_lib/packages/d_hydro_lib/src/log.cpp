@@ -151,8 +151,7 @@ Log::Write (
     this->clock->Now (clock);
 
     char * threadID = (char *) pthread_getspecific (this->thkey);
-    if (threadID == NULL)
-        threadID = "<anonymous>";
+    if (threadID == NULL) threadID = (char *) "<anonymous>";
 
     fprintf (this->output, "D_Hydro [%s] %s >> %s\n",
                         clock,

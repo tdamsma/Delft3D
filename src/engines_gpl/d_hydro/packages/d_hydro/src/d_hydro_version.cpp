@@ -33,35 +33,33 @@
 #endif
 
 #if defined(_WIN64)
-static char modname_version_id [] = {"@(#)Deltares, " modname_program " Version " modname_major "." modname_minor "." modname_build " (Win64), " __DATE__ ", " __TIME__ ""};
+static const char modname_version_id[] = {"@(#)Deltares, " modname_program " Version " modname_major "." modname_minor
+                                          "." modname_build " (Win64), " __DATE__ ", " __TIME__ ""};
 #elif defined(LINUX64)
-static char modname_version_id [] = {"@(#)Deltares, " modname_program " Version " modname_major "." modname_minor "." modname_build " (Linux64), " __DATE__ ", " __TIME__ ""};
+static const char modname_version_id[] = {"@(#)Deltares, " modname_program " Version " modname_major "." modname_minor
+                                          "." modname_build " (Linux64), " __DATE__ ", " __TIME__ ""};
 #else
-static char modname_version_id[] = { "@(#)Deltares, " modname_program " Version " modname_major "." modname_minor "." modname_build " (Unknown), " __DATE__ ", " __TIME__ "" };
+static const char modname_version_id[] = {"@(#)Deltares, " modname_program " Version " modname_major "." modname_minor
+                                          "." modname_build " (Unknown), " __DATE__ ", " __TIME__ ""};
 #endif
 
 
-char * getversionstring_d_hydro(void)
-{
+const char* getversionstring_d_hydro(void) {
     return modname_version;
 }
 
-char * getfullversionstring_d_hydro(void)
-{
+const char* getfullversionstring_d_hydro(void) {
     return modname_version_full;
 }
 
-char * getshortversionstring_d_hydro(void)
-{
+const char* getshortversionstring_d_hydro(void) {
     return modname_version_short;
 }
 
-char * geturlstring_d_hydro(void)
-{
+const char* geturlstring_d_hydro(void) {
     return modname_url;
 }
 
-char * getversionidstring_d_hydro(void)
-{
+const char* getversionidstring_d_hydro(void) {
     return modname_version_id;
 }
