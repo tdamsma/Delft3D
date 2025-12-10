@@ -7,10 +7,12 @@ add_executable(${executable_name} ${source})
 set(oss_dependencies    fortrangis
                         ftnunit
                         io_netcdf
+                        netCDF::netcdf
 )
 
+target_link_libraries(${executable_name} ${oss_dependencies})
+
 if (UNIX)
-    target_link_libraries(${executable_name} ${oss_dependencies})
     set_property(TARGET ${executable_name} PROPERTY LINKER_LANGUAGE Fortran)
 endif(UNIX)
 
