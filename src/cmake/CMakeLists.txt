@@ -13,6 +13,7 @@ if (UNIX)
 endif(UNIX)
 
 include(functions.cmake)
+include(dependencies.cmake)
 
 # Set checkout root
 set(checkout_src_root ${CMAKE_CURRENT_SOURCE_DIR}/..) # This points to the location of OSS/src
