@@ -31,8 +31,8 @@ set(oss_dependencies_general delftio
                             deltares_common
                             rr_rtc_tools
                             wl_openmi_support)
-                             
-                             
+
+
 # Add dependencies
 if (UNIX)
     set(oss_dependencies ${oss_dependencies_general})
@@ -40,12 +40,12 @@ if (UNIX)
     target_link_libraries(${library_name}
          ${oss_dependencies}
     )
-    add_definitions(-DHAVE_CONFIG_H)    
+    add_definitions(-DHAVE_CONFIG_H)
 endif(UNIX)
 
 if (WIN32)
     target_link_libraries(${library_name} ${oss_dependencies_general}
-                                            netcdff)
+                                            netcdf-fortran::netcdf-fortran)
 endif(WIN32)
 
 

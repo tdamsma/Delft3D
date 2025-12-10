@@ -16,17 +16,17 @@ include_directories(${version_include_dir} ${rr_version_header_path})
 # Define executable
 set(executable_name rr)
 add_executable(${executable_name} ${source_files}
-                                ${rc_version_file} 
+                                ${rc_version_file}
                                 ${fortran_version_file})
 
 set_source_files_properties(
                     src/rrmain.F90
                     ${fortran_version_file}
                     PROPERTIES COMPILE_OPTIONS "${file_preprocessor_flag}")
-                   
+
 target_compile_definitions(${executable_name} PRIVATE "X64")
 
-set(oss_dependencies_general 
+set(oss_dependencies_general
                             control_lib
                             delftio
                             deltares_common
@@ -42,11 +42,11 @@ set(oss_dependencies_general
                             rr_rtc_tools
                             triangle_c
                             wl_openmi_support
-                            netcdff
+                            netcdf-fortran::netcdf-fortran
                             esmfsm
                             )
-                             
-                             
+
+
 # Add dependencies
 if (UNIX)
     set(oss_dependencies ${oss_dependencies_general})
@@ -54,13 +54,13 @@ if (UNIX)
     target_link_libraries(${executable_name}
          ${oss_dependencies}
     )
-         
+
     set_property(TARGET ${executable_name} PROPERTY LINKER_LANGUAGE Fortran)
 endif(UNIX)
 
 if (WIN32)
     set(oss_dependencies ${oss_dependencies_general}
-                        netcdff)
+                        netcdf-fortran::netcdf-fortran)
 endif(WIN32)
 
 target_link_libraries(${executable_name} ${oss_dependencies})

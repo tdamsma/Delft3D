@@ -23,7 +23,7 @@ Download from http://www.earthsystemmodeling.org: esmf_7_0_0_src
        #  export ESMF_CXXESMFLINKLIBS="-lhdf5_hl -lhdf5 -lz -lcurl -lgfortran -lstdc++"
        #  export ESMF_F90LINKLIBS="-lhdf5_hl -lhdf5 -lz -lcurl -lgfortran -lstdc++"
    DO (see esmf\esmf\build\common.mk):
-       export ESMF_NETCDF_LIBS="-lnetcdff -lnetcdf_c++ -lnetcdf -lhdf5_hl -lhdf5 -lz -lcurl -lgfortran -lstdc++"
+       export ESMF_NETCDF_LIBS="-lnetcdf-fortran::netcdf-fortran -lnetcdf_c++ -lnetcdf -lhdf5_hl -lhdf5 -lz -lcurl -lgfortran -lstdc++"
        !Watch out! The order is important: first netcdf, then the libraries that netcdf uses (hdf5, curl)
 2) (solved in esmf 7.0.0) esmf\build_config\Cygwin.gfortran.default\build_rules.mk:
    Replace:
@@ -43,7 +43,7 @@ Download from http://www.earthsystemmodeling.org: esmf_7_0_0_src
       	-@echo "A3M: ranlib disabled"
 4) (solved in esmf 7.0.0) esmf\src\apps\makefile: skip ESMF_WebServController: (maybe not needed anymore?)
    Replace:
-      DIRS      = ESMF_Info ESMF_InfoC ESMF_RegridWeightGen ESMF_WebServController 
+      DIRS      = ESMF_Info ESMF_InfoC ESMF_RegridWeightGen ESMF_WebServController
    With:
       DIRS      = ESMF_Info ESMF_InfoC ESMF_RegridWeightGen
 5) make build_apps

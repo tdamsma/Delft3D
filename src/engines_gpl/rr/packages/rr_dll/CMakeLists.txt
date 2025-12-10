@@ -16,7 +16,7 @@ include_directories(${version_include_dir} ${rr_version_header_path})
 # Define library
 set(library_name rr_dll)
 add_library(${library_name} SHARED  ${source_files}
-                                    ${rc_version_file} 
+                                    ${rc_version_file}
                                     ${fortran_version_file})
 
 set_source_files_properties(
@@ -24,7 +24,7 @@ set_source_files_properties(
                     src/rr_dll.F90
                     ${fortran_version_file}
                     PROPERTIES COMPILE_OPTIONS "${file_preprocessor_flag}")
-                   
+
 target_compile_definitions(${library_name} PRIVATE "X64")
 
 set(oss_dependencies_general control_lib
@@ -41,19 +41,19 @@ set(oss_dependencies_general control_lib
                             rr_rtc_tools
                             wl_openmi_support
                             esmfsm)
-                             
+
 # Add dependencies
 if (UNIX)
-    set(oss_dependencies ${oss_dependencies_general} netcdff)
+    set(oss_dependencies ${oss_dependencies_general} netcdf-fortran::netcdf-fortran)
 
     target_link_libraries(${library_name}
          ${oss_dependencies}
     )
-    add_definitions(-DHAVE_CONFIG_H)   
+    add_definitions(-DHAVE_CONFIG_H)
 endif(UNIX)
 if (WIN32)
     set(oss_dependencies ${oss_dependencies_general}
-                        netcdff)
+                        netcdf-fortran::netcdf-fortran)
 
     target_link_libraries(${library_name} ${oss_dependencies})
 endif(WIN32)

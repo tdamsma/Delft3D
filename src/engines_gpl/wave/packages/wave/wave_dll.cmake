@@ -22,10 +22,10 @@ if (WIN32)
                                 wave_kernel
                                 wave_manager
                                 nefis
-                                netcdff
+                                netcdf-fortran::netcdf-fortran
                                 triangle_c
                                 swan
-                                ) 
+                                )
 
     target_link_libraries(${library_name} ${library_dependencies})
 
@@ -37,7 +37,7 @@ if (WIN32)
                             "${checkout_src_root}/third_party_open/pthreads/bin/x64"
                             "${mpi_library_path}")
 
-    target_link_libraries(${library_name}                                                   
+    target_link_libraries(${library_name}
                             "pthreadVC2.lib"
                             "netcdf.lib"
                             "${mpi_fortran_library}")
@@ -70,7 +70,7 @@ if(UNIX)
                                 triangle_c
                                 swan
                                 esmfsm
-                                netcdff
+                                netcdf-fortran::netcdf-fortran
                                 )
 
     target_link_libraries(${library_name}
@@ -80,7 +80,7 @@ if(UNIX)
 
     message(STATUS "netcdf lib dir is ${NETCDF_LIBRARY_DIRS}")
     target_link_directories(${library_name} PRIVATE ${NETCDF_LIBRARY_DIRS})
-    
+
     #target_link_options(${library_name} PRIVATE ${openmp_flag})
     set_property(TARGET ${library_name} PROPERTY LINKER_LANGUAGE Fortran)
 

@@ -3,7 +3,7 @@ message(STATUS "swan lib:")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Set the directory of where the source code is located
-set(src_path src) 
+set(src_path src)
 set(version_include_dir ${CMAKE_SOURCE_DIR}/../version_includes)
 
 # Gather the source files
@@ -25,7 +25,7 @@ target_link_libraries(${library_name} PRIVATE no_compiler_warnings)
 # Add dependencies
 if (UNIX)
     target_link_libraries(${library_name} PRIVATE
-         netcdff)
+         netcdf-fortran::netcdf-fortran)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                         ${version_include_dir})
 
@@ -33,7 +33,7 @@ if (UNIX)
 endif(UNIX)
 
 if (WIN32)
-    set(oss_dependencies netcdff)
+    set(oss_dependencies netcdf-fortran::netcdf-fortran)
     target_link_libraries(${library_name} PRIVATE ${oss_dependencies})
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                         ${mpi_module_path}
@@ -67,7 +67,7 @@ if (UNIX)
                                                   "SHELL:${avx2_flag}")
 endif(UNIX)
 
-# Define preprocessor definitions 
+# Define preprocessor definitions
 if (WIN32)
     target_compile_definitions(${library_name} PRIVATE "WIN32;USE_MPI")
 endif(WIN32)

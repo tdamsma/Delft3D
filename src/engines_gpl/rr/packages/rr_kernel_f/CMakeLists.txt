@@ -28,7 +28,7 @@ set_source_files_properties(
 target_compile_definitions(${library_name} PRIVATE "X64")
 
 
-set(oss_dependencies_general 
+set(oss_dependencies_general
                             control_lib
                             flow1d_core
                             delftio
@@ -38,11 +38,11 @@ set(oss_dependencies_general
                             rr_rtc_tools
                             rr_walrus_c
                             wl_openmi_support)
-                             
-                             
+
+
 # Add dependencies
 if (UNIX)
-    set(oss_dependencies ${oss_dependencies_general} netcdff)
+    set(oss_dependencies ${oss_dependencies_general} netcdf-fortran::netcdf-fortran)
 
     target_link_libraries(${library_name}
          ${oss_dependencies}
@@ -51,7 +51,7 @@ endif(UNIX)
 
 if (WIN32)
     target_link_libraries(${library_name} ${oss_dependencies_general}
-                                            netcdff)
+                                            netcdf-fortran::netcdf-fortran)
 endif(WIN32)
 
 

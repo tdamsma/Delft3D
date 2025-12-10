@@ -121,7 +121,7 @@ set(oss_dependencies_general flow2d3d_manager
 # Add dependencies
 if (UNIX)
     set(oss_dependencies ${oss_dependencies_general}
-                         netcdff)
+                         netcdf-fortran::netcdf-fortran)
 
     target_link_libraries(${library_name}
          ${oss_dependencies}
@@ -129,7 +129,7 @@ if (UNIX)
 endif(UNIX)
 if (WIN32)
     set(oss_dependencies ${oss_dependencies_general}
-                        netcdff)
+                        netcdf-fortran::netcdf-fortran)
 
     target_link_libraries(${library_name} ${oss_dependencies})
 endif(WIN32)
@@ -182,7 +182,7 @@ install(TARGETS ${library_name} RUNTIME DESTINATION lib
 if (UNIX)
     install(PROGRAMS ${CMAKE_SOURCE_DIR}/../engines_gpl/flow2d3d/scripts/submit_dflow2d3d.sh                DESTINATION bin)
     install(PROGRAMS ${CMAKE_SOURCE_DIR}/../engines_gpl/flow2d3d/scripts/rd2d3d.sh                          DESTINATION bin)
-    
+
     # Add scripts for running coupled Delft3D4 - C-SUMO computations. These .sh scripts make sure that C-SUMO is started in the background
     install(PROGRAMS ${CMAKE_SOURCE_DIR}/../engines_gpl/flow2d3d/scripts/rd2d3d_AL8_csumo.sh                DESTINATION bin)
     install(PROGRAMS ${CMAKE_SOURCE_DIR}/../engines_gpl/flow2d3d/scripts/submit_dflow2d3d_AL8_csumo.sh      DESTINATION bin)

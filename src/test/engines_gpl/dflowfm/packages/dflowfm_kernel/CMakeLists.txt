@@ -79,7 +79,7 @@ if(WIN32)
                          morphology_io
                          morphology_kernel
                          morphology_plugins_c
-                         netcdff
+                         netcdf-fortran::netcdf-fortran
                          petsc
                          polypack
                          trachytopes_io

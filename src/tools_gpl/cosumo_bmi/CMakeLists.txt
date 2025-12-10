@@ -18,7 +18,7 @@ if (WIN32)
                                 kdtree2
                                 io_netcdf
                                 io_netcdf_data
-                                netcdff
+                                netcdf-fortran::netcdf-fortran
                                 )
 
     target_link_libraries(${library_name} ${library_dependencies})
