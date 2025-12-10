@@ -29,19 +29,16 @@ if(UNIX)
 endif(UNIX)
 
 if (WIN32)
-    target_link_directories(${library_name}
-            INTERFACE
-            "${checkout_src_root}/third_party_open/netcdf/${netcdf_version}/lib")
-
     # Add dependency
     set(oss_dependencies deltares_common
                         fortrangis
                         io_netcdf_data
                         netcdf-fortran::netcdf-fortran)
+
     target_compile_definitions(${library_name} PRIVATE WIN64)
 
     target_link_libraries(${library_name} ${oss_dependencies}
-                                          netcdf)
+                                          netCDF::netcdf)
 
     target_compile_options(${library_name} PRIVATE "${heap_arrays_one_flag}")
 endif(WIN32)

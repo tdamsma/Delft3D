@@ -79,7 +79,7 @@ set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/net_main.F90
                             PROPERTIES COMPILE_OPTIONS "${file_preprocessor_flag}")
 
 if (WIN32)
-    target_link_libraries(${executable_name} PRIVATE netcdf)
+    target_link_libraries(${executable_name} PRIVATE netCDF::netcdf)
     include_directories(${mpi_module_path}
                         ${version_include_dir}
     )
@@ -89,7 +89,6 @@ if (WIN32)
     target_link_directories(${executable_name}
                             PRIVATE
                             "${mpi_library_path}"
-                            "${checkout_src_root}/third_party_open/netcdf/${netcdf_version}/lib"
                             "${checkout_src_root}/third_party_open/pthreads/bin/x64"
     )
 

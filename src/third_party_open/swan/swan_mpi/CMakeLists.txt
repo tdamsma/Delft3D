@@ -42,12 +42,10 @@ if (WIN32)
     message(STATUS "Setting linker properties in windows")
     target_link_directories(${executable_name}
                             PRIVATE
-                            "${mpi_library_path}"
-                            "${checkout_src_root}/third_party_open/netcdf/${netcdf_version}/lib")
+                            "${mpi_library_path}")
 
     target_link_libraries(${executable_name} PRIVATE
-                          "${mpi_fortran_library}"
-                          "netcdf.lib")
+                          "${mpi_fortran_library}")
 
     # Set linker options
     message(STATUS "Setting target_link_options in windows")

@@ -36,11 +36,7 @@ if(WIN32)
                          kdtree2
                          netcdf-fortran::netcdf-fortran)
 
-    target_link_directories(${executable_name} PRIVATE
-                                "${checkout_src_root}/third_party_open/netcdf/${netcdf_version}/lib")
-
-    target_link_libraries(${executable_name} ${oss_dependencies}
-                                             "netcdf.lib")
+    target_link_libraries(${executable_name} ${oss_dependencies})
 endif(WIN32)
 
 set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/ec_module_test.F90

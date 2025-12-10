@@ -80,7 +80,6 @@ if (WIN32)
     target_link_directories(${executable_name}
                             PRIVATE
                             "${mpi_library_path}"
-                            "${checkout_src_root}/third_party_open/netcdf/${netcdf_version}/lib"
                             "${checkout_src_root}/third_party_open/pthreads/bin/x64"
     )
 
@@ -93,7 +92,6 @@ if (WIN32)
                           "Shlwapi.lib"
                           "Gdi32.lib"
                           "Winspool.lib"
-                          "netcdf.lib"
                           "pthreadVC2.lib"
                           "${mpi_fortran_library}"
     )

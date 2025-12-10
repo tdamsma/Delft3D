@@ -7,8 +7,8 @@ if (UNIX)
     include(FortranCInterface)
     FortranCInterface_HEADER("${CMAKE_CURRENT_SOURCE_DIR}/include/FortranCInterface.h" MACRO_NAMESPACE "FC_")
     #produce a config.h to be included
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake.in ${CMAKE_CURRENT_SOURCE_DIR}/include/config.h)  
-    set(configFile "${CMAKE_CURRENT_SOURCE_DIR}/include/config.h") 
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake.in ${CMAKE_CURRENT_SOURCE_DIR}/include/config.h)
+    set(configFile "${CMAKE_CURRENT_SOURCE_DIR}/include/config.h")
 
     add_definitions(-DD3D_PLUGIN_EXT=".so")
     add_definitions(-DHAVE_STRUCT_TIMESPEC)
@@ -16,7 +16,7 @@ endif(UNIX)
 
 
 # Set version file variables
-set(absolute_header_path "${CMAKE_CURRENT_SOURCE_DIR}/${header_path}") 
+set(absolute_header_path "${CMAKE_CURRENT_SOURCE_DIR}/${header_path}")
 set(rc_version_file "${absolute_header_path}/dimr_lib_version.rc")
 set(header_version_file "${absolute_header_path}/dimr_lib_version.h")
 set(version_include_dir ${CMAKE_SOURCE_DIR}/../version_includes)
@@ -38,13 +38,13 @@ if(UNIX)
     set(oss_dependencies    deltares_common_c
                             getopt
                             expat
-                            netcdf
+                            netCDF::netcdf
     )
 
     target_compile_definitions(${library_name} PRIVATE LINUX64)
 
-    target_include_directories(${library_name} 
-                               PRIVATE  
+    target_include_directories(${library_name}
+                               PRIVATE
                                ${header_path}
                               "${getopt_include_path}"
                               "${expat_include_path}")
@@ -55,10 +55,10 @@ if(UNIX)
 endif()
 
 if(WIN32)
-    set(oss_dependencies deltares_common_c getopt)
+    set(oss_dependencies deltares_common_c getopt netCDF::netcdf)
 
     # Define output name
-    set_target_properties(${library_name} 
+    set_target_properties(${library_name}
                           PROPERTIES
                           OUTPUT_NAME dimr_dll)
 
@@ -67,19 +67,17 @@ if(WIN32)
     target_compile_definitions(${library_name} PRIVATE WIN32;_WINDOWS;_USRDLL;DIMR_EXPORTS)
     target_compile_definitions(${library_name} PRIVATE $<$<CONFIG:DEBUG>:_DEBUG>)
 
-    target_include_directories(${library_name} 
-                               PRIVATE  
+    target_include_directories(${library_name}
+                               PRIVATE
                                ${header_path}
                                "${getopt_include_path}"
                                "${expat_include_path}"
                                "${mpi_include_path}"
-                               "${checkout_src_root}/third_party_open/netcdf/${netcdf_version}/include"
                                "${checkout_src_root}/third_party_open/pthreads/include/x64")
 
     # Set the linker properties
     target_link_directories(${library_name}
                             PRIVATE
-                            "${checkout_src_root}/third_party_open/netcdf/${netcdf_version}/lib"
                             "${getopt_library_path_win}"
                             "${expat_library_path_win}"
                             "${mpi_library_path}"

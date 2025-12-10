@@ -62,7 +62,6 @@ if (WIN32)
     target_link_directories(${library_name}
                             PRIVATE
                             "${mpi_library_path}"
-                            "${checkout_src_root}/third_party_open/netcdf/${netcdf_version}/lib"
                             "${petsc_libdir}"
                             "${checkout_src_root}/third_party_open/pthreads/bin/x64")
 
