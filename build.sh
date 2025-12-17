@@ -317,9 +317,6 @@ if [ ! -z "$chkutils" ]; then
     exit 1
 fi
 
-pip install conan
-conan install conanfile.py
-
 CreateCMakedir ${config} ${buildDirExtension}
 
 DoCMake ${config} ${buildDirExtension}
