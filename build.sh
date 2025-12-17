@@ -317,6 +317,9 @@ if [ ! -z "$chkutils" ]; then
     exit 1
 fi
 
+pip install conan
+conan install conanfile.py
+
 CreateCMakedir ${config} ${buildDirExtension}
 
 DoCMake ${config} ${buildDirExtension}
@@ -325,8 +328,7 @@ if [ "$prepareonly" = "1" ]; then
     echo Finished with preparations only
     exit 0
 fi
-pip install conan
-conan install conanfile.py
+
 
 BuildCMake ${config} ${buildDirExtension}
 
