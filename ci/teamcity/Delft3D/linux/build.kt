@@ -45,6 +45,10 @@ object LinuxBuild : BuildType({
         param("generator", """"Unix Makefiles"""")
         select("product", "auto-select", display = ParameterDisplay.PROMPT, options = listOf("auto-select", "all-testbench", "fm-suite", "d3d4-suite", "fm-testbench", "d3d4-testbench", "waq-testbench", "part-testbench", "rr-testbench", "wave-testbench", "swan-testbench"))
         select("build_type", "%dep.${LinuxThirdPartyLibs.id}.build_type%", display = ParameterDisplay.PROMPT, options = listOf("Release", "RelWithDebInfo", "Debug"))
+        param("env.CONAN_PASSWORD_DELTARESCONAN", "%conan.password%")
+        param("env.CONAN_PASSWORD_DELTARESCONANDEV", "%conan.password%")
+        param("env.CONAN_LOGIN_USERNAME_DELTARESCONAN", "%conan.username%")
+        param("env.CONAN_LOGIN_USERNAME_DELTARESCONANDEV", "%conan.username%")
     }
 
     vcs {
@@ -52,6 +56,8 @@ object LinuxBuild : BuildType({
         cleanCheckout = true
         checkoutDir = "ossbuild-lnx64"
     }
+  
+    
 
     steps {
         mergeTargetBranch {}
@@ -63,6 +69,27 @@ object LinuxBuild : BuildType({
                 echo '#define BUILD_NR "%build.vcs.number%"' > checkout_info.h
                 echo '#define BRANCH "%teamcity.build.branch%"' >> checkout_info.h
             """.trimIndent()
+        }
+        script {
+        name = "Load, Build, Create, Push, Conan"
+        workingDir = "./"
+        scriptContent = """
+            #!/usr/bin/env bash
+            pip3 install conan
+            conan remote add deltaresconan "https://artifacts.deltares.nl/repository/conan-internal/"
+            conan remote add deltaresconandev "https://artifacts.deltares.nl/repository/conan-dev/"
+            conan remote remove conancenter
+            conan profile detect
+            for d in ./tools/conan/recipes/*/*/ ; do
+               if [ -f "$recipedirectory/conanfile.py" ]; then
+                echo "Adding editable and creating it: $recipedirectory"
+                conan editable add "$recipedirectory" 
+                conan create $recipedirectory --build=missing
+              fi
+            done
+            conan install --build=missing conanfile.py
+            conan upload "*" -r deltaresconandev --confirm
+        """.trimIndent()
         }
         exec {
             name = "Build"
