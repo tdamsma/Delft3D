@@ -56,4 +56,4 @@ unit-test-report-windows.xml
 
 # Conan
 /tools/conan/recipes/*/build/**
-
+/tools/conan/recipes/build/**
