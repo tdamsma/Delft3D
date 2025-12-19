@@ -32,11 +32,7 @@ https://artifacts.deltares.nl/repository/conan-internal/
   #conan build --build=missing tools/conan/recipes/netcdf-fortran.py
   #conan build tools/conan/recipes/netcdf-fortran.py
 
-export CONAN_PASSWORD_DELTARESCONAN=parking.displease.oval.duvet.subway
-export CONAN_LOGIN_USERNAME_DELTARESCONAN=robot-teamcity-delft3d-conan@deltares.nl
 
-export CONAN_PASSWORD_DELTARESCONANDEV=parking.displease.oval.duvet.subway
-export CONAN_LOGIN_USERNAME_DELTARESCONANDEV=robot-teamcity-delft3d-conan@deltares.nl
 
 pip3 install conan
 conan remote add deltaresconan "https://artifacts.deltares.nl/repository/conan-internal/"
