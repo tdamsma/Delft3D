@@ -76,7 +76,8 @@ object LinuxBuild : BuildType({
         script {
         name = "Load, Build, Create, Push, Conan"
         workingDir = "./"
-        scriptContent = """
+          val recipedirectory = ""
+          scriptContent = """
             #!/usr/bin/env bash
             pip3 install conan
             conan remote add deltaresconan "%deltaresconan_url%"
@@ -84,7 +85,7 @@ object LinuxBuild : BuildType({
             conan remote remove conancenter
             conan profile detect
             for recipedirectory in ./tools/conan/recipes/*/*/ ; do
-               if [ -f "$recipedirectory/conanfile.py" ]; then
+               if [ -f "\$recipedirectory/conanfile.py" ]; then
                 echo "Adding editable and creating it: $recipedirectory"
                 conan editable add "$recipedirectory" 
                 conan create $recipedirectory --build=missing
