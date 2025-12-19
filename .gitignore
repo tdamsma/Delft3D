@@ -53,3 +53,7 @@ src/**/FortranCInterface.h
 /ci/teamcity/Delft3D/target/**
 **/result_doc/**
 unit-test-report-windows.xml
+
+# Conan
+/tools/conan/recipes/*/build/**
+

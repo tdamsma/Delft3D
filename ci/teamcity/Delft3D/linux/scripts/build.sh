@@ -22,8 +22,32 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-pip install conan
-conan install conanfile.py
+
+https://artifacts.deltares.nl/repository/conan-internal/
+ 
+  robot-teamcity-delft3d-conan@deltares.nl
+
+  parking.displease.oval.duvet.subway 
+
+  #conan build --build=missing tools/conan/recipes/netcdf-fortran.py
+  #conan build tools/conan/recipes/netcdf-fortran.py
+
+export CONAN_PASSWORD_DELTARESCONAN=parking.displease.oval.duvet.subway
+export CONAN_LOGIN_USERNAME_DELTARESCONAN=robot-teamcity-delft3d-conan@deltares.nl
+
+export CONAN_PASSWORD_DELTARESCONANDEV=parking.displease.oval.duvet.subway
+export CONAN_LOGIN_USERNAME_DELTARESCONANDEV=robot-teamcity-delft3d-conan@deltares.nl
+
+pip3 install conan
+conan remote add deltaresconan "https://artifacts.deltares.nl/repository/conan-internal/"
+conan remote add deltaresconandev "https://artifacts.deltares.nl/repository/conan-dev/"
+conan remote remove conancenter
+conan editable add tools/conan/recipes/netcdf-fortran/4.6.2
+conan create tools/conan/recipes/netcdf-fortran/4.6.2/ --build=missing
+conan profile detect
+conan install --build=missing conanfile.py
+conan upload netcdf-fortran/4.6.2 -r deltaresconandev --confirm
+conan upload "*" -r deltaresconandev -c
 
 cmake -S ./src/cmake -G "${GENERATOR}" -D CONFIGURATION_TYPE:STRING="${PRODUCT}" -D CMAKE_BUILD_TYPE="${BUILD_TYPE}" -B "build_${PRODUCT}" -D CMAKE_INSTALL_PREFIX="build_${PRODUCT}/install"
 cmake --build "build_${PRODUCT}" --parallel --config "${BUILD_TYPE}"
