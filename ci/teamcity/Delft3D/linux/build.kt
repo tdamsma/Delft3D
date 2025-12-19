@@ -83,7 +83,7 @@ object LinuxBuild : BuildType({
             conan remote add deltaresconandev "%deltaresconandev_url"%
             conan remote remove conancenter
             conan profile detect
-            for d in ./tools/conan/recipes/*/*/ ; do
+            for recipedirectory in ./tools/conan/recipes/*/*/ ; do
                if [ -f "$recipedirectory/conanfile.py" ]; then
                 echo "Adding editable and creating it: $recipedirectory"
                 conan editable add "$recipedirectory" 
