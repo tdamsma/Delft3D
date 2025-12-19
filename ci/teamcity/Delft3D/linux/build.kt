@@ -45,10 +45,13 @@ object LinuxBuild : BuildType({
         param("generator", """"Unix Makefiles"""")
         select("product", "auto-select", display = ParameterDisplay.PROMPT, options = listOf("auto-select", "all-testbench", "fm-suite", "d3d4-suite", "fm-testbench", "d3d4-testbench", "waq-testbench", "part-testbench", "rr-testbench", "wave-testbench", "swan-testbench"))
         select("build_type", "%dep.${LinuxThirdPartyLibs.id}.build_type%", display = ParameterDisplay.PROMPT, options = listOf("Release", "RelWithDebInfo", "Debug"))
-        param("env.CONAN_PASSWORD_DELTARESCONAN", "%conan.password%")
-        param("env.CONAN_PASSWORD_DELTARESCONANDEV", "%conan.password%")
-        param("env.CONAN_LOGIN_USERNAME_DELTARESCONAN", "%conan.username%")
-        param("env.CONAN_LOGIN_USERNAME_DELTARESCONANDEV", "%conan.username%")
+        param("env.CONAN_LOGIN_USERNAME_DELTARESCONAN", DslContext.getParameter("conan.username"))
+        param("env.CONAN_PASSWORD_DELTARESCONAN", DslContext.getParameter("conan.password"))
+        param("env.CONAN_LOGIN_USERNAME_DELTARESCONANDEV", DslContext.getParameter("conan.username"))
+        param("env.CONAN_PASSWORD_DELTARESCONANDEV", DslContext.getParameter("conan.password"))
+        param("deltaresconan_url", DslContext.getParameter("conan.deltaresconan"))
+        param("deltaresconandev_url", DslContext.getParameter("conan.deltaresconandev"))
+      
     }
 
     vcs {
@@ -76,8 +79,8 @@ object LinuxBuild : BuildType({
         scriptContent = """
             #!/usr/bin/env bash
             pip3 install conan
-            conan remote add deltaresconan "https://artifacts.deltares.nl/repository/conan-internal/"
-            conan remote add deltaresconandev "https://artifacts.deltares.nl/repository/conan-dev/"
+            conan remote add deltaresconan "%deltaresconan_url%"
+            conan remote add deltaresconandev "%deltaresconandev_url"%
             conan remote remove conancenter
             conan profile detect
             for d in ./tools/conan/recipes/*/*/ ; do
