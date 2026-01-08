@@ -79,7 +79,10 @@ object LinuxBuild : BuildType({
           val recipedirectory = ""
           scriptContent = """
             #!/usr/bin/env bash
-            pip3 install conan
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            source $HOME/.local/bin/env
+            uv sync 
+            source .venv/bin/activate
             conan remote add deltaresconan "%deltaresconan_url%"
             conan remote add deltaresconandev "%deltaresconandev_url"%
             conan remote remove conancenter

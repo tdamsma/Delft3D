@@ -1,0 +1,10 @@
+[project]
+name = "delft3d"
+version = "1.0.0"
+description = "Python Requirements to build delft3d with Conan"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "conan>=2.24.0",
+    "uv>=0.9.22",
+]
