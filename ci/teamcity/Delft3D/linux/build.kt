@@ -83,8 +83,8 @@ object LinuxBuild : BuildType({
             source ~/.local/bin/env
             uv sync 
             source .venv/bin/activate
-            conan remote add deltaresconan "%deltaresconan_url%"
-            conan remote add deltaresconandev "%deltaresconandev_url%"
+            conan remote add deltaresconan "%deltaresconan_url%" --force 
+            conan remote add deltaresconandev "%deltaresconandev_url%" --force 
             conan remote remove conancenter
             conan profile detect
             for recipedirectory in ./tools/conan/recipes/*/*/ ; do
