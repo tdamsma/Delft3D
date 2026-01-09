@@ -94,7 +94,7 @@ object LinuxBuild : BuildType({
                 conan create $recipedirectory --build=missing
               fi
             done
-            conan install --build=missing conanfile.py --out-folder=build
+            conan install --build=missing --output-folder=build conanfile.py 
             conan upload "*" -r deltaresconandev --confirm
         """.trimIndent()
         }
