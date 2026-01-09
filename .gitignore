@@ -58,3 +58,6 @@ unit-test-report-windows.xml
 /tools/conan/recipes/*/build/**
 /tools/conan/recipes/*/*/build/**
 /tools/conan/recipes/build/**
+
+#jetbrains
+.cache/jb/**
