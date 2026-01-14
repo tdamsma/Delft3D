@@ -74,29 +74,33 @@ object LinuxBuild : BuildType({
             """.trimIndent()
         }
         script {
-        name = "Load, Build, Create, Push, Conan"
-        workingDir = "./"
+          name = "Load, Build, Create, Push, Conan"
+          workingDir = "./"
           val recipedirectory = ""
           scriptContent = """
-            #!/usr/bin/env bash
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-            source ~/.local/bin/env
-            uv sync 
-            source .venv/bin/activate
-            conan remote add deltaresconan "%deltaresconan_url%" --force 
-            conan remote add deltaresconandev "%deltaresconandev_url%" --force 
-            conan remote remove conancenter
-            conan profile detect
-            for recipedirectory in ./tools/conan/recipes/*/*/ ; do
-               if [ -f "\$recipedirectory/conanfile.py" ]; then
-                echo "Adding editable and creating it: $recipedirectory"
-                conan editable add "$recipedirectory" 
-                conan create $recipedirectory --build=missing
-              fi
-            done
-            conan install --build=missing --output-folder=build conanfile.py 
-            conan upload "*" -r deltaresconandev --confirm
-        """.trimIndent()
+              #!/usr/bin/env bash
+              curl -LsSf https://astral.sh/uv/install.sh | sh
+              source ~/.local/bin/env
+              uv sync 
+              source .venv/bin/activate
+              conan remote add deltaresconan "%deltaresconan_url%" --force 
+              conan remote add deltaresconandev "%deltaresconandev_url%" --force 
+              conan remote remove conancenter
+              conan profile detect
+              for recipedirectory in ./tools/conan/recipes/*/*/ ; do
+                 if [ -f "$recipedirectory/conanfile.py" ]; then
+                  echo "Adding editable and creating it: $recipedirectory"
+                  conan editable add "$recipedirectory" 
+                  conan create $recipedirectory --build=missing
+                fi
+              done
+              conan install --build=missing --output-folder=./build/ conanfile.py 
+              conan upload "*" -r deltaresconandev --confirm
+          """.trimIndent()
+          dockerImage = "containers.deltares.nl/delft3d-dev/delft3d-third-party-libs:%dep.${LinuxThirdPartyLibs.id}.env.IMAGE_TAG%"
+          dockerImagePlatform = ExecBuildStep.ImagePlatform.Linux
+          dockerRunParameters = "--rm"
+          dockerPull = true
         }
         exec {
             name = "Build"
