@@ -98,7 +98,7 @@ object LinuxBuild : BuildType({
               conan upload "*" -r deltaresconandev --confirm
           """.trimIndent()
           dockerImage = "containers.deltares.nl/delft3d-dev/delft3d-third-party-libs:%dep.${LinuxThirdPartyLibs.id}.env.IMAGE_TAG%"
-          dockerImagePlatform = ExecBuildStep.ImagePlatform.Linux
+          dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
           dockerRunParameters = "--rm"
           dockerPull = true
         }
