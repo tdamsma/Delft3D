@@ -706,7 +706,7 @@ contains
 
       integer, dimension(:), allocatable :: Lperm_new, valid_links, valid_link_types
       integer, dimension(:, :), allocatable :: kn_new
-      integer num_1d_links, num_1d2d_links, num_2d_links, l1d2d, L_idx
+      integer num_1d_links, num_1d2d_links, num_2d_links, l1d2d, L_idx, num_valid
       integer :: jacrosscheck ! remove 2D crossing netlinks (1) or not (0)
       integer :: japermout ! output permutation array (1) or not (0)
 
@@ -794,9 +794,41 @@ contains
       if (any(kn(3, :) == 0)) then
          jathindams = 1
       end if
-      valid_links = pack([(L, L=1, NUML)], is_valid_link([(L, L=1, NUML)], kn(1, 1:NUML), kn(2, 1:NUML), kn(3, 1:NUML)))
+      
+      ! Pre-validate node indices before calling is_valid_link to prevent segfault
+      ! Workaround for Intel ifx compiler issue on Linux
+      allocate(valid_links(NUML))
+      num_valid = 0
+      do L = 1, NUML
+         if (is_valid_link_safe(L, kn(1, L), kn(2, L), kn(3, L))) then
+            num_valid = num_valid + 1
+            valid_links(num_valid) = L
+         end if
+      end do
+      
+      ! Resize array using temporary - avoid self-assignment segfault with Intel ifx
+      if (num_valid < NUML) then
+         allocate(valid_link_types(num_valid))
+         valid_link_types = valid_links(1:num_valid)
+         deallocate(valid_links)
+         allocate(valid_links(num_valid))
+         valid_links = valid_link_types
+         deallocate(valid_link_types)
+      end if
 
-      valid_link_types = kn(3, valid_links)
+      allocate(valid_link_types(size(valid_links)))
+      ! Extract link types element-by-element with bounds checking
+      ! Workaround for potential memory corruption from NetCDF reading
+      do L_idx = 1, size(valid_links)
+         L = valid_links(L_idx)
+         if (L < 1 .or. L > size(kn, 2)) then
+            write(msgbuf, '(a,i0,a,i0,a,i0)') 'Invalid link index ', L, ' at position ', L_idx, ', size(kn,2)=', size(kn, 2)
+            call err_flush()
+            valid_link_types(L_idx) = 2  ! Default to 2D link type
+         else
+            valid_link_types(L_idx) = kn(3, L)
+         end if
+      end do
 
       num_1d_links = count(valid_link_types == LINK_1D .or. valid_link_types == LINK_1D_MAINBRANCH)
       num_1d2d_links = count(is_1d2d_type(valid_link_types))
@@ -4520,13 +4552,20 @@ contains
 
       ja = 0
       if (K1 /= 0 .and. K2 /= 0 .and. K1 /= K2) then
+         ! Bounds check to prevent segfault on Linux with Intel ifx
+         if (K1 < 1 .or. K1 > size(XK) .or. K2 < 1 .or. K2 > size(XK)) then
+            ja = 0
+            return
+         end if
          JA = 1
          if (XK(K1) == DMISS .or. XK(K2) == DMISS) then ! EXTRA CHECK: ONE MISSING
             JA = 0
          else !            : OR BOTH EQUAL
             if ((K3 == 1 .or. k3 == 6) .and. allocated(dxe)) then ! User-defined net link lengths
-               if (dxe(L) /= dmiss .and. dxe(L) <= 0d0) then ! X/Y of K1, K2 may be equal, as long as length > 0
-                  ja = 0
+               if (L > 0 .and. L <= size(dxe)) then ! Bounds check for dxe array
+                  if (dxe(L) /= dmiss .and. dxe(L) <= 0d0) then ! X/Y of K1, K2 may be equal, as long as length > 0
+                     ja = 0
+                  end if
                end if
             else if (XK(K1) == XK(K2) .and. YK(K1) == YK(K2)) then
                JA = 0
@@ -4535,6 +4574,24 @@ contains
       end if
 
    end function is_valid_link
+
+   !> Safe wrapper for is_valid_link that does bounds checking first
+   !! Workaround for Intel ifx segfault issue on Linux
+   function is_valid_link_safe(L, K1, K2, K3) result(ja)
+      use network_data
+      implicit none
+      integer, intent(in) :: L, K1, K2, K3
+      logical :: ja
+      
+      ja = .false.
+      
+      ! Check bounds before calling is_valid_link
+      if (K1 < 1 .or. K1 > size(XK) .or. K2 < 1 .or. K2 > size(XK)) then
+         return
+      end if
+      
+      ja = is_valid_link(L, K1, K2, K3)
+   end function is_valid_link_safe
 
    !> Determines if a network link is of 1D2D type based on kn(3,L) link code
    elemental function is_1D2D_type(K3) result(res)

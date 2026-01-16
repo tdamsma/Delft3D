@@ -12928,9 +12928,6 @@ contains
       integer, intent(out) :: ierr !< Return status (NetCDF operations)
 
       character(len=:), allocatable :: coordsyscheck
-      integer, dimension(:), allocatable :: kn3read
-      integer, dimension(:), allocatable :: kn1read
-      integer, dimension(:), allocatable :: kn2read
 
       integer :: inetfile, &
                  id_netnodedim, id_netlinkdim, & !< Dimensions
@@ -13058,34 +13055,42 @@ contains
       end if
       deallocate (coordsyscheck)
 
-      ! An array slice cannot be passed to netcdf C-library (risk of stack overflow), so use placeholder.
-      allocate (kn3read(numl_read))
-      allocate (kn2read(numl_read))
-      allocate (kn1read(numl_read))
+      ! Validate numl_read before using it for allocation
+      if (numl_read <= 0) then
+         call mess(LEVEL_ERROR, 'Invalid number of netlinks read from file: ', numl_read)
+         ierr = dfm_genericerror
+         return
+      end if
 
-!    ierr = nf90_get_var(inetfile, id_netlink,     kn(:,numl_keep+1:numl_keep+numl_read), count = [ 2, numl_read ], map=[ 1, 3 ])
-      ierr = nf90_get_var(inetfile, id_netlink, kn1read, count=[1, numl_read])
-      ierr = nf90_get_var(inetfile, id_netlink, kn2read, count=[1, numl_read], start=[2, 1])
-      call check_error(ierr, 'netlink nodes')
-      do L = numL_keep + 1, numL_keep + numL_read
-         kn(1, L) = kn1read(L - numL_keep)
-         kn(2, L) = kn2read(L - numL_keep)
-      end do
-
-      ierr = nf90_get_var(inetfile, id_netlinktype, kn3read, count=[numl_read])
-      call check_error(ierr, 'netlink type')
-
-      kn(3, numl_keep + 1:numl_keep + numl_read) = kn3read
-      ! Repair invalid kn3 codes (e.g. 0, always set to default 2==2D, i.e., don't read in thin dam codes)
-      do L = numl_keep + 1, numl_keep + numl_read
-         if (kn(3, L) < 1) then
-            kn(3, L) = 2
+      ! Workaround for NetCDF-Fortran 4.6.x + Intel ifx segfault issue
+      ! Read NetLink data one element at a time to avoid C-Fortran interface issues
+      ! This is slower but works around segfault in NetCDF-Fortran 4.6.x with Intel ifx
+      do L = 1, numl_read
+         ierr = nf90_get_var(inetfile, id_netlink, kn(1, numL_keep + L), start=[1, L])
+         if (ierr /= nf90_noerr) then
+            call check_error(ierr, 'netlink first node')
+            return
+         end if
+         ierr = nf90_get_var(inetfile, id_netlink, kn(2, numL_keep + L), start=[2, L])
+         if (ierr /= nf90_noerr) then
+            call check_error(ierr, 'netlink second node')
+            return
          end if
       end do
 
-      deallocate (kn3read)
-      deallocate (kn1read)
-      deallocate (kn2read)
+      ! Read NetLinkType one element at a time, same workaround as above
+      do L = 1, numl_read
+         ierr = nf90_get_var(inetfile, id_netlinktype, kn(3, numL_keep + L), start=[L])
+         if (ierr /= nf90_noerr) then
+            call check_error(ierr, 'netlink type')
+            return
+         end if
+         ! Repair invalid kn3 codes (e.g. 0, always set to default 2==2D, i.e., don't read in thin dam codes)
+         if (kn(3, numL_keep + L) < 1) then
+            kn(3, numL_keep + L) = 2
+         end if
+      end do
+
       call readyy('Reading net data', 0.95_dp)
 
       ! Increment netnode numbers in netlink array to ensure unique ids.
