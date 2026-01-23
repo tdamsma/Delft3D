@@ -79,6 +79,7 @@ object LinuxBuild : BuildType({
           val recipedirectory = ""
           scriptContent = """
               #!/usr/bin/env bash
+              dnf install git -y
               curl -LsSf https://astral.sh/uv/install.sh | sh
               source ~/.local/bin/env
               uv sync 
@@ -87,10 +88,10 @@ object LinuxBuild : BuildType({
               conan remote add deltaresconandev "%deltaresconandev_url%" --force 
               conan remote remove conancenter
               conan profile detect
+              export FC=/opt/intel/oneapi/compiler/2024.2/bin/ifx
               for recipedirectory in ./tools/conan/recipes/*/*/ ; do
                  if [ -f "$recipedirectory/conanfile.py" ]; then
-                  echo "Adding editable and creating it: $recipedirectory"
-                  conan editable add "$recipedirectory" 
+                  echo "Adding / creating package: $recipedirectory"
                   conan create $recipedirectory --build=missing
                 fi
               done

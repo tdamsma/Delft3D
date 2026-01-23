@@ -55,12 +55,13 @@ class netcdf_fortranRecipe(ConanFile):
         # Do not build tests or examples
         tc.variables["ENABLE_TESTS"] = False
         tc.variables["BUILD_EXAMPLES"] = False
+        
         tc.generate()
 
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-        cmake.bui
+        cmake.build()
 
     def package(self):
         cmake = CMake(self)

@@ -1,0 +1,14 @@
+[settings]
+arch=x86_64
+build_type=Release
+compiler=intel-cc
+compiler.cppstd=23
+compiler.version=2024.1
+compiler.mode=icx
+compiler.libcxx=libstdc++
+os=Linux
+
+[conf]
+user.deltares:fortran.compiler=ifx
+user.deltares:fortran.version=2024.2
+tools.intel:installation_path=/opt/intel/oneapi
