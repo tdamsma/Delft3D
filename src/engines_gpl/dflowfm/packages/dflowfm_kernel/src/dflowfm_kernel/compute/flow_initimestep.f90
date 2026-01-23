@@ -1,6 +1,6 @@
 !----- AGPL --------------------------------------------------------------------
 !
-!  Copyright (C)  Stichting Deltares, 2017-2025.
+!  Copyright (C)  Stichting Deltares, 2017-2026.
 !
 !  This file is part of Delft3D (D-Flow Flexible Mesh component).
 !
@@ -190,7 +190,7 @@ contains
 
       ! Add wave model dependent wave force in RHS
       ! After setdt because surfbeat needs updated dts
-      if (jawave > NO_WAVES .and. .not. flowwithoutwaves) then
+      if (jawave > NO_WAVES .and. .not. flow_without_waves) then
          call compute_wave_forcing_RHS()
       end if
 
@@ -220,8 +220,10 @@ contains
          end if
       end if
 
-      if (jatem > 1 .and. jaheat_eachstep == 1) then
-         call heatu(tim1bnd / 3600.0_dp) ! from externalforcings
+      if (jaheat_eachstep == 1) then
+         if (temperature_model == TEMPERATURE_MODEL_EXCESS .or. temperature_model == TEMPERATURE_MODEL_COMPOSITE) then
+            call heatu(tim1bnd / 3600.0_dp) ! from externalforcings
+         end if
       end if
       call update_icecover()
 

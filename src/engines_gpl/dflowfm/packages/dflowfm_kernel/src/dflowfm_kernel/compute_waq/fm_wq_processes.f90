@@ -1,6 +1,6 @@
 !----- AGPL --------------------------------------------------------------------
 !
-!  Copyright (C)  Stichting Deltares, 2018-2025.
+!  Copyright (C)  Stichting Deltares, 2018-2026.
 !  This file is part of Delft3D (D-Flow Flexible Mesh component).
 !
 !  Delft3D is free software: you can redistribute it and/or modify
@@ -404,7 +404,8 @@ contains
       use m_alloc
       use m_flow, only: kmx
       use m_flowgeom, only: Ndxi, ba
-      use m_flowparameters, only: jasal, jatem, jawave, jawaveSwartDelwaq
+      use m_flowparameters, only: jasal, temperature_model, TEMPERATURE_MODEL_NONE, TEMPERATURE_MODEL_COMPOSITE, jawave, &
+         jawaveSwartDelwaq
       use fm_external_forcings_data
       use m_transport
       use m_partitioninfo
@@ -585,7 +586,7 @@ contains
 
       icon = index_in_array(ctemperatureflow, coname_sub)
       isftem = 0
-      if (jatem >= 1) then
+      if (temperature_model /= TEMPERATURE_MODEL_NONE) then
          if (icon > 0) then
             num_spatial_time_fuctions = num_spatial_time_fuctions + 1
             isftem = num_spatial_time_fuctions
@@ -674,7 +675,7 @@ contains
       icon = index_in_array(cirradiation, coname_sub)
       isfradsurf = 0
       no_reflection_wq = .false.
-      if (jatem == 5) then
+      if (temperature_model == TEMPERATURE_MODEL_COMPOSITE) then
          if (icon > 0) then
             num_spatial_time_fuctions = num_spatial_time_fuctions + 1
             isfradsurf = num_spatial_time_fuctions
@@ -1386,7 +1387,7 @@ contains
       use m_flowgeom, only: Ndxi, ba
       use m_flow, only: vol1, ucx, ucy
       use m_flowtimes, only: irefdate, tunit
-      use m_flowparameters, only: flowWithoutWaves, jawaveswartdelwaq
+      use m_flowparameters, only: flow_without_waves, jawaveswartdelwaq
       use m_fm_wq_processes
       use m_transport, only: constituents, itemp, isalt
       use m_sferic, only: twopi, rd2dg
@@ -1458,7 +1459,7 @@ contains
 
       if (isftau > 0) then
          ipoitau = arrpoi(iisfun) + (isftau - 1) * num_cells
-         if (jawave == NO_WAVES .or. flowWithoutWaves) then
+         if (jawave == NO_WAVES .or. flow_without_waves) then
             call gettaus(1, 2)
          else
             call gettauswave(jawaveswartdelwaq)

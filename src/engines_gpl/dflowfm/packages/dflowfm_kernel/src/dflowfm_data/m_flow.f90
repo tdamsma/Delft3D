@@ -1,6 +1,6 @@
 !----- AGPL --------------------------------------------------------------------
 !
-!  Copyright (C)  Stichting Deltares, 2017-2025.
+!  Copyright (C)  Stichting Deltares, 2017-2026.
 !
 !  This file is part of Delft3D (D-Flow Flexible Mesh component).
 !
@@ -31,17 +31,18 @@
 !
 
 module m_flow ! flow arrays-999
-   use m_flowparameters
    use fm_external_forcings_data
+   use m_alloc
+   use m_density_parameters, only: idensform, apply_thermobaricity, thermobaricity_in_pressure_gradient, &
+      max_iterations_pressure_density, jabarocponbnd
+   use m_flowparameters
    use m_flowoutput
-   use m_physcoef
-   use m_density_parameters, only: idensform, apply_thermobaricity, thermobaricity_in_pressure_gradient, max_iterations_pressure_density, jabarocponbnd
-   use m_turbulence
    use m_grw
    use m_heatfluxes
-   use m_alloc
-   use m_vegetation
+   use m_physcoef
    use m_ship
+   use m_turbulence
+   use m_vegetation
 
    implicit none
 
@@ -724,11 +725,11 @@ contains
 
    !> Check if salinity, temperature or sediment are simulated, i.e. density needs to be incorporated
    pure function use_density() result(res)
-      use m_flowparameters, only: jasal, jatem, jased
+      use m_flowparameters, only: jasal, temperature_model, TEMPERATURE_MODEL_NONE, jased
 
       logical :: res !< Return value
 
-      res = (jasal > 0 .or. jatem > 0 .or. jased > 0)
+      res = (jasal > 0 .or. temperature_model /= TEMPERATURE_MODEL_NONE .or. jased > 0)
    end function use_density
 
 end module m_flow

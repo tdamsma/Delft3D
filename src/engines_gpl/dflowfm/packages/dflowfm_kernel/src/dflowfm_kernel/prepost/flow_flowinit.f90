@@ -1,6 +1,6 @@
 !----- AGPL --------------------------------------------------------------------
 !
-!  Copyright (C)  Stichting Deltares, 2017-2025.
+!  Copyright (C)  Stichting Deltares, 2017-2026.
 !
 !  This file is part of Delft3D (D-Flow Flexible Mesh component).
 !
@@ -52,7 +52,7 @@ module m_flow_flowinit
    use m_coriolistilt, only: coriolistilt
    use m_wave_uorbrlabda, only: wave_uorbrlabda
    use m_wave_comp_stokes_velocities, only: wave_comp_stokes_velocities
-   use m_tauwavehk, only: tauwavehk
+   use m_wave_shear_velocity, only: compute_wave_shear_velocity
    use m_tauwave, only: tauwave
    use m_setwavmubnd, only: setwavmubnd
    use m_setwavfu, only: setwavfu
@@ -509,12 +509,12 @@ contains
 
 !> initialize_temperature_with_uniform_value
    subroutine initialize_temperature_with_uniform_value()
-      use m_flowparameters, only: jatem, temini
+      use m_flowparameters, only: temperature_model, TEMPERATURE_MODEL_NONE, temini
       use m_flow, only: tem1
 
       implicit none
 
-      if (jatem > OFF) then
+      if (temperature_model /= TEMPERATURE_MODEL_NONE) then
          tem1(:) = temini
       end if
 
@@ -1276,7 +1276,7 @@ contains
 !> set wave modelling
    subroutine set_wave_modelling()
       use precision, only: dp
-      use m_flowparameters, only: jawave, flowWithoutWaves, waveforcing, jawavestokes
+      use m_flowparameters, only: jawave, flow_without_waves, waveforcing, jawavestokes
       use m_flow, only: hs, hu, kmx
       use mathconsts, only: sqrt2_hp
       use m_waves !only : hwavcom, hwav, gammax, twav, phiwav, ustokes, vstokes
@@ -1304,7 +1304,7 @@ contains
       real(kind=dp) :: ustt
       real(kind=dp) :: hh
 
-      if ((jawave == SWAN .or. jawave >= SWAN_NETCDF) .and. .not. flowWithoutWaves) then
+      if ((jawave == SWAN .or. jawave >= SWAN_NETCDF) .and. .not. flow_without_waves) then
          ! Normal situation: use wave info in FLOW
          hs = max(hs, 0.0_dp)
          if (jawave >= SWAN_NETCDF) then
@@ -1335,7 +1335,7 @@ contains
          call setwavmubnd()
       end if
 
-      if ((jawave == SWAN .or. jawave >= SWAN_NETCDF) .and. flowWithoutWaves) then
+      if ((jawave == SWAN .or. jawave >= SWAN_NETCDF) .and. flow_without_waves) then
          ! Exceptional situation: use wave info not in FLOW, only in WAQ
          ! Only compute uorb
          ! Works both for 2D and 3D
@@ -1349,7 +1349,7 @@ contains
          call wave_uorbrlabda() ! hwav gets depth-limited here
       end if
 
-      if (jawave == CONST .and. .not. flowWithoutWaves) then
+      if (jawave == CONST .and. .not. flow_without_waves) then
          hs = max(hs, 0.0_dp)
          hwav = min(hwavcom, gammax * hs)
          call wave_uorbrlabda()
@@ -1363,7 +1363,7 @@ contains
                   tw = 0.5_dp * (twav(left_node) + twav(right_node))
                   csw = 0.5 * (cosd(phiwav(left_node)) + cosd(phiwav(right_node)))
                   snw = 0.5 * (sind(phiwav(left_node)) + sind(phiwav(right_node)))
-                  call tauwavehk(hw, tw, hh, uorbi, rkw, ustt)
+                  call compute_wave_shear_velocity(hw, tw, hh, uorbi, rkw, ustt)
                   ustokes(link) = ustt * (csu(link) * csw + snu(link) * snw)
                   vstokes(link) = ustt * (-snu(link) * csw + csu(link) * snw)
                end do
@@ -1514,7 +1514,7 @@ contains
 !> Initialize salinity and temperature on boundaries
    subroutine initialize_salinity_temperature_on_boundary()
       use m_flowtimes, only: keepstbndonoutflow
-      use m_flowparameters, only: jasal, jatem
+      use m_flowparameters, only: jasal, temperature_model, TEMPERATURE_MODEL_NONE
       use m_flowgeom, only: ln
       use m_flow, only: sa1, q1, tem1, kbnds, kbndtm, kmxd, nbnds, nbndtm, zbnds, zbndtm
       use m_get_Lbot_Ltop, only: getlbotltop
@@ -1549,7 +1549,7 @@ contains
          end do
       end if ! jasal
 
-      if (jatem /= OFF) then
+      if (temperature_model /= TEMPERATURE_MODEL_NONE) then
          do i_boundary = 1, nbndtm
             link = kbndtm(3, i_boundary)
             call getLbotLtop(link, bottom_link, top_link)
@@ -1567,7 +1567,7 @@ contains
                end if
             end do
          end do
-      end if ! jatem
+      end if
 
    end subroutine initialize_salinity_temperature_on_boundary
 
@@ -1917,24 +1917,24 @@ contains
                else
                   if (xz(k) > 0.5_dp * (xzmin + xzmax) .and. (kk - kb + 1) <= locsaltlev * kmx) then
                      sa1(kk) = locsaltmax
-                     if (jatem > 0) then
+                     if (temperature_model /= TEMPERATURE_MODEL_NONE) then
                         tem1(kk) = 5.0_dp
                      end if
                   else
                      sa1(kk) = locsaltmin
-                     if (jatem > 0) then
+                     if (temperature_model /= TEMPERATURE_MODEL_NONE) then
                         tem1(kk) = 10.0_dp
                      end if
                   end if
                end if
                sa1(k) = sa1(k) + vol1(kk) * sa1(kk)
 
-               if (jatem > 0) then
+               if (temperature_model /= TEMPERATURE_MODEL_NONE) then
                   tem1(k) = tem1(k) + vol1(kk) * tem1(kk)
                end if
             end do
             sa1(k) = sa1(k) / vol1(k)
-            if (jatem > 0) then
+            if (temperature_model /= TEMPERATURE_MODEL_NONE) then
                tem1(k) = tem1(k) / vol1(k)
             end if
          end do

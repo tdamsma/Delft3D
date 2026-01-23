@@ -1,6 +1,6 @@
 !----- AGPL --------------------------------------------------------------------
 !
-!  Copyright (C)  Stichting Deltares, 2017-2025.
+!  Copyright (C)  Stichting Deltares, 2017-2026.
 !
 !  This file is part of Delft3D (D-Flow Flexible Mesh component).
 !
@@ -117,7 +117,7 @@ contains
             znod = constituents(isalt, k)
          end if
       else if (nodval == 12) then
-         if (jatem > 0) then
+         if (temperature_model /= TEMPERATURE_MODEL_NONE) then
             if (jafahrenheit == 0) then
                znod = constituents(itemp, k)
             else
@@ -218,7 +218,7 @@ contains
 
       else if (nodval == 37) then
 
-         if (Soiltempthick > 0 .and. jatem > 0) then
+         if (Soiltempthick > 0 .and. temperature_model /= TEMPERATURE_MODEL_NONE) then
             znod = tbed(kk)
          else
             znod = same(k)
@@ -230,7 +230,7 @@ contains
 
       else if (nodval == 39) then
 
-         if (flowWithoutWaves) then
+         if (flow_without_waves) then
             jawaveswartdelwaq_local = WAVE_WAQ_SHEAR_STRESS_HYD
          else
             jawaveswartdelwaq_local = jawaveswartdelwaq
@@ -241,13 +241,13 @@ contains
 
          znod = rain(kk)
 
-      else if (nodval == 41 .and. jatem > 0) then
+      else if (nodval == 41 .and. temperature_model /= TEMPERATURE_MODEL_NONE) then
          znod = relative_humidity(kk)
-      else if (nodval == 42 .and. jatem > 0) then
+      else if (nodval == 42 .and. temperature_model /= TEMPERATURE_MODEL_NONE) then
          znod = air_temperature(kk)
-      else if (nodval == 43 .and. jatem > 0) then
+      else if (nodval == 43 .and. temperature_model /= TEMPERATURE_MODEL_NONE) then
          znod = cloudiness(kk)
-      else if (nodval == 44 .and. jatem > 0 .and. allocated(solar_radiation)) then
+      else if (nodval == 44 .and. temperature_model /= TEMPERATURE_MODEL_NONE .and. allocated(solar_radiation)) then
          znod = solar_radiation(kk)
       else if (nodval == 45 .and. NUMCONST > 0) then
          if (iconst_cur > 0 .and. iconst_cur <= NUMCONST) then
@@ -313,7 +313,7 @@ contains
             znod = s1(kk) + zsp(kk)
          end if
 
-      else if (nodval == numoptwav .and. jawave > NO_WAVES .and. .not. flowWithoutWaves) then
+      else if (nodval == numoptwav .and. jawave > NO_WAVES .and. .not. flow_without_waves) then
          if (jawave == WAVE_FETCH_HURDLE .or. jawave == WAVE_FETCH_YOUNG) then
             select case (waveparopt)
             case (1)

@@ -1,6 +1,6 @@
 !----- AGPL --------------------------------------------------------------------
 !
-!  Copyright (C)  Stichting Deltares, 2017-2025.
+!  Copyright (C)  Stichting Deltares, 2017-2026.
 !
 !  This file is part of Delft3D (D-Flow Flexible Mesh component).
 !
@@ -1292,8 +1292,8 @@ contains
 
       use m_flow, only: s1, hs, sabot, satop, sa1, ndkx, tem1, h_unsat, kmx
       use m_flowgeom, only: ndx, lnx
-      use m_flowparameters, only: jasal, inisal2D, uniformsalinityabovez, uniformsalinitybelowz, jatem, &
-                                  initem2D, inivel
+      use m_flowparameters, only: jasal, inisal2D, uniformsalinityabovez, uniformsalinitybelowz, temperature_model, &
+                                  TEMPERATURE_MODEL_NONE, initem2D, inivel
 
       use m_lateral_helper_fuctions, only: prepare_lateral_mask
       use m_hydrology_data, only: DFM_HYD_INFILT_CONST, DFM_HYD_INTERCEPT_LAYER
@@ -1432,7 +1432,7 @@ contains
          end if
 
       case ('initialtemperature')
-         if (jatem > 0) then
+         if (temperature_model /= TEMPERATURE_MODEL_NONE) then
             target_location_type = UNC_LOC_S
             target_array => tem1
             initem2D = 1
@@ -1484,7 +1484,7 @@ contains
          end if
 
       case ('initialverticaltemperatureprofile')
-         if (jatem > 0 .and. kmx > 0) then
+         if (temperature_model /= TEMPERATURE_MODEL_NONE .and. kmx > 0) then
             target_location_type = UNC_LOC_3DV
             target_array => tem1
          end if
@@ -1928,7 +1928,7 @@ contains
       use m_flowgeom, only: ndx
       use fm_external_forcings_data, only: success
       use m_hydrology_data, only: DFM_HYD_INFILT_CONST, &
-                                  HortonMinInfCap, HortonMaxInfCap, HortonDecreaseRate, HortonRecoveryRate, &
+                                  horton_infiltration_config, &
                                   InterceptThickness, interceptionmodel, DFM_HYD_INTERCEPT_LAYER, jadhyd, &
                                   PotEvap, InterceptHs, &
                                   infiltcap, infiltrationmodel
@@ -1944,16 +1944,16 @@ contains
       select case (str_tolower(qid))
       case ('hortonmininfcap')
          target_location_type = UNC_LOC_S
-         target_array => HortonMinInfCap
+         target_array => horton_infiltration_config%min_inf_cap
       case ('hortonmaxinfcap')
          target_location_type = UNC_LOC_S
-         target_array => HortonMaxInfCap
+         target_array => horton_infiltration_config%max_inf_cap
       case ('hortondecreaserate')
          target_location_type = UNC_LOC_S
-         target_array => HortonDecreaseRate
+         target_array => horton_infiltration_config%decrease_rate
       case ('hortonrecoveryrate')
          target_location_type = UNC_LOC_S
-         target_array => HortonRecoveryRate
+         target_array => horton_infiltration_config%recovery_rate
       case ('interceptionlayerthickness')
          target_location_type = UNC_LOC_S
          call realloc(InterceptHs, ndx, keepExisting=.true., fill=0.0_dp)

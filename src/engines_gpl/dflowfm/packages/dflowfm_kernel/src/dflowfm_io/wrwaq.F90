@@ -1,6 +1,6 @@
 !----- AGPL --------------------------------------------------------------------
 !
-!  Copyright (C)  Stichting Deltares, 2017-2025.
+!  Copyright (C)  Stichting Deltares, 2017-2026.
 !
 !  This file is part of Delft3D (D-Flow Flexible Mesh component).
 !
@@ -559,7 +559,7 @@ contains
       write (lunhyd, '(a,a)') 'salinity-file               ', trim(stmp)
 
       stmp = ' '
-      if (jatem > 0) then
+      if (temperature_model /= TEMPERATURE_MODEL_NONE) then
          stmp = ''''//trim(defaultFilename('tem', prefixWithDirectory=.false.))//''''
       else
          stmp = 'none'
@@ -1800,12 +1800,12 @@ contains
       end if
 
       ! Temperature file (salinity of computational cells)
-      if (jatem > 0) then
+      if (temperature_model /= TEMPERATURE_MODEL_NONE) then
          call waq_wri_tem(itim, defaultFilename('tem'), waqpar%luntem)
       end if
 
       ! Taus file (contains taus at the bottom of computational cells)
-      if (jawave == NO_WAVES .or. flowWithoutWaves) then ! If jawave > 0, then taus is obtained from subroutine tauwave (taus = taucur + tauwave).
+      if (jawave == NO_WAVES .or. (jawave > NO_WAVES .and. flow_without_waves)) then ! If jawave > 0, then taus is obtained from subroutine tauwave (taus = taucur + tauwave).
          call gettaus(1, 2)
       else
          call gettauswave(jawaveswartdelwaq)

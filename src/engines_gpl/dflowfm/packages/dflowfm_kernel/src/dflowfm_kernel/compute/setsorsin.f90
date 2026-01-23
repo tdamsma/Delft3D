@@ -1,6 +1,6 @@
 !----- AGPL --------------------------------------------------------------------
 !
-!  Copyright (C)  Stichting Deltares, 2017-2025.
+!  Copyright (C)  Stichting Deltares, 2017-2026.
 !
 !  This file is part of Delft3D (D-Flow Flexible Mesh component).
 !
@@ -108,7 +108,7 @@ contains
                end if
                do k = ksrc(2, n), ksrc(3, n)
                   !if (jasal > 0) constituents(isalt,k) = srsn(1+isalt,n)
-                  !if (jatem > 0) constituents(itemp,k) = srsn(1+itemp,n)
+                  !if (temperature_model /= TEMPERATURE_MODEL_NONE) constituents(itemp,k) = srsn(1+itemp,n)
                   do L = 1, numconst
                      constituents(L, k) = srsn(L + 1, n)
                   end do
@@ -165,7 +165,7 @@ contains
                end if
                do k = ksrc(5, n), ksrc(6, n)
                   !if (jasal > 0) constituents(isalt,k) = srsn(1+numconst+1+isalt,n)
-                  !if (jatem > 0) constituents(itemp,k) = srsn(1+numconst+1+itemp,n)
+                  !if (temperature_model /= TEMPERATURE_MODEL_NONE) constituents(itemp,k) = srsn(1+numconst+1+itemp,n)
                   do L = 1, numconst
                      constituents(L, k) = srsn(1 + numconst + 1 + L, n)
                   end do
