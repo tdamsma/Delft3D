@@ -9,6 +9,7 @@ import Delft3D.windows.*
 import Delft3D.template.*
 
 import Delft3D.ciUtilities.*
+import Delft3D.dvc.*
 import Delft3D.verschilanalyse.*
 
 version = "2025.07"
@@ -133,9 +134,10 @@ project {
         buildType(CopyExamples)
         buildType(SigCi)
         buildType(RunBashBatonUtilities)
+	buildType(DvcGarbageCollection)
 
         buildTypesOrder = arrayListOf(
-            TestPythonCiTools, TestBenchValidation, TestFortranStyler, CopyExamples, SigCi, RunBashBatonUtilities
+            TestPythonCiTools, TestBenchValidation, TestFortranStyler, CopyExamples, SigCi, RunBashBatonUtilities,DvcGarbageCollection
         )
     }
 
