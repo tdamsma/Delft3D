@@ -103,7 +103,7 @@ object LinuxBuild : BuildType({
           dockerRunParameters = "--rm"
           dockerPull = true
         }
-        exec {
+        script {
             name = "Build"
             scriptContent = """
                 #!/usr/bin/env bash
