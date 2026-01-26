@@ -241,8 +241,8 @@ class TestSetRunner(ABC):
                     logger.info("Testcase not executed (ignored)...\n")
 
             # Check for errors during execution of testcase
-            if len(testcase.getErrors()) > 0:
-                errstr = ",".join(str(e) for e in testcase.getErrors())
+            if len(testcase.get_errors()) > 0:
+                errstr = ",".join(str(e) for e in testcase.get_errors())
                 logger.error("Errors during testcase: " + errstr)
                 raise TestCaseFailure("Errors during testcase: " + errstr)
 
@@ -652,7 +652,7 @@ class TestSetRunner(ABC):
         if os.path.exists(copy_path):
             delete_directory(copy_path, logger)
 
-        # copy input to work directory
+        # Copy input to work directory
         logger.debug(f"Copying input from {local_path} to {copy_path}")
         if os.path.isdir(local_path):
             shutil.copytree(local_path, copy_path, symlinks=False, ignore_dangling_symlinks=True)

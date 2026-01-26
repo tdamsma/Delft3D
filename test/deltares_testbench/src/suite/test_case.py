@@ -31,13 +31,10 @@ class DirectoryState:
     files: Dict[str, datetime] = field(default_factory=dict)
     size: int = 0
 
-    def __init__(self, files: Dict[str, datetime] | None = None, size: int = 0) -> None:
-        self.files = files if files is not None else {}
-        self.size = size
 
-
-# Test case handler (compare or reference)
 class TestCase:
+    """Test Case instance (compare or reference)."""
+
     __test__: ClassVar[bool] = False
 
     # constructor
@@ -45,27 +42,27 @@ class TestCase:
     def __init__(self, config: TestCaseConfig, logger: ILogger) -> None:
         self.__config = config
         self.__logger = logger
-        self.__maxRunTime: float = self.__config.max_run_time
+        self.__max_run_time: float = self.__config.max_run_time
         self.__programs: List[Tuple[int, Program]] = []
         self.__errors: list[Exception] = []
 
-        logger.debug(f"Initializing test case ({self.__config.name}), max runtime : {str(self.__maxRunTime)}")
+        logger.debug(f"Initializing test case ({self.__config.name}), max runtime : {str(self.__max_run_time)}")
 
         self.__config.run_file_name = os.path.join(self.__config.absolute_test_case_path, "_tb3_char.run")
         refrunfile = os.path.join(config.absolute_test_case_reference_path, "_tb3_char.run")
 
         if os.path.exists(refrunfile):
-            refruntime = self.__findCharacteristicsRunTime__(refrunfile)
+            refruntime = self.__find_characteristics_run_time(refrunfile)
             if refruntime:
                 self.__config.ref_run_time = refruntime
                 if not self.__config.overrule_ref_max_run_time:
                     # set maxRunTime to 1.5 * reference runtime and add a few seconds (some systems start slow)
                     # The variation in runtimes vary a lot (different machines, other processes)
-                    self.__maxRunTime = refruntime * 1.5 + 10.0
-                    logger.info(f"Overwriting max run time via reference _tb3_char.run ({str(self.__maxRunTime)})")
+                    self.__max_run_time = refruntime * 1.5 + 10.0
+                    logger.info(f"Overwriting max run time via reference _tb3_char.run ({str(self.__max_run_time)})")
 
-        self.__maxRunTime = max(self.__maxRunTime, 120.0) * 5.0 + 300.0
-        logger.debug(f"maxRunTime increased to {str(self.__maxRunTime)}")
+        self.__max_run_time = max(self.__max_run_time, 120.0) * 5.0 + 300.0
+        logger.debug(f"maxRunTime increased to {str(self.__max_run_time)}")
 
     def run(self, programs: List[Program]) -> None:
         """Execute a Test Case.
@@ -85,7 +82,7 @@ class TestCase:
         # prepare the programs for running
 
         logger = self.__logger
-        self.__initializeProgramList__(programs)
+        self.__initialize_program_list(programs)
 
         logger.debug("Starting test case")
 
@@ -142,11 +139,12 @@ class TestCase:
         return DirectoryState(files=files, size=size)
 
     # get errors from Test Case
-    # output: list of Errors (type), can be None
-    def getErrors(self):
+    # output: list of Errors (type)
+    def get_errors(self) -> list[Exception]:
+        """Retrieve errors encountered during Test Case execution."""
         return self.__errors
 
-    def __initializeProgramList__(self, programs: List[Program]):
+    def __initialize_program_list(self, programs: List[Program]) -> None:
         """Prepare programs from configuration."""
         # programs are loaded by the manager
         shell_arguments = " ".join(self.__config.shell_arguments)
@@ -178,7 +176,7 @@ class TestCase:
     # retrieve runtime or none from _tb3_char.run file
     # input: path to _tb3_char.run file
     # output: actual runtime value (float)
-    def __findCharacteristicsRunTime__(self, filename):
+    def __find_characteristics_run_time(self, filename: str) -> float | None:
         with open(filename) as f:
             retval = None
             for line in f:

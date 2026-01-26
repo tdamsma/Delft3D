@@ -19,16 +19,25 @@ class TestTestCase:
         logger = mocker.Mock(spec=FileLogger)
         config = self.create_test_case_config("name_1", platform=platform)
         fs.create_file(f"{config.absolute_test_case_path}/input1.input", contents="input data")
+        program_config = ProgramConfig()
+        program_config.name = "program_1"
+        program_config.path = "program_1"
+        program_config.absolute_bin_path = "/bin/program_1"
+        program_config.sequence = 0
+        config.program_configs = [program_config]
+        program = Program(program_config, TestBenchSettings())
         test_case = TestCase(config, logger)
 
-        mocked_program = mocker.Mock(spec=Program)
-        mocked_program.run.side_effect = self.create_file_side_effect(f"{config.absolute_test_case_path}/out1.out")
-        mocked_program.name.return_value = "program_1"
-        test_case._TestCase__programs = [[0, mocked_program]]
-        mocker.patch("src.suite.test_case.TestCase.__initializeProgramList__")
+        def run_side_effect(self, _logger) -> None:
+            with open(f"{config.absolute_test_case_path}/out1.out", "w") as file:
+                file.write("File content")
+            self._Program__last_return_code = 0
+            self._Program__error = None
+
+        mocker.patch("src.suite.program.Program.run", new=run_side_effect)
 
         # Act
-        test_case.run([])
+        test_case.run([program])
 
         # Assert
         assert fs.exists(f"{config.absolute_test_case_path}/_tb3_char.run"), "during run no _tb3_char.run was created"
