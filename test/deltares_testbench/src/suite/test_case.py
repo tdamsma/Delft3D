@@ -6,12 +6,34 @@ Copyright (C)  Stichting Deltares, 2026
 import copy
 import os
 import time
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import ClassVar, Dict, List, Tuple
 
 from src.config.test_case_config import TestCaseConfig
 from src.suite.program import Program
 from src.utils.logging.i_logger import ILogger
 from src.utils.paths import Paths
+
+
+@dataclass
+class DirectoryState:
+    """Snapshot of a directory's state used to detect added/changed files.
+
+    Attributes
+    ----------
+    files : Dict[str, datetime]
+        Mapping of filename to last modification time (UTC).
+    size : int
+        Total size in bytes of all files in the directory at snapshot time.
+    """
+
+    files: Dict[str, datetime] = field(default_factory=dict)
+    size: int = 0
+
+    def __init__(self, files: Dict[str, datetime] | None = None, size: int = 0) -> None:
+        self.files = files if files is not None else {}
+        self.size = size
 
 
 # Test case handler (compare or reference)
@@ -68,7 +90,9 @@ class TestCase:
         logger.debug("Starting test case")
 
         # prepare presets for testbench run file
-        input_files, size = self.__get_initial_state()
+        pre_run_state = self.__get_state_directory(self.__config.absolute_test_case_path)
+        pre_run_files = pre_run_state.files
+        size = pre_run_state.size
 
         start_time = time.time()
         logger.debug(f"Test case start time {str(time.ctime(int(start_time)))}")
@@ -91,27 +115,31 @@ class TestCase:
         with open(self.__config.run_file_name, "w") as runfile:
             runfile.write("Start_size:" + str(size) + "\n")
             runfile.write("Runtime:" + str(elapsed_time) + "\n")
-            for allfile in os.listdir(self.__config.absolute_test_case_path):
+            post_run_state = self.__get_state_directory(self.__config.absolute_test_case_path)
+            for post_file in post_run_state.files:
                 # collect all added and changed files in the working directory (after running, compare to initial list)
-                if allfile not in {}.fromkeys(input_files, 0):
-                    runfile.write("Output_added:" + str(allfile) + "\n")
-                    size = size + os.path.getsize(os.path.join(self.__config.absolute_test_case_path, allfile))
+                if post_file not in {}.fromkeys(pre_run_files, 0):
+                    runfile.write("Output_added:" + str(post_file) + "\n")
+                    size = size + os.path.getsize(os.path.join(self.__config.absolute_test_case_path, post_file))
                 else:
-                    ftime = os.path.getmtime(os.path.join(self.__config.absolute_test_case_path, allfile))
-                    if ftime != input_files[allfile]:
-                        runfile.write("Output_changed:" + str(allfile) + "\n")
+                    ftime = post_run_state.files[post_file]
+                    if ftime != pre_run_files[post_file]:
+                        runfile.write("Output_changed:" + str(post_file) + "\n")
             runfile.write("End_size:" + str(size) + "\n")
 
-    def __get_initial_state(self) -> Tuple[Dict[str, float], int]:
-        inputfiles: Dict[str, float] = {}
+    def __get_state_directory(self, directory: str) -> DirectoryState:
+        files: Dict[str, datetime] = {}
         size: int = 0
 
         # collect all initial files in the working directory before running
-        for infile in os.listdir(self.__config.absolute_test_case_path):
-            inputfiles[infile] = os.path.getmtime(os.path.join(self.__config.absolute_test_case_path, infile))
-            size = size + os.path.getsize(os.path.join(self.__config.absolute_test_case_path, infile))
+        for infile in os.listdir(directory):
+            files[infile] = datetime.fromtimestamp(
+                os.path.getmtime(os.path.join(directory, infile)),
+                tz=timezone.utc,
+            )
+            size = size + os.path.getsize(os.path.join(directory, infile))
 
-        return inputfiles, size
+        return DirectoryState(files=files, size=size)
 
     # get errors from Test Case
     # output: list of Errors (type), can be None

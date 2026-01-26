@@ -4,8 +4,10 @@ from typing import List, Optional
 from pyfakefs.fake_filesystem import FakeFilesystem
 from pytest_mock import MockerFixture
 
+from src.config.program_config import ProgramConfig
 from src.config.test_case_config import TestCaseConfig
 from src.suite.program import Program
+from src.suite.test_bench_settings import TestBenchSettings
 from src.suite.test_case import TestCase
 from src.utils.logging.file_logger import FileLogger
 
@@ -39,6 +41,45 @@ class TestTestCase:
                     assert reference.startswith("Runtime:"), "_tb3_char.run content does not match"
                 else:
                     assert line == reference, "_tb3_char.run content does not match"
+
+    def test_run__changes_runfile(self, mocker: MockerFixture, fs: FakeFilesystem) -> None:
+        # Arrange
+        logger = mocker.Mock(spec=FileLogger)
+        config = self.create_test_case_config("name_2")
+        fs.create_dir(config.absolute_test_case_path)
+        input_path = f"{config.absolute_test_case_path}/input.mdu"
+        fs.create_file(input_path, contents="input data")
+        program_config = ProgramConfig()
+        program_config.name = "program_1"
+        program_config.path = "program_1"
+        program_config.absolute_bin_path = "/bin/program_1"
+        program_config.sequence = 0
+        config.program_configs = [program_config]
+        program = Program(program_config, TestBenchSettings())
+        test_case = TestCase(config, logger)
+
+        def run_side_effect(self, _logger) -> None:
+            # Modify existing file.
+            with open(input_path, "w") as file:
+                file.write("updated input")
+            # Add new file.
+            with open(f"{config.absolute_test_case_path}/new.out", "w") as file:
+                file.write("new output")
+            self._Program__last_return_code = 0
+            self._Program__error = None
+
+        mocker.patch("src.suite.program.Program.run", new=run_side_effect)
+
+        # Act
+        test_case.run([program])
+
+        # Assert
+        run_file = f"{config.absolute_test_case_path}/_tb3_char.run"
+        assert fs.exists(run_file)
+        with open(run_file, "r") as file:
+            lines = [line.strip() for line in file.readlines()]
+        assert any(line == "Output_changed:input.mdu" for line in lines)
+        assert any(line == "Output_added:new.out" for line in lines)
 
     def create_test_case_config(self, name: str, platform: Optional[str] = "lnx64") -> TestCaseConfig:
         config = TestCaseConfig()
