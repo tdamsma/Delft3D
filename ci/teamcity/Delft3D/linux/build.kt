@@ -80,15 +80,19 @@ object LinuxBuild : BuildType({
           scriptContent = """
               #!/usr/bin/env bash
               dnf install git -y
-              curl -LsSf https://astral.sh/uv/install.sh | sh
+              wget -qO- https://astral.sh/uv/install.sh | sh
               source ~/.local/bin/env
               uv sync 
               source .venv/bin/activate
               conan remote add deltaresconan "%deltaresconan_url%" --force 
               conan remote add deltaresconandev "%deltaresconandev_url%" --force 
               conan remote remove conancenter
+              export FC=/opt/intel/oneapi/mpi/2021.13/bin/mpiifx
+              export CXX=/opt/intel/oneapi/mpi/2021.13/bin/mpicxx 
+              export CC=/opt/intel/oneapi/mpi/2021.13/bin/mpiicx
+              
               conan profile detect
-              export FC=/opt/intel/oneapi/compiler/2024.2/bin/ifx
+              
               for recipedirectory in ./tools/conan/recipes/*/*/ ; do
                  if [ -f "$recipedirectory/conanfile.py" ]; then
                   echo "Adding / creating package: $recipedirectory"
