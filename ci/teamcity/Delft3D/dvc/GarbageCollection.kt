@@ -36,7 +36,9 @@ object DvcGarbageCollection : BuildType({
 	script {
             name = "Run garbage collector"
 	    id = "DvcGcExecute"
-	    scriptContent = """ 
+	    scriptContent = """
+                git status
+                git log  
         		uv venv --python=3.12 .venv
                 uv pip sync test/deltares_testbench/pip/lnx-dev-requirements.txt
                 source .venv/bin/activate
