@@ -37,6 +37,7 @@ object DvcGarbageCollection : BuildType({
             name = "Run garbage collector"
 	    id = "DvcGcExecute"
 	    scriptContent = """
+                git fetch --all --prune
                 git status
                 git branch  
         		uv venv --python=3.12 .venv
