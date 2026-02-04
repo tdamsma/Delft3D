@@ -6,6 +6,7 @@ Copyright (C)  Stichting Deltares, 2026
 import os
 import urllib.parse as parse
 from ftplib import FTP, error_perm
+from pathlib import Path
 from typing import Optional
 
 from src.config.credentials import Credentials
@@ -13,18 +14,21 @@ from src.utils.handlers.i_handler import IHandler
 from src.utils.logging.i_logger import ILogger
 
 
-# Upload and download for ftp paths
 class FTPHandler(IHandler):
+    """Upload and download for ftp paths."""
+
     # Download data from location
     # input: from, to and credentials
     def download(
         self,
-        from_path: str,
-        to_path: str,
+        from_path: Path | str,
+        to_path: Path,
         credentials: Credentials,
         version: Optional[str],
         logger: ILogger,
     ) -> None:
+        if isinstance(from_path, Path):
+            raise TypeError("from_path must be of type str for FTPHandler")
         logger.debug(f"setting up connection to FTP: {from_path}")
         url = parse.urlparse(from_path)
         ftp = FTP(url.netloc)
@@ -36,10 +40,10 @@ class FTPHandler(IHandler):
         ftp.cwd(url.path)
         logger.debug(f"going to root: {url.path}")
         # create root on filesystem
-        if not os.path.exists(to_path):
-            os.makedirs(to_path)
+        if not to_path.exists():
+            to_path.mkdir(parents=True)
         logger.debug("analysing directory structure on ftp")
-        self.__traverseDirectoryDownload__(ftp, "/", to_path, logger)
+        self.__traverse_directory_download__(ftp, "/", to_path, logger)
         ftp.close()
 
     # recursive traverse, fills ftpdirs array
@@ -47,7 +51,7 @@ class FTPHandler(IHandler):
     # frompath is relative dir of local system
     # destination is abs dir of ftp
     # topath is relative dir of ftp
-    def __traverseDirectoryUpload__(self, ftp, cwd, frompath, destination, topath, logger: ILogger):
+    def __traverse_directory_upload__(self, ftp, cwd, frompath, destination, topath, logger: ILogger):
         try:
             ftp.cwd(destination)
             if topath:
@@ -68,7 +72,7 @@ class FTPHandler(IHandler):
                     if parts:
                         for part in parts:
                             topath = topath + part + "/"
-                self.__traverseDirectoryUpload__(
+                self.__traverse_directory_upload__(
                     ftp,
                     cwd,
                     os.path.join(frompath, locfile),
@@ -87,19 +91,20 @@ class FTPHandler(IHandler):
     # recursive traverse download files
     # frompath is str of the form "/dir/folder/something/"
     # frompath should be the abs frompath to the root FOLDER of the file tree to download
-    def __traverseDirectoryDownload__(self, ftp, path, destination, logger: ILogger):
-        topath = destination + path.replace("/", os.sep)
+    def __traverse_directory_download__(self, ftp: FTP, path: str, destination: Path, logger: ILogger) -> None:
+        """Recursively traverse an FTP directory tree and download all files into the destination folder."""
+        topath = destination / Path(path.lstrip("/"))
         try:
             ftp.cwd(path)
             # clone path to destination
-            os.makedirs(topath)
+            topath.mkdir(parents=True, exist_ok=True)
             logger.debug(f"built path : {topath}")
         except OSError:
             # folder already exists at destination
             pass
-        except error_perm:
+        except error_perm as exc:
             # invalid entry (ensure input form: "/dir/folder/something/")
-            raise OSError("error: could not change to %s", path)
+            raise OSError(f"error: could not change to {path}") from exc
         # list children:
         filelist = ftp.nlst()
         for ftpfile in filelist:
@@ -107,10 +112,10 @@ class FTPHandler(IHandler):
                 # this will check if ftpfile is folder:
                 ftp.cwd(path + ftpfile + "/")
                 # if so, explore it:
-                self.__traverseDirectoryDownload__(ftp, path + ftpfile + "/", destination, logger)
+                self.__traverse_directory_download__(ftp, path + ftpfile + "/", destination, logger)
             except error_perm:
                 # possibly need a permission exception catch:
-                with open(os.path.join(topath, ftpfile), "wb") as ff:
+                with open(topath / ftpfile, "wb") as ff:
                     ftp.retrbinary("RETR " + ftpfile, ff.write)
 
                 logger.debug(f"downloaded {ftpfile}")

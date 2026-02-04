@@ -6,6 +6,7 @@
 import datetime
 import os
 import tempfile
+from pathlib import Path
 from typing import List, Tuple
 
 import netCDF4 as nc
@@ -23,24 +24,24 @@ from src.utils.logging.i_logger import ILogger
 
 
 @pytest.fixture
-def testdata() -> str:
-    testroot = os.path.abspath(os.path.dirname(__file__))
-    return os.path.join(testroot, "data")
+def testdata() -> Path:
+    testroot = Path(os.path.abspath(os.path.dirname(__file__)))
+    return testroot / "data"
 
 
 @pytest.fixture
-def right_path(testdata: str) -> str:
-    return os.path.join(testdata, "right")
+def right_path(testdata: Path) -> Path:
+    return testdata / "right"
 
 
 @pytest.fixture
-def left_path(testdata: str) -> str:
-    return os.path.join(testdata, "left")
+def left_path(testdata: Path) -> Path:
+    return testdata / "left"
 
 
 @pytest.fixture
-def test_path() -> str:
-    return os.path.join("test")
+def test_path() -> Path:
+    return Path("test")
 
 
 @pytest.fixture
@@ -57,7 +58,7 @@ def comparer() -> nccmp.NetcdfComparer:
 class TestNetcdfComparer:
     ##################################################
 
-    def test_compare(self, left_path: str, right_path: str, logger: ILogger) -> None:
+    def test_compare(self, left_path: Path, right_path: Path, logger: ILogger) -> None:
         fc = FileCheck()
         pm = Parameter()
         pm.name = "mesh2d_s1"
@@ -68,8 +69,8 @@ class TestNetcdfComparer:
         fc.type = FileType.NETCDF
         fc.parameters = {"par1": [pm]}
         comparer = nccmp.NetcdfComparer(enable_plotting=False)
-        path = os.path.join("test")
-        results = comparer.compare(left_path, right_path, fc, path, logger)
+        test_name = "test"
+        results = comparer.compare(left_path, right_path, fc, test_name, logger)
         resultstruc = results[0][3]
 
         # perform a set of asserts on the result structure
@@ -80,7 +81,7 @@ class TestNetcdfComparer:
         assert resultstruc.max_abs_diff_coordinates == (1, 0)
         assert pytest.approx(resultstruc.max_rel_diff) == 0.21672465466549
 
-    def test_time_independent_compare(self, left_path: str, right_path: str, logger: ILogger) -> None:
+    def test_time_independent_compare(self, left_path: Path, right_path: Path, logger: ILogger) -> None:
         fc = FileCheck()
         pm = Parameter()
         pm.name = "mesh2d_node_x"
@@ -90,19 +91,19 @@ class TestNetcdfComparer:
         fc.type = FileType.NETCDF
         fc.parameters = {"par1": [pm]}
         comparer = nccmp.NetcdfComparer(enable_plotting=False)
-        path = os.path.join("test")
-        results = comparer.compare(left_path, right_path, fc, path, logger)
+        test_name = "test"
+        results = comparer.compare(left_path, right_path, fc, test_name, logger)
         resultstruc = results[0][3]
         print(resultstruc.result)
 
-    def test_search_time_variable(self, left_path: str) -> None:
-        nc_root = nc.Dataset(os.path.join(left_path, "str_map.nc"))
+    def test_search_time_variable(self, left_path: Path) -> None:
+        nc_root = nc.Dataset(left_path / "str_map.nc")
         varid = nccmp.search_time_variable(nc_root, "mesh2d_s1")
         stname = varid.getncattr("standard_name")
         assert stname == "time"
 
-    def test_search_times_series_id(self, left_path: str) -> None:
-        nc_root = nc.Dataset(os.path.join(left_path, "str_his.nc"))
+    def test_search_times_series_id(self, left_path: Path) -> None:
+        nc_root = nc.Dataset(left_path / "str_his.nc")
         tssid = nccmp.search_times_series_id(nc_root)
         assert tssid == ["station_name"]
 
@@ -127,7 +128,7 @@ class TestNetcdfComparer:
 
         fc = self.create_netcdf_file_check("pump_name")
 
-        results = comparer.compare(left.filepath(), right.filepath(), fc, test_path, logger)
+        results = comparer.compare(Path(left.filepath()), Path(right.filepath()), fc, test_path, logger)
 
         self.assert_comparison_passed(results)
 
@@ -146,7 +147,7 @@ class TestNetcdfComparer:
 
         fc = self.create_netcdf_file_check("pump_name")
 
-        results = comparer.compare(left.filepath(), right.filepath(), fc, test_path, logger)
+        results = comparer.compare(Path(left.filepath()), Path(right.filepath()), fc, test_path, logger)
 
         self.assert_comparison_failed(results)
 

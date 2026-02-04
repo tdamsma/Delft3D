@@ -1,6 +1,7 @@
 import os
 import sys
 from os.path import abspath, dirname, join
+from pathlib import Path
 
 import pytest
 
@@ -21,18 +22,18 @@ sys.path.insert(0, abspath(join(dirname(__file__), "..")))
 class TestTreeComparer:
     def setup_method(self) -> None:
         self.python_version = sys.version_info[0]
-        self.path_to_file = ""
+        self.path_to_file = Path("")
         # Parse the classes that are going to be tested
         self.trcmp = TreeComparer()
         self.comp = DSeriesComparer()
         # Open the reference and tests files
-        self.testroot = abspath(os.path.dirname(__file__))
-        self.testdata = join(self.testroot, "data")
-        self.lp = join(self.testdata, "left")
-        self.rp = join(self.testdata, "right")
+        self.testroot = Path(__file__).resolve().parent
+        self.testdata = self.testroot / "data"
+        self.lp = self.testdata / "left"
+        self.rp = self.testdata / "right"
 
-        self.ftest = open(join(self.rp, "Unit_test.fod"), "r")
-        self.fref = open(join(self.lp, "Unit_ref_same.fod"), "r")
+        self.ftest = open(self.rp / "Unit_test.fod", "r")
+        self.fref = open(self.lp / "Unit_ref_same.fod", "r")
         # Define the trees
         self.testtree = DSeriesComparer.buildTrees(self.comp, self.ftest)[0]
         self.reftree = DSeriesComparer.buildTrees(self.comp, self.fref)[0]
@@ -169,7 +170,7 @@ class TestTreeComparer:
         xmlcp = XmlConfigParser()
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
-        settings.config_file = join(self.testdata, "Unit_test.xml")
+        settings.config_file = self.testdata / "Unit_test.xml"
         settings.credentials.name = "commandline"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
@@ -215,7 +216,7 @@ class TestTreeComparer:
             xmlcp = XmlConfigParser()
             logger = ConsoleLogger(LogLevel.DEBUG)
             settings = CommandLineSettings()
-            settings.config_file = join(self.testdata, "Unit_test.xml")
+            settings.config_file = self.testdata / "Unit_test.xml"
             settings.credentials.name = "commandline"
             xml_config = xmlcp.load(settings, logger)
             file = xml_config.testcase_configs
@@ -249,7 +250,7 @@ class TestTreeComparer:
         xmlcp = XmlConfigParser()
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
-        settings.config_file = join(self.testdata, "Unit_test.xml")
+        settings.config_file = self.testdata / "Unit_test.xml"
         settings.credentials.name = "commandline"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
@@ -273,7 +274,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_wrong_name.xml")
+        settings.config_file = self.testdata / "Unit_test_wrong_name.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         file_check = file[0].checks[0]
@@ -289,9 +290,9 @@ class TestTreeComparer:
 
         # Check if the correct exceptions are raised
         if self.python_version < 3:
-            assert "Cannot open reference file Unit_test_wrong.fod in " + self.lp == str(context.value)
+            assert f"Cannot open reference file Unit_test_wrong.fod in {self.lp}" == str(context.value)
         else:
-            assert "Cannot open reference file Unit_test_wrong.fod in " + self.lp == context.value.args[0]
+            assert f"Cannot open reference file Unit_test_wrong.fod in {self.lp}" == context.value.args[0]
 
     def test_compare_fail_to_open_files_referenced(self) -> None:
         from shutil import copyfile
@@ -306,7 +307,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_wrong_name.xml")
+        settings.config_file = self.testdata / "Unit_test_wrong_name.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         file_check = file[0].checks[0]
@@ -318,9 +319,9 @@ class TestTreeComparer:
 
         # Check if the correct exception is raised
         if self.python_version < 3:
-            assert "Cannot open reference file Unit_test_wrong.fod in " + self.lp == str(context.value)
+            assert f"Cannot open reference file Unit_test_wrong.fod in {self.lp}" == str(context.value)
         else:
-            assert "Cannot open reference file Unit_test_wrong.fod in " + self.lp == context.value.args[0]
+            assert f"Cannot open reference file Unit_test_wrong.fod in {self.lp}" == context.value.args[0]
 
     def test_compare_NOK_results(self) -> None:
         # Inputs for the function to be tested
@@ -330,7 +331,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_NOK_values.xml")
+        settings.config_file = self.testdata / "Unit_test_NOK_values.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         file_check = file[0].checks[0]
@@ -350,7 +351,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test.xml")
+        settings.config_file = self.testdata / "Unit_test.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameters = file[0].checks[0].parameters["parameters"]
@@ -367,7 +368,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_Ignored.xml")
+        settings.config_file = self.testdata / "Unit_test_Ignored.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameters = file[0].checks[0].parameters["parameters"]
@@ -388,7 +389,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_compare_this_node.xml")
+        settings.config_file = self.testdata / "Unit_test_compare_this_node.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameter = file[0].checks[0].parameters["parameters"][0]
@@ -447,7 +448,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_compare_this_node.xml")
+        settings.config_file = self.testdata / "Unit_test_compare_this_node.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameter = file[0].checks[0].parameters["parameters"][0]
@@ -504,7 +505,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_compare_this_node_1.xml")
+        settings.config_file = self.testdata / "Unit_test_compare_this_node_1.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameter = file[0].checks[0].parameters["parameters"][0]
@@ -651,7 +652,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_compare_this_node.xml")
+        settings.config_file = self.testdata / "Unit_test_compare_this_node.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameter = file[0].checks[0].parameters["parameters"][0]
@@ -711,7 +712,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_compare_this_node.xml")
+        settings.config_file = self.testdata / "Unit_test_compare_this_node.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameter = file[0].checks[0].parameters["parameters"][0]
@@ -735,7 +736,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_compare_this_node.xml")
+        settings.config_file = self.testdata / "Unit_test_compare_this_node.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameter = file[0].checks[0].parameters["parameters"][0]
@@ -769,7 +770,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_compare_this_node.xml")
+        settings.config_file = self.testdata / "Unit_test_compare_this_node.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameter = file[0].checks[0].parameters["parameters"][0]
@@ -803,7 +804,7 @@ class TestTreeComparer:
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
         settings.credentials.name = "commandline"
-        settings.config_file = join(self.testdata, "Unit_test_compare_this_node.xml")
+        settings.config_file = self.testdata / "Unit_test_compare_this_node.xml"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
         parameter: Parameter = file[0].checks[0].parameters["parameters"][0]
@@ -835,5 +836,5 @@ class TestTreeComparer:
 
     def teardown_method(self) -> None:
         self.fref.close()
-        self.fref.close()
+        self.ftest.close()
         return

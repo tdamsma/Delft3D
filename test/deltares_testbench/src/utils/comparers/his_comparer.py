@@ -4,6 +4,7 @@ Copyright (C)  Stichting Deltares, 2026
 """
 
 import os
+from pathlib import Path
 import struct
 import sys
 from datetime import datetime, timedelta
@@ -54,8 +55,8 @@ class HisComparer(IComparer):
 
     def compare(
         self,
-        left_path: str,
-        right_path: str,
+        left_path: Path,
+        right_path: Path,
         file_check: FileCheck,
         testcase_name: str,
         logger: ILogger,
@@ -64,8 +65,8 @@ class HisComparer(IComparer):
 
         Parameters
         ----------
-        left_path : str
-        right_path : str
+        left_path : Path
+        right_path : Path
         file_check : FileCheck
         testcase_name: str
             Name ot the test case.

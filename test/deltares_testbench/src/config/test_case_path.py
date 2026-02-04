@@ -3,7 +3,8 @@
 Copyright (C)  Stichting Deltares, 2026
 """
 
-from typing import Optional
+import os
+from pathlib import Path
 
 
 class TestCasePath:
@@ -11,8 +12,8 @@ class TestCasePath:
 
     __test__ = False  # Pytest gets confused by classes with names starting with 'Test'.
 
-    def __init__(self, prefix: str, version: Optional[str] = None) -> None:
-        self.__prefix = prefix
+    def __init__(self, prefix: Path | str, version: str | None = None) -> None:
+        self.__prefix: str = os.fspath(Path(prefix))
         self.__version = version
 
     @property
@@ -21,16 +22,16 @@ class TestCasePath:
         return self.__prefix
 
     @prefix.setter
-    def path(self, value: str) -> None:
+    def prefix(self, value: Path | str) -> None:
         """Set path prefix to the test case data."""
-        self.__prefix = value
+        self.__prefix = os.fspath(Path(value))
 
     @property
-    def version(self) -> Optional[str]:
+    def version(self) -> str | None:
         """Get version of test case data."""
         return self.__version
 
     @version.setter
-    def version(self, value: Optional[str]) -> None:
+    def version(self, value: str | None) -> None:
         """Set version of test case data."""
         self.__version = value

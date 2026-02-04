@@ -4,6 +4,7 @@ Copyright (C)  Stichting Deltares, 2025
 """
 
 import os
+from pathlib import Path
 from typing import Optional
 
 from dvc.dvcfile import load_file
@@ -26,7 +27,7 @@ class DvcHandler(IHandler):
             self.__repo = Repo(repo_root)
 
     def download(
-        self, from_path: str, to_path: str, credentials: Credentials, version: Optional[str], logger: ILogger
+        self, from_path: Path | str, to_path: Path, credentials: Credentials, version: Optional[str], logger: ILogger
     ) -> None:
         """Set up a DVC client connection.
 
@@ -34,9 +35,9 @@ class DvcHandler(IHandler):
 
         Parameters
         ----------
-        from_path : str
+        from_path : Path
             dvc file path.
-        to_path : str
+        to_path : Path
             Deprecated: use from_path as the location of the .dvc file.
         credentials : Credentials
             DVC credentials (used for remote storage access).
@@ -45,14 +46,17 @@ class DvcHandler(IHandler):
         logger : ILogger
             The logger that logs to a file.
         """
+        if isinstance(from_path, str):
+            raise TypeError("from_path must be of type Path for DvcHandler")
+
         self.__download_with_dvc_pull(from_path, logger)
 
-    def __download_with_dvc_pull(self, dvc_file: str, logger: ILogger) -> None:
+    def __download_with_dvc_pull(self, dvc_file: Path, logger: ILogger) -> None:
         """Download using DVC by reading the .dvc file and fetching from remote.
 
         Parameters
         ----------
-        dvc_file : str
+        dvc_file : Path
             Path to the .dvc file (e.g., "data/cases/e02_f002_c100.dvc").
         logger : ILogger
             Logger instance.
@@ -61,7 +65,7 @@ class DvcHandler(IHandler):
             logger.debug(f"Downloading DVC directory with file: {dvc_file}")
 
             # Check if .dvc file exists
-            if not os.path.isfile(dvc_file):
+            if not dvc_file.is_file():
                 raise FileNotFoundError(f"DVC file not found: {dvc_file}")
 
             dvcfile = load_file(self.__repo, dvc_file)

@@ -11,7 +11,6 @@ import re
 import subprocess
 import time
 from datetime import datetime
-from typing import Optional
 
 from src.config.program_config import ProgramConfig
 from src.config.types.mode_type import ModeType
@@ -48,7 +47,7 @@ class Program:
     def run(self, logger: ILogger) -> None:
         self.__execute__(logger)
 
-    def overwriteConfiguration(self, program_config: ProgramConfig) -> None:
+    def overwrite_configuration(self, program_config: ProgramConfig) -> None:
         """Overwrite program configuration settings.
 
         Parameters
@@ -66,7 +65,7 @@ class Program:
             # overwrite a shell if one is given
             if program_config.shell:
                 if program_config.shell.working_directory:
-                    program_config.shell.working_directory = Paths().rebuildToLocalPath(
+                    program_config.shell.working_directory = Paths().rebuild_to_local_path(
                         program_config.shell.working_directory
                     )
                 else:
@@ -108,7 +107,7 @@ class Program:
             if program_config.shell_remove_quotes:
                 self.__program_config.shell_remove_quotes = True
 
-    def getError(self) -> Exception | None:
+    def get_error(self) -> Exception | None:
         """Return sub process errors if any."""
         return self.__error
 
@@ -156,13 +155,13 @@ class Program:
                     logger.warning(f"{prog_path} contained error message - {error_message}")
                     self.__error = subprocess.CalledProcessError(-1, self.__program_config.path, error_message)
         except Exception as e:
-            logger.exception(f"{repr(e)} Could not execute program: {e.filename}")
+            logger.exception(f"{repr(e)} Could not execute program: {self.__program_config.path}")
             self.__error = e
 
     def __handle_process_output(self, logger: ILogger, completed_process: subprocess.CompletedProcess) -> None:
         if not self.__program_config.log_output_to_file:
             return
-        file_logger: Optional[FileLogger] = None
+        file_logger: FileLogger | None = None
 
         if self.__settings.command_line_settings.run_mode == ModeType.REFERENCE:
             time_str = datetime.now().strftime("%y%m%d_%H%M%S")
@@ -179,8 +178,8 @@ class Program:
         for line in completed_process.stdout.splitlines():
             file_logger.debug(line.decode())
 
-    def __start_process(self, logger):
-        execmd = self.__buildExeCommand__(logger)
+    def __start_process(self, logger: ILogger):
+        execmd = self.__build_exe_command__(logger)
         # Don't display the Windows GPF dialog if the invoked program dies.
         if platform.system() == "Windows":
             # http://msdn.microsoft.com/en-us/library/windows/desktop/ms680621(v=vs.85).aspx
@@ -216,7 +215,7 @@ class Program:
         return completed_process
 
     # create a command string for either windows or linux
-    def __buildExeCommand__(self, logger: ILogger):
+    def __build_exe_command__(self, logger: ILogger):
         logger.debug("Building command to be executed")
         if platform.system() != "Windows":
             if len(self.__program_config.modules) > 0 or (
@@ -274,30 +273,30 @@ class Program:
         # add environment variables
         for ev in self.__program_config.environment_variables:
             logger.debug(f"Adding environment variable {ev} : {self.__program_config.environment_variables[ev][1]}")
-            self.__program_config.environment[ev] = self.__insertOutputVariable__(
+            self.__program_config.environment[ev] = self.__insert_output_variable__(
                 self.__program_config.environment_variables[ev][1], logger
             )
         for sp in self.__program_config.search_paths:
             add_search_path(self.__program_config.environment, sp, logger)
         # start with the binary path
-        cmdAndArgs = str(self.__program_config.absolute_bin_path)
+        cmd_and_args = str(self.__program_config.absolute_bin_path)
         if platform.system() == "Windows":
             # Needed when the path contains spaces
-            cmdAndArgs = f'"{cmdAndArgs}"'
+            cmd_and_args = f'"{cmd_and_args}"'
         # add the given arguments
         for arg in self.__program_config.arguments:
             a = str(arg)
             # Add quotes around the argument when it is a path,
             # unless a flag is used to switch this off
-            if Paths().isPath(arg):
-                a = Paths().rebuildToLocalPath(a)
+            if Paths().is_path(arg):
+                a = Paths().rebuild_to_local_path(a)
                 if (not self.__program_config.shell and not self.__program_config.program_remove_quotes) or (
                     self.__program_config.shell and self.__program_config.shell.shell_remove_quotes
                 ):
                     a = f'"{a}"'
-            cmdAndArgs += f" {a}"
+            cmd_and_args += f" {a}"
         # replace argument variables containing [output()] variable and others with actual value
-        cmdAndArgs = self.__insertOutputVariable__(cmdAndArgs, logger)
+        cmd_and_args = self.__insert_output_variable__(cmd_and_args, logger)
         # if a shell has been specified we need to reformat the command string
         if self.__program_config.shell:
             # add shell environment variables to the working environment
@@ -306,50 +305,50 @@ class Program:
                     f"adding shell environment variable {ev} :"
                     + f" {self.__program_config.shell.environment_variables[ev][1]}"
                 )
-                self.__program_config.environment[ev] = self.__insertOutputVariable__(
+                self.__program_config.environment[ev] = self.__insert_output_variable__(
                     self.__program_config.shell.environment_variables[ev][1], logger
                 )
             for sp in self.__program_config.shell.search_paths:
                 add_search_path(self.__program_config.environment, sp, logger)
             # format shell command
-            shlAndArgs = str(self.__program_config.shell.absolute_bin_path)
-            LocalShellArgument = self.__program_config.shell_arguments
-            if LocalShellArgument == "":
+            shl_and_args = str(self.__program_config.shell.absolute_bin_path)
+            local_shell_argument = self.__program_config.shell_arguments
+            if local_shell_argument == "":
                 for arg in self.__program_config.shell.arguments:
                     a = str(arg)
-                    if Paths().isPath(arg) and not self.__program_config.shell.shell_remove_quotes:
+                    if Paths().is_path(arg) and not self.__program_config.shell.shell_remove_quotes:
                         a = f'"{a}"'
-                    shlAndArgs += f" {a}"
+                    shl_and_args += f" {a}"
             else:
-                shlAndArgs += " " + LocalShellArgument
-            shlAndArgs = self.__insertOutputVariable__(shlAndArgs, logger)
+                shl_and_args += " " + local_shell_argument
+            shl_and_args = self.__insert_output_variable__(shl_and_args, logger)
             if platform.system() == "Windows":
                 if self.__program_config.shell.shell_remove_quotes:
                     # Example: 'cmd \c vs <infile'
-                    return f"{shlAndArgs} {cmdAndArgs}"
+                    return f"{shl_and_args} {cmd_and_args}"
                 # Example: 'cmd \c "vs <infile"'
-                return f'{shlAndArgs} "{cmdAndArgs}"'
+                return f'{shl_and_args} "{cmd_and_args}"'
             else:
-                execmd = shlAndArgs.strip().split()
+                execmd = shl_and_args.strip().split()
                 if self.__program_config.shell.shell_remove_quotes:
                     # Example: ['bash', '-c', 'vs', '<infile']
-                    execmd.extend(cmdAndArgs.split(" "))
+                    execmd.extend(cmd_and_args.split(" "))
                 else:
                     # Example: ['bash', '-c', 'vs <infile']
-                    execmd.append(cmdAndArgs)
+                    execmd.append(cmd_and_args)
                 return execmd
         else:
             if platform.system() == "Windows":
                 # Example: 'svn checkout -r head url targetdir'
-                return cmdAndArgs
+                return cmd_and_args
             else:
                 # Example: ['svn', 'checkout', '-r', 'head', 'url', 'targetdir']
-                return cmdAndArgs.split(" ")
+                return cmd_and_args.split(" ")
 
     # replace an output variable and other with actual value
     # input: string to search in
     # return value: modified string
-    def __insertOutputVariable__(self, original: str, logger: ILogger):
+    def __insert_output_variable__(self, original: str, logger: ILogger):
         # replace [output(some_name)] result from previous run some_name in command string
         retval = original
         if "[output(" in retval:
@@ -388,5 +387,5 @@ class Program:
 
         # call this routine again if there is still something to replace
         if "[programpath(" in retval:
-            retval = self.__insertOutputVariable__(retval, logger)
+            retval = self.__insert_output_variable__(retval, logger)
         return retval

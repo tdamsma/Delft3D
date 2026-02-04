@@ -7,6 +7,7 @@ import copy
 import operator
 import re
 import sys
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from lxml import etree
@@ -80,10 +81,30 @@ class XmlConfigParser:
             Parsed XML Configuration.
         """
         self.__reset()
-        XmlConfigParser.__validate(settings)
+        XmlConfigParser.__validate(str(settings.config_file))
         self.__credentials.append(settings.credentials)
 
         return self.__parse(logger, settings)
+
+    class _OpenResolver(etree.Resolver):
+        """Resolver that reads external entities/includes via Python open().
+
+        This keeps parsing compatible with pyfakefs (which patches builtins.open).
+        """
+
+        def resolve(self, url: str, pubid: str, context: object) -> object:  # type: ignore[override]
+            try:
+                with open(url, "rb") as f:  # noqa: PTH123
+                    data = f.read()
+                return self.resolve_string(data, context)
+            except OSError:
+                return None
+
+    @staticmethod
+    def __parse_xml_file(path: str | Path, parser: etree.XMLParser) -> etree._ElementTree:
+        """Parse XML from a path via Python open() (pyfakefs-friendly)."""
+        with open(str(path), "rb") as f:  # noqa: PTH123
+            return etree.parse(f, parser, base_url=str(path))
 
     @staticmethod
     def __make_tree(path: str) -> XmlTree:
@@ -195,12 +216,12 @@ class XmlConfigParser:
                 del elem.attrib["{http://www.w3.org/XML/1998/namespace}base"]
 
     @staticmethod
-    def __validate(settings: CommandLineSettings) -> None:
+    def __validate(config_file: str) -> None:
         """Validate Xml file format."""
         xmlschema_doc = etree.parse("configs/xsd/deltaresTestbench.xsd")
         xmlschema = etree.XMLSchema(xmlschema_doc)
         parser = etree.XMLParser(load_dtd=True)
-        xml_doc: etree._ElementTree = etree.parse(settings.config_file, parser)
+        xml_doc: etree._ElementTree = etree.parse(config_file, parser)
         xml_doc.xinclude()
         XmlConfigParser.__remove_xml_base(xml_doc)
         xmlschema.assertValid(xml_doc)
@@ -208,7 +229,7 @@ class XmlConfigParser:
     def __parse(self, logger: IMainLogger, settings: CommandLineSettings) -> XmlConfig:
         """Parse the xml file."""
         xml_config = XmlConfig()
-        xml_tree = XmlConfigParser.__make_tree(settings.config_file)
+        xml_tree = XmlConfigParser.__make_tree(str(settings.config_file))
 
         xml_config.local_paths = self.__parse_config_tags(xml_tree.doc, settings)
         xml_config.program_configs = self.__parse_programs(xml_tree.doc, xml_tree.root_name, settings)
@@ -278,13 +299,13 @@ class XmlConfigParser:
     def __parse_local_paths(self, config_tag: Dict[str, Any]) -> LocalPaths:
         local_paths = LocalPaths()
 
-        def get_text(d) -> str:
-            return str(d[0]["txt"])
+        def get_path(d) -> Path:
+            return Path(d[0]["txt"])
 
         for lcl in XmlConfigParser.__loop(config_tag, "localPaths"):
-            local_paths.cases_path = get_text(lcl["testCasesDir"])
-            local_paths.engines_path = get_text(lcl["enginesDir"])
-            local_paths.reference_path = get_text(lcl["referenceDir"])
+            local_paths.cases_path = get_path(lcl["testCasesDir"])
+            local_paths.engines_path = get_path(lcl["enginesDir"])
+            local_paths.reference_path = get_path(lcl["referenceDir"])
 
         return local_paths
 
@@ -617,7 +638,7 @@ class XmlConfigParser:
         return test_case
 
     @staticmethod
-    def __get_overwrite_paths(rstr: str, who: str, what: str) -> Optional[str]:
+    def __get_overwrite_paths(rstr: str, who: str, what: str) -> Path | None:
         """Get overwrite paths from the override string."""
         if rstr is None or rstr == "":
             return None
@@ -633,7 +654,7 @@ class XmlConfigParser:
             if not str(call).startswith(what):
                 continue
             # found it
-            return path
+            return Path(path)
         # found nothing
         return None
 

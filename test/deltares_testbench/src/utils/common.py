@@ -10,6 +10,7 @@ import shutil
 import string
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Dict, Iterator, List, Tuple
 
 from src.config.credentials import Credentials
@@ -28,7 +29,7 @@ if platform.system() == "Windows":
 # add search path to environment
 # input: environment to add search path to, path
 def add_search_path(environment, sp, logger: ILogger) -> None:
-    search_path = Paths().rebuildToLocalPath(sp)
+    search_path = Paths().rebuild_to_local_path(sp)
     if platform.system() == "Windows":
         logger.debug(f"Adding windows search path {search_path}")
         environment["PATH"] = f"{search_path};{environment['PATH']}"
@@ -403,22 +404,22 @@ def __create_table_row(row: List, max_lengths: List[int]) -> str:
     return f"{row_str}|"
 
 
-def delete_directory(directory: str, logger: ILogger) -> None:
+def delete_directory(directory: Path, logger: ILogger) -> None:
     """Delete a directory recursively.
 
     Parameters
     ----------
-    directory : str
+    directory : Path
         Directory to remove.
     logger : ILogger
         Logger for logging errors.
     """
     for filename in os.listdir(directory):
-        file_path = os.path.join(directory, filename)
+        file_path = directory / filename
         try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
+            if file_path.is_file() or file_path.is_symlink():
+                file_path.unlink()
+            elif file_path.is_dir():
                 shutil.rmtree(file_path)
         except Exception as exc:
             logger.warning(f"error removing {directory}: {exc}")

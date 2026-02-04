@@ -27,12 +27,12 @@ from src.utils.paths import Paths
         ),
     ],
 )
-def test_split_network_path(path: str, expected: tuple[str, str, str]) -> None:
+def test_split_network_path(path: Path, expected: tuple[str, str, str]) -> None:
     # Arrange
     paths = Paths()
 
     # Act
-    server, folder, rest = paths.splitNetworkPath(path)
+    server, folder, rest = paths.split_network_path(path)
 
     # Assert
     assert (server, folder, rest) == expected
@@ -51,12 +51,12 @@ def test_split_network_path(path: str, expected: tuple[str, str, str]) -> None:
         pytest.param(r"C:\\temp\\file.txt", True, id="windows-path"),
     ],
 )
-def test_is_path(path: str, expected: bool) -> None:
+def test_is_path(path: Path, expected: bool) -> None:
     # Arrange
     paths = Paths()
 
     # Act
-    result = paths.isPath(path)
+    result = paths.is_path(path)
 
     # Assert
     assert result is expected
@@ -70,12 +70,12 @@ def test_is_path(path: str, expected: bool) -> None:
         pytest.param(r"C:\\temp\\file.txt", True, id="windows-absolute"),
     ],
 )
-def test_is_absolute(path: str, expected: bool) -> None:
+def test_is_absolute(path: Path, expected: bool) -> None:
     # Arrange
     paths = Paths()
 
     # Act
-    result = paths.isAbsolute(path)
+    result = paths.is_absolute(path)
 
     # Assert
     assert result is expected
@@ -84,10 +84,10 @@ def test_is_absolute(path: str, expected: bool) -> None:
 def test_rebuild_to_local_path_normalizes_mixed_separators() -> None:
     # Arrange
     paths = Paths()
-    mixed = "/a/b\\c/d"
+    mixed = Path("/a/b\\c/d")
 
     # Act
-    result = paths.rebuildToLocalPath(mixed)
+    result = paths.rebuild_to_local_path(mixed)
 
     # Assert
     assert result == os.path.join("/", "a", "b", "c", "d")
@@ -96,10 +96,10 @@ def test_rebuild_to_local_path_normalizes_mixed_separators() -> None:
 def test_rebuild_to_local_path_preserves_drive_letter() -> None:
     # Arrange
     paths = Paths()
-    mixed = "C:/folder/sub"
+    mixed = Path("C:/folder/sub")
 
     # Act
-    result = paths.rebuildToLocalPath(mixed)
+    result = paths.rebuild_to_local_path(mixed)
 
     # Assert
     assert result == os.path.join("C:\\", "folder", "sub")
@@ -108,25 +108,25 @@ def test_rebuild_to_local_path_preserves_drive_letter() -> None:
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
-        pytest.param(None, "fruit", "fruit", id="none-left"),
-        pytest.param("", "fruit", "fruit", id="empty-left"),
-        pytest.param("/etc/path", None, "/etc/path", id="none-right"),
-        pytest.param("/etc/path", "", "/etc/path", id="empty-right"),
-        pytest.param("/etc/path", "child", "/etc/path/child", id="linux-path"),
-        pytest.param(r"C:\user\documents", "child", r"C:\user\documents\child", id="windows-path"),
-        pytest.param("/etc/path", "/child", "/etc/path/child", id="trim-right-fwd"),
-        pytest.param(r"C:\root", r"\child", r"C:\root\child", id="trim-right-back"),
-        pytest.param(r"C:\root\\", "child", r"C:\root\child", id="trim-left-back"),
-        pytest.param("root", "sub/child", "root/sub/child", id="right-fwd-no-left-slash"),
-        pytest.param("root", r"sub\child", r"root\sub\child", id="right-back-no-left-slash"),
+        pytest.param(None, Path("fruit"), Path("fruit"), id="none-left"),
+        pytest.param(Path(), Path("fruit"), Path("fruit"), id="empty-left"),
+        pytest.param(Path("/etc/path"), None, Path("/etc/path"), id="none-right"),
+        pytest.param(Path("/etc/path"), Path(), Path("/etc/path"), id="empty-right"),
+        pytest.param(Path("/etc/path"), Path("child"), Path("/etc/path/child"), id="linux-path"),
+        pytest.param(Path(r"C:\user\documents"), Path("child"), Path(r"C:\user\documents\child"), id="windows-path"),
+        pytest.param(Path("/etc/path"), Path("/child"), Path("/etc/path/child"), id="trim-right-fwd"),
+        pytest.param(Path(r"C:\root"), Path(r"\child"), Path(r"C:\root\child"), id="trim-right-back"),
+        pytest.param(Path(r"C:\root\\"), Path("child"), Path(r"C:\root\child"), id="trim-left-back"),
+        pytest.param(Path("root"), Path("sub/child"), Path("root/sub/child"), id="right-fwd-no-left-slash"),
+        pytest.param(Path("root"), Path(r"sub\child"), Path(r"root\sub\child"), id="right-back-no-left-slash"),
     ],
 )
-def test_merge_path_elements(left: str | None, right: str, expected: str) -> None:
+def test_merge_path_elements(left: Path | None, right: Path | None, expected: Path) -> None:
     # Arrange
     paths = Paths()
 
     # Act
-    result = paths.mergePathElements(left, right)
+    result = paths.merge_path_elements(left, right)
 
     # Assert
     assert result == expected
@@ -135,11 +135,11 @@ def test_merge_path_elements(left: str | None, right: str, expected: str) -> Non
 @pytest.mark.parametrize(
     ("left", "segments", "expected"),
     [
-        pytest.param(None, ("fruit", "apple"), "fruit/apple", id="no-base"),
-        pytest.param("", ("fruit", "apple"), "fruit/apple", id="empty-base"),
-        pytest.param("/etc", ("sub1", "sub2"), "/etc/sub1/sub2", id="linux-base"),
-        pytest.param(r"C:\user", ("documents",), r"C:\user\documents", id="windows-base"),
-        pytest.param(None, ("", None), "", id="all-empty"),
+        pytest.param(None, (Path("fruit"), Path("apple")), Path("fruit/apple"), id="no-base"),
+        pytest.param(Path(), (Path("fruit"), Path("apple")), Path("fruit/apple"), id="empty-base"),
+        pytest.param(Path("/etc"), (Path("sub1"), Path("sub2")), Path("/etc/sub1/sub2"), id="linux-base"),
+        pytest.param(Path(r"C:\user"), (Path("documents"),), Path(r"C:\user\documents"), id="windows-base"),
+        pytest.param(None, (Path(), None), Path(), id="all-empty"),
         pytest.param(
             r"https://s3.deltares.nl/dsc-testbench/references",
             ("win64", "\n      e02_dflowfm/f012_inout/c0325_alloutrealistic_f12_e02_3dom_classmap"),
@@ -148,12 +148,12 @@ def test_merge_path_elements(left: str | None, right: str, expected: str) -> Non
         ),
     ],
 )
-def test_merge_full_path(left: str | None, segments: tuple[str, ...], expected: str) -> None:
+def test_merge_full_path(left: Path | None, segments: tuple[Path | None, ...], expected: Path) -> None:
     # Arrange
     paths = Paths()
 
     # Act
-    result = paths.mergeFullPath(left, *segments)
+    result = paths.merge_full_path(left, *segments)
 
     # Assert
     assert result == expected
@@ -169,10 +169,10 @@ def test_find_all_sub_files_returns_relative_files(tmp_path: Path) -> None:
     (root / "a" / "file1.txt").write_text("nested")
 
     # Act
-    result = paths.findAllSubFiles(str(root))
+    result = paths.find_all_sub_files(root)
 
     # Assert
-    assert sorted(result) == sorted(["b.txt", os.path.join("a", "file1.txt")])
+    assert sorted(result) == sorted([Path("b.txt"), Path("a") / "file1.txt"])
 
 
 def test_find_all_sub_folders_respects_exclude(tmp_path: Path) -> None:
@@ -185,11 +185,11 @@ def test_find_all_sub_folders_respects_exclude(tmp_path: Path) -> None:
     (root / "skip" / "child").mkdir()
 
     # Act
-    result = paths.findAllSubFolders(str(root), "skip")
+    result = paths.find_all_sub_folders(root, "skip")
 
     # Assert
     expected = {
-        os.path.abspath(str(root)),
-        os.path.abspath(str(root / "keep")),
+        root.resolve(),
+        (root / "keep").resolve(),
     }
     assert set(result) == expected

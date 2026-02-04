@@ -8,6 +8,7 @@ import os
 import re
 import sys
 from abc import ABC
+from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -52,8 +53,8 @@ class TimeseriesSetComparer(IComparer, ABC):
 
     def compare(
         self,
-        left_path: str,
-        right_path: str,
+        left_path: Path,
+        right_path: Path,
         file_check: FileCheck,
         testcase_name: str,
         logger: ILogger,
@@ -62,8 +63,8 @@ class TimeseriesSetComparer(IComparer, ABC):
         local_error = False
 
         filename = file_check.name
-        left_TS = self.getTimeseriesSet(os.path.join(left_path, filename))
-        right_TS = self.getTimeseriesSet(os.path.join(right_path, filename))
+        left_TS = self.getTimeseriesSet(left_path / filename)
+        right_TS = self.getTimeseriesSet(right_path / filename)
 
         for parameters in file_check.parameters.values():
             for parameter in parameters:

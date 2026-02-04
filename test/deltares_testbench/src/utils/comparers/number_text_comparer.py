@@ -6,6 +6,7 @@ Copyright (C)  Stichting Deltares, 2026
 import os
 import re
 import sys
+from pathlib import Path
 from sys import float_info
 from typing import Dict, List, Tuple
 
@@ -28,7 +29,7 @@ class NumberTextComparer(IComparer):
     __lineNumber = [0, 0]
     __columnNumber = [0, 0]
     __words = [[], []]
-    __startTag = [None, None]
+    __start_tag = [None, None]
     __is_number = [0, 0]
 
     # floats are separated by different characters.
@@ -45,13 +46,13 @@ class NumberTextComparer(IComparer):
     __sepToSpace = str.maketrans({c: f" {c} " for c in __separators})
 
     # compare left and right file
-    # input: left path, right path, FileCheck instance, logfilename (optional), startTag (optional)
+    # input: left path, right path, FileCheck instance, logfilename (optional), start_tag (optional)
     # output: boolean
 
     def compare(
         self,
-        left_path: str,
-        right_path: str,
+        left_path: Path,
+        right_path: Path,
         file_check: FileCheck,
         testcase_name: str,
         logger: ILogger,
@@ -60,7 +61,7 @@ class NumberTextComparer(IComparer):
         self.__lineNumber = [0, 0]
         self.__columnNumber = [0, 0]
         self.__words = [[], []]
-        self.__startTag = [start_tag, start_tag]
+        self.__start_tag = [start_tag, start_tag]
 
         min_ref_value = sys.float_info.max
         max_ref_value = -1.0 * min_ref_value
@@ -158,13 +159,13 @@ class NumberTextComparer(IComparer):
     #        self.__right == 1
     # output: None if no float found (anymore in file
     #         [float, lineNumber, columnNumber]
-    # Notes: - lines are skipped until startTag is found
+    # Notes: - lines are skipped until start_tag is found
     #        - float_left and float_right may be located on different lines (when using ncdump)
     #        - the following self.parameters are lists containing a left and a right value (using ilr to access it):
     #          __linenumber[ilr]  : counts the number of lines read from file
     #          __words[ilr]       : containing the words read from line. This itself is a list
     #          __columnNumber[ilr]: counts the number of words already "popped" from __words[ilr]
-    #          __startTag[ilr]    : Initially, startTag[left]==startTag[right]. startTag is set to None when found.
+    #          __start_tag[ilr]    : Initially, start_tag[left]==start_tag[right]. start_tag is set to None when found.
     #                               This may happen a-synchronous!
     #        - __parseText__ used to read a full file, returning a list of number/word (with their position indices).
     #          But this list can be that huge that Python runs out of memory.
@@ -190,12 +191,12 @@ class NumberTextComparer(IComparer):
                             break
                 if skip_this_line == 1:
                     continue
-                if self.__startTag[ilr] is not None:
-                    if str(line).find(self.__startTag[ilr]) > -1:
-                        # startTag found: start parsing, set startTag to None
-                        self.__startTag[ilr] = None
+                if self.__start_tag[ilr] is not None:
+                    if str(line).find(self.__start_tag[ilr]) > -1:
+                        # start_tag found: start parsing, set start_tag to None
+                        self.__start_tag[ilr] = None
                     else:
-                        # startTag not found yet: skip this line
+                        # start_tag not found yet: skip this line
                         continue
                 # Replace the separator characters into spaces and split
                 self.__words[ilr] = str.translate(line, self.__sepToSpace).split()

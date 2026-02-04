@@ -1,6 +1,7 @@
 import os
 import sys
 from io import StringIO
+from pathlib import Path
 from tokenize import generate_tokens
 from typing import List, Tuple
 
@@ -22,8 +23,8 @@ class DSeriesBenchmarkComparer(DSeriesComparer.DSeriesComparer):
         # call base class constructor
         DSeriesComparer.DSeriesComparer.__init__(self)
         self.skipped_keys.append("txt")
-        self.relTol_global = 1.0e10
-        self.absTol_global = 1.0e10
+        self.rel_tol_global = 1.0e10
+        self.abs_tol_global = 1.0e10
         return
 
         # the skipped keys should not be passed on in the next call of
@@ -32,16 +33,16 @@ class DSeriesBenchmarkComparer(DSeriesComparer.DSeriesComparer):
 
     def compare(
         self,
-        left_path: str,
-        right_path: str,
+        left_path: Path,
+        right_path: Path,
         file_check: FileCheck,
         testcase_name: str,
         logger: ILogger,
     ) -> List[Tuple[str, FileCheck, Parameter, ComparisonResult]]:
         filename = file_check.name
         self.test_path = right_path
-        test_file = os.path.join(right_path, filename)
-        csv_filename = test_file[: test_file.rfind(".")] + ".csv"
+        test_file = right_path / filename
+        csv_filename = str(test_file)[: str(test_file).rfind(".")] + ".csv"
 
         try:
             ftest = open(test_file, "r")
@@ -59,22 +60,22 @@ class DSeriesBenchmarkComparer(DSeriesComparer.DSeriesComparer):
             if parm.name.upper().strip() == "DEFAULT":
                 # other parameter specifications are ignored by this comparer
                 # it is only intended as container for general settings for this case and file
-                self.relTol_global = parm.tolerance_relative
-                self.absTol_global = parm.tolerance_absolute
-                if self.relTol_global is None:
-                    self.relTol_global = np.nan
-                if self.absTol_global is None:
-                    self.absTol_global = np.nan
+                self.rel_tol_global = parm.tolerance_relative
+                self.abs_tol_global = parm.tolerance_absolute
+                if self.rel_tol_global is None:
+                    self.rel_tol_global = np.nan
+                if self.abs_tol_global is None:
+                    self.abs_tol_global = np.nan
 
-        paramResults = []
-        varList = self.parse_params(csv_filename)
-        results = self.compareBenchmark(varList, right_path, filename)
+        param_results = []
+        var_list = self.parse_params(csv_filename)
+        results = self.compareBenchmark(var_list, right_path, filename)
 
         local_error = False
-        if (varList is not None) and (varList > []):
-            paramResults_file = os.path.join(right_path, f"param_results_{filename.split('.')[0]}.csv")
-            fparamResults = open(paramResults_file, "w")
-            fparamResults.write(
+        if (var_list is not None) and (var_list > []):
+            param_results_file = os.path.join(right_path, f"param_results_{filename.split('.')[0]}.csv")
+            fparam_results = open(param_results_file, "w")
+            fparam_results.write(
                 "%4s, %12s, %12s, %12s, %12s, %12s, %12s\n"
                 % (
                     "TEST",
@@ -109,7 +110,7 @@ class DSeriesBenchmarkComparer(DSeriesComparer.DSeriesComparer):
                     resultvalue = "%12.6f" % param_result["result value"]
                     benchmarkvalue = "%12.6f" % param_result["benchmark value"]
 
-                fparamResults.write(
+                fparam_results.write(
                     "%4s, %s, %s, %12.4e, %12.4e, %12.4e, %12.4e, %20s,                %s\n"
                     % (
                         param_result["valueOK"],
@@ -123,11 +124,11 @@ class DSeriesBenchmarkComparer(DSeriesComparer.DSeriesComparer):
                         var_path,
                     )
                 )
-                paramResults.append((testcase_name, file_check, local_parameter, end_result))
-            fparamResults.close()
+                param_results.append((testcase_name, file_check, local_parameter, end_result))
+            fparam_results.close()
         else:
             raise Exception("No variables in CSV-file to compare !")
-        return paramResults
+        return param_results
 
     def compareBenchmark(self, varList, ref_path, testcase):
         """
@@ -179,8 +180,8 @@ class DSeriesBenchmarkComparer(DSeriesComparer.DSeriesComparer):
                     raise Exception(var_notfound)
 
                 # Define default tolerances
-                absTol = self.absTol_global
-                relTol = self.relTol_global
+                absTol = self.abs_tol_global
+                relTol = self.rel_tol_global
                 # If tolerance is a specific input for a value assign them with that value
                 if "relTol" in var:
                     relTol = var["relTol"]

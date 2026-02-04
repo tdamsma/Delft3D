@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import List, Tuple
 
 from src.config.file_check import FileCheck
@@ -41,8 +42,8 @@ class ComparisonRunner(TestSetRunner):
         logger.info("Comparing results with reference")
 
         # Step 1: check if all files in the reference also exist in the compare run.
-        all_reference_files = Paths().findAllSubFiles(test_case_config.absolute_test_case_reference_path)
-        all_result_files = Paths().findAllSubFiles(test_case_config.absolute_test_case_path)
+        all_reference_files = Paths().find_all_sub_files(test_case_config.absolute_test_case_reference_path)
+        all_result_files = Paths().find_all_sub_files(test_case_config.absolute_test_case_path)
 
         self.__warn_for_missing_files(test_case_config, all_reference_files, all_result_files, logger)
 
@@ -159,8 +160,9 @@ class ComparisonRunner(TestSetRunner):
 
         return [(test_case_config.name, file_check, parameter, result)]
 
-    def __raise_error_when_missing(self, all_result_files: list[str], file_check: FileCheck) -> None:
-        in_results = Paths().rebuildToLocalPath(file_check.name) in all_result_files
+    def __raise_error_when_missing(self, all_result_files: list[Path], file_check: FileCheck) -> None:
+        in_results = Paths().rebuild_to_local_path(file_check.name) in all_result_files
+
         if (
             not in_results
             and os.path.splitext(file_check.name)[1] != ".log"
@@ -171,8 +173,8 @@ class ComparisonRunner(TestSetRunner):
     def __warn_for_missing_files(
         self,
         test_case_config: TestCaseConfig,
-        all_reference_files: List[str],
-        all_result_files: List[str],
+        all_reference_files: List[Path],
+        all_result_files: List[Path],
         logger: ILogger,
     ) -> None:
         if len(all_reference_files) == 0:
@@ -189,11 +191,11 @@ class ComparisonRunner(TestSetRunner):
                 ".tmp",
             ):
                 ignore = False
-                fllocal = Paths().rebuildToLocalPath(file_name)
+                fllocal = Paths().rebuild_to_local_path(file_name)
                 # To check whether a missing file can be ignored: use "config.getChecks()" instead of "comparers.keys()"
                 # Otherwise files without checks (but with the "ignore" sign) won't be used
                 for fc in test_case_config.checks:
-                    fclocal = Paths().rebuildToLocalPath(fc.name)
+                    fclocal = Paths().rebuild_to_local_path(fc.name)
                     if fclocal == fllocal:
                         ignore = fc.ignore
                         break

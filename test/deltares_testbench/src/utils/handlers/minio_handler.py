@@ -23,7 +23,7 @@ class MinIOHandler(IHandler):
     """MinIO wrapper, has handler interface."""
 
     def download(
-        self, from_path: str, to_path: str, credentials: Credentials, version: Optional[str], logger: ILogger
+        self, from_path: Path | str, to_path: Path, credentials: Credentials, version: Optional[str], logger: ILogger
     ) -> None:
         """Set up a Minio client connection.
 
@@ -31,9 +31,9 @@ class MinIOHandler(IHandler):
 
         Parameters
         ----------
-        from_path : str
+        from_path : Path | str
             Minio URL.
-        to_path : str
+        to_path : Path
             Dowload location.
         credentials : Credentials
             Minio credentials.
@@ -42,6 +42,9 @@ class MinIOHandler(IHandler):
         logger : ILogger
             The logger that logs to a file.
         """
+        if isinstance(from_path, Path):
+            raise TypeError("from_path must be of type str for MinIOHandler")
+
         match = re.match(r"^https://(?P<hostname>[^/]*)/(?P<bucket>[^/]*)/(?P<path>.*)$", from_path)
         if match is None:
             raise ValueError("Invalid `from_path` value. Must match pattern `https://{hostname}/{bucket-name}/{path}`")

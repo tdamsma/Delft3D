@@ -8,6 +8,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import ClassVar, Dict, List, Tuple
 
 from src.config.test_case_config import TestCaseConfig
@@ -98,7 +99,7 @@ class TestCase:
         for program in self.__programs:
             program[1].run(logger)
 
-            error = program[1].getError()
+            error = program[1].get_error()
             return_code = program[1].last_return_code
             if not program[1].ignore_return_code and return_code != 0 and error is not None:
                 self.__errors.append(error)
@@ -124,7 +125,7 @@ class TestCase:
                         runfile.write("Output_changed:" + str(post_file) + "\n")
             runfile.write("End_size:" + str(size) + "\n")
 
-    def __get_state_directory(self, directory: str) -> DirectoryState:
+    def __get_state_directory(self, directory: Path) -> DirectoryState:
         files: Dict[str, datetime] = {}
         size: int = 0
 
@@ -157,18 +158,20 @@ class TestCase:
 
             # Combine the program workdir with the testcase workdir
             if program_config.working_directory:
-                program_config.working_directory = Paths().mergePathElements(
-                    self.__config.absolute_test_case_path,
-                    program_config.working_directory,
+                program_config.working_directory = str(
+                    Paths().merge_path_elements(
+                        self.__config.absolute_test_case_path,
+                        Path(program_config.working_directory),
+                    )
                 )
             else:
-                program_config.working_directory = self.__config.absolute_test_case_path
+                program_config.working_directory = str(self.__config.absolute_test_case_path)
 
             # overwrite run configuration with given overrides
             program_config.shell_arguments = shell_arguments
             program_config.shell = shell
             program_config.case_name = self.__config.name
-            program_copy.overwriteConfiguration(program_config)
+            program_copy.overwrite_configuration(program_config)
 
             # add runner sequence number and runner configuration to local storage
             self.__programs.append((program_config.sequence, program_copy))

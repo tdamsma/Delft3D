@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 from os.path import abspath, dirname, isfile, join
+from pathlib import Path
 
 import pytest
 
@@ -23,9 +24,9 @@ class TestDSeriesBenchmarkComparer:
         # Defining settings that will be used commonly
         # First import the class to be tested and make it an attribute
         self.testroot = abspath(os.path.dirname(__file__))
-        self.testdata = join(self.testroot, "data")
-        self.lp = join(self.testdata, "left")
-        self.rp = join(self.testdata, "right")
+        self.testdata = Path(self.testroot) / "data"
+        self.lp = self.testdata / "left"
+        self.rp = self.testdata / "right"
         self.comp = DSeriesBenchmarkComparer()
 
         # Parse the xml file.
@@ -33,7 +34,7 @@ class TestDSeriesBenchmarkComparer:
         xmlcp = XmlConfigParser()
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
-        settings.config_file = join(self.testdata, "Unit_test.xml")
+        settings.config_file = self.testdata / "Unit_test.xml"
         settings.credentials.name = "commandline"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
@@ -48,20 +49,21 @@ class TestDSeriesBenchmarkComparer:
         ref_path = self.lp
         test_path = self.rp
         testcase_name = "Testing_all_the_fod_file"
+        logger = TestLogger()
 
         # Run the function
         with pytest.raises(Exception) as context:
-            DSeriesBenchmarkComparer.compare(self.comp, ref_path, test_path, self.file_check, testcase_name)
+            DSeriesBenchmarkComparer.compare(self.comp, ref_path, test_path, self.file_check, testcase_name, logger)
             # Check if the correct exception is raised
-            assert "Cannot open csv-file " + join(self.rp, "Unit_test.csv") == str(context.value)
+            assert f"Cannot open csv-file {self.rp / 'Unit_test.csv'}" == str(context.value)
 
     def test_compare(self) -> None:
         # Import the needed the packages
         # Delete files from directory so that they don't interfere with other tests
-        lfile = join(self.lp, "Unit_test_empty.csv")
+        lfile = self.lp / "Unit_test_empty.csv"
         if isfile(lfile):
             os.remove(lfile)
-        rfile = join(self.rp, "Unit_test_empty.csv")
+        rfile = self.rp / "Unit_test_empty.csv"
         if isfile(rfile):
             os.remove(rfile)
 
@@ -69,8 +71,8 @@ class TestDSeriesBenchmarkComparer:
         testcase_name = "Testing_all_the_fod_file"
 
         # Copy the Unit_test.csv files so that they can be read
-        shutil.copy2(join(self.testdata, "Unit_test.csv"), join(self.lp, "Unit_test.csv"))
-        shutil.copy2(join(self.testdata, "Unit_test.csv"), join(self.rp, "Unit_test.csv"))
+        shutil.copy2(self.testdata / "Unit_test.csv", self.lp / "Unit_test.csv")
+        shutil.copy2(self.testdata / "Unit_test.csv", self.rp / "Unit_test.csv")
 
         logger = TestLogger()
         # Run the function to be tested
@@ -79,11 +81,11 @@ class TestDSeriesBenchmarkComparer:
         )
 
         # Delete the files so that they don't interfere with the
-        os.remove(join(self.lp, "Unit_test.csv"))
-        os.remove(join(self.rp, "Unit_test.csv"))
+        os.remove(self.lp / "Unit_test.csv")
+        os.remove(self.rp / "Unit_test.csv")
 
         # Check if the result file is created
-        assert os.path.isfile(join(self.rp, "param_results_Unit_test.csv"))
+        assert os.path.isfile(self.rp / "param_results_Unit_test.csv")
 
         # Set output as True this will be changed through an iterative process if it is not true
         output = True
@@ -179,8 +181,8 @@ class TestDSeriesBenchmarkComparer:
         testcase = "comparebenchmarks.fod"
 
         # Setting the absolute and relative Tolerance
-        self.comp.absTol_global = 0.0005
-        self.comp.relTol_global = 0.0005
+        self.comp.abs_tol_global = 0.0005
+        self.comp.rel_tol_global = 0.0005
         # Call the function to be tested
         results = DSeriesBenchmarkComparer.compareBenchmark(self.comp, varlist, self.lp, testcase)
 
@@ -299,7 +301,7 @@ class TestDSeriesBenchmarkComparer:
             DSeriesBenchmarkComparer.compareBenchmark(self.comp, varlist, self.rp, testcase)
 
         # Check if the exception raised is what expected
-        assert "Cannot open tested file thisdoesnotexist.fod in " + self.rp == str(context.value)
+        assert f"Cannot open tested file thisdoesnotexist.fod in {self.rp}" == str(context.value)
 
     def test_compareBenchmark_Exception2(self) -> None:
         # Set inputs in this case there should be no errors
@@ -365,8 +367,8 @@ class TestDSeriesBenchmarkComparer:
         testcase = "comparebenchmarks.fod"
 
         # Setting the absolute and relative Tolerance
-        self.comp.absTol_global = 0.0005
-        self.comp.relTol_global = 0.0005
+        self.comp.abs_tol_global = 0.0005
+        self.comp.rel_tol_global = 0.0005
         # Call the function to be tested
         results = DSeriesBenchmarkComparer.compareBenchmark(self.comp, varlist, self.lp, testcase)
 
@@ -477,7 +479,7 @@ class TestDSeriesBenchmarkComparer:
         xmlcp = XmlConfigParser()
         logger = ConsoleLogger(LogLevel.DEBUG)
         settings = CommandLineSettings()
-        settings.config_file = join(self.testdata, "Unit_test_empty_file.xml")
+        settings.config_file = Path(self.testdata) / "Unit_test_empty_file.xml"
         settings.credentials.name = "commandline"
         xml_config = xmlcp.load(settings, logger)
         file = xml_config.testcase_configs
@@ -489,12 +491,12 @@ class TestDSeriesBenchmarkComparer:
 
         # Copy files in the paths of reference and test
         shutil.copy2(
-            join(self.testdata, "Unit_test_empty.csv"),
-            join(self.lp, "Unit_test_empty.csv"),
+            Path(self.testdata) / "Unit_test_empty.csv",
+            self.lp / "Unit_test_empty.csv",
         )
         shutil.copy2(
-            join(self.testdata, "Unit_test_empty.csv"),
-            join(self.rp, "Unit_test_empty.csv"),
+            Path(self.testdata) / "Unit_test_empty.csv",
+            self.rp / "Unit_test_empty.csv",
         )
 
         logger = TestLogger()
@@ -507,12 +509,12 @@ class TestDSeriesBenchmarkComparer:
         assert "No variables in CSV-file to compare !" == str(context.value)
 
         # Delete files from directory so that they don't interfere with other tests
-        os.remove(join(self.lp, "Unit_test_empty.csv"))
-        os.remove(join(self.rp, "Unit_test_empty.csv"))
+        os.remove(self.lp / "Unit_test_empty.csv")
+        os.remove(self.rp / "Unit_test_empty.csv")
 
     def test_parse_params(self) -> None:
         # Define the name of the csv file to be tested
-        csvfilename = join(self.lp, "parse_params.csv")
+        csvfilename = self.lp / "parse_params.csv"
 
         # Call the function to be tested
         varlist = DSeriesBenchmarkComparer.parse_params(self.comp, csvfilename)
@@ -534,14 +536,14 @@ class TestDSeriesBenchmarkComparer:
 
     def test_parse_params_no_file(self) -> None:
         # Define the name of the csv file to be tested
-        csvfilename = join(self.testdata, "filethatdoesnotexist.csv")
+        csvfilename = Path(self.testdata) / "filethatdoesnotexist.csv"
 
         # Call function but with with so that it catches all the exceptions
         with pytest.raises(Exception) as context:
             DSeriesBenchmarkComparer.parse_params(self.comp, csvfilename)
 
         # Check if the correct exceprion is raised
-        assert "Cannot open csv-file " + csvfilename == str(context.value)
+        assert "Cannot open csv-file " + str(csvfilename) == str(context.value)
 
     def test_compute_abs_difference_between_strings(self) -> None:
         dsbc = DSeriesBenchmarkComparer()

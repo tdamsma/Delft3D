@@ -3,7 +3,10 @@
 Copyright (C)  Stichting Deltares, 2026
 """
 
-from typing import Dict, List, Optional
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Dict, List
 
 from src.config.location import Location
 
@@ -13,7 +16,7 @@ class ProgramConfig:
 
     # constructor: always initialize variables
     def __init__(self) -> None:
-        self.__shell: Optional[ProgramConfig] = None
+        self.__shell: ProgramConfig | None = None
         self.__shell_arguments: str = ""
         self.__program_remove_quotes: bool = False
         self.__shell_remove_quotes: bool = False
@@ -23,27 +26,27 @@ class ProgramConfig:
         self.__name: str = ""
         self.__case_name: str = ""
         self.__locations: List[Location] = []
-        self.__path: str = ""
-        self.__search_paths: List[str] = []
+        self.__path: Path = Path()
+        self.__search_paths: List[Path] = []
         self.__add_search_paths: bool = False
         self.__exclude_search_paths_containing: str = ""
         self.__environment_vars: Dict[str, List[str]] = {}
         self.__environment: Dict[str, str] = {}
         self.__modules: List[str] = []
-        self.__absolute_bin_path: str = ""
-        self.__working_directory: Optional[str] = None
+        self.__absolute_bin_path: Path = Path()
+        self.__working_directory: Path | None = None
         self.__arguments: List[str] = []
         self.__sequence: int = 0
         self.__delay: float = 0
         self.__max_run_time: float = 0
 
     @property
-    def shell(self) -> Optional["ProgramConfig"]:
+    def shell(self) -> ProgramConfig | None:
         """Optional shell statement."""
         return self.__shell
 
     @shell.setter
-    def shell(self, value: Optional["ProgramConfig"]) -> None:
+    def shell(self, value: ProgramConfig | None) -> None:
         self.__shell = value
 
     @property
@@ -119,21 +122,21 @@ class ProgramConfig:
         self.__locations = value
 
     @property
-    def path(self) -> str:
+    def path(self) -> Path:
         """Path for program."""
         return self.__path
 
     @path.setter
-    def path(self, value: str) -> None:
+    def path(self, value: Path) -> None:
         self.__path = value
 
     @property
-    def search_paths(self) -> List[str]:
+    def search_paths(self) -> List[Path]:
         """Absolute search paths."""
         return self.__search_paths
 
     @search_paths.setter
-    def search_paths(self, value: List[str]) -> None:
+    def search_paths(self, value: List[Path]) -> None:
         self.__search_paths = value
 
     @property
@@ -176,21 +179,21 @@ class ProgramConfig:
         return self.__modules
 
     @property
-    def absolute_bin_path(self) -> str:
+    def absolute_bin_path(self) -> Path:
         """Absolute system path to binary."""
         return self.__absolute_bin_path
 
     @absolute_bin_path.setter
-    def absolute_bin_path(self, value: str) -> None:
+    def absolute_bin_path(self, value: Path) -> None:
         self.__absolute_bin_path = value
 
     @property
-    def working_directory(self) -> Optional[str]:
+    def working_directory(self) -> Path | None:
         """The working directory."""
         return self.__working_directory
 
     @working_directory.setter
-    def working_directory(self, value: Optional[str]) -> None:
+    def working_directory(self, value: Path | None) -> None:
         self.__working_directory = value
 
     @property

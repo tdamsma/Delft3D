@@ -5,6 +5,7 @@ Copyright (C)  Stichting Deltares, 2026
 
 import os
 import sys
+from pathlib import Path
 from sys import float_info
 from typing import List, Tuple
 
@@ -24,7 +25,7 @@ class AsciiComparer(IComparer):
     __lineNumber = [0, 0]
     __columnNumber = [0, 0]
     __words = [[], []]
-    __startTag = [None, None]
+    __start_tag = [None, None]
 
     # floats are separated by different characters.
     # Typical nefis.tkl line:
@@ -40,28 +41,28 @@ class AsciiComparer(IComparer):
     __sepToSpace = str.maketrans({c: f" {c} " for c in __separators})
 
     # compare left and right file
-    # input: left path, right path, FileCheck instance, logfilename (optional), startTag (optional)
+    # input: left path, right path, FileCheck instance, logfilename (optional), start_tag (optional)
     # output: boolean
     def compare(
         self,
-        left_path: str,
-        right_path: str,
+        left_path: Path,
+        right_path: Path,
         file_check: FileCheck,
         testcase_name: str,
         logger: ILogger,
-        startTag=None,
-        startColumn: int = 0,
-        endColumn: int = 0,
+        start_tag=None,
+        start_column: int = 0,
+        end_column: int = 0,
     ) -> List[Tuple[str, FileCheck, Parameter, ComparisonResult]]:
         self.__lineNumber = [0, 0]
         self.__columnNumber = [0, 0]
         self.__words = [[], []]
-        self.__startTag = [startTag, startTag]
+        self.__start_tag = [start_tag, start_tag]
 
         results = []
         local_error = False
 
-        nCompared = 0
+        n_compared = 0
         for parameters in file_check.parameters.values():
             for parameter in parameters:
                 logger.debug(f"Checking parameter: {parameter.name}")
@@ -74,61 +75,61 @@ class AsciiComparer(IComparer):
 
                 try:
                     filename = file_check.name
-                    with open(os.path.join(left_path, filename), "r") as leftFile:
-                        with open(os.path.join(right_path, filename), "r") as rightFile:
+                    with open(os.path.join(left_path, filename), "r") as left_file:
+                        with open(os.path.join(right_path, filename), "r") as right_file:
                             while True:
-                                leftData = self.__parseText__(leftFile, self.__left)
-                                rightData = self.__parseText__(rightFile, self.__right)
+                                left_data = self.__parseText__(left_file, self.__left)
+                                right_data = self.__parseText__(right_file, self.__right)
 
-                                if leftData is None and rightData is None:
+                                if left_data is None and right_data is None:
                                     # Finished comparing the files
                                     logger.debug(f"Absolute Tolerance: {parameter.tolerance_absolute}")
                                     logger.debug(f"Relative Tolerance: {parameter.tolerance_relative}")
-                                    logger.debug(f"Compared {nCompared} floats")
+                                    logger.debug(f"Compared {n_compared} floats")
                                     break
-                                elif leftData is None and rightData is not None:
+                                elif left_data is None and right_data is not None:
                                     raise TestCaseFailure(
                                         "Still floats found in right file after comparing %i floats in both files: value=%f line=%i column=%i"
                                         % (
-                                            nCompared,
-                                            rightData[0],
-                                            rightData[1],
-                                            rightData[2],
+                                            n_compared,
+                                            right_data[0],
+                                            right_data[1],
+                                            right_data[2],
                                         )
                                     )
-                                elif leftData is not None and rightData is None:
+                                elif left_data is not None and right_data is None:
                                     raise TestCaseFailure(
                                         "Still floats found in left file after comparing %i floats in both files: value=%f line=%i column=%i"
                                         % (
-                                            nCompared,
-                                            leftData[0],
-                                            leftData[1],
-                                            leftData[2],
+                                            n_compared,
+                                            left_data[0],
+                                            left_data[1],
+                                            left_data[2],
                                         )
                                     )
 
                                 if (
-                                    startColumn > 0
-                                    and endColumn > 0
-                                    and (leftData[2] < startColumn or leftData[2] > endColumn)
+                                    start_column > 0
+                                    and end_column > 0
+                                    and (left_data[2] < start_column or left_data[2] > end_column)
                                 ):
                                     continue
-                                result.line_number = min(result.line_number, leftData[1])
+                                result.line_number = min(result.line_number, left_data[1])
 
                                 # Assuming that leftData is the data from the reference run.
-                                max_ref_value = max(leftData[0], max_ref_value)
-                                min_ref_value = min(leftData[0], min_ref_value)
+                                max_ref_value = max(left_data[0], max_ref_value)
+                                min_ref_value = min(left_data[0], min_ref_value)
 
-                                nCompared += 1
-                                diff = abs(leftData[0] - rightData[0])
+                                n_compared += 1
+                                diff = abs(left_data[0] - right_data[0])
                                 if diff > 2 * float_info.epsilon and diff > result.max_abs_diff:
                                     result.max_abs_diff = diff
-                                    result.max_abs_diff_coordinates = (nCompared,)
+                                    result.max_abs_diff_coordinates = (n_compared,)
                                     result.max_abs_diff_values = (
-                                        leftData[0],
-                                        rightData[0],
+                                        left_data[0],
+                                        right_data[0],
                                     )
-                                    result.column_number = leftData[2]
+                                    result.column_number = left_data[2]
 
                     # Make the absolute difference in maxDiff relative, by dividing by (max_ref_value-min_ref_value).
                     if result.max_abs_diff < 2 * sys.float_info.epsilon:
@@ -156,33 +157,33 @@ class AsciiComparer(IComparer):
     #        self.__right == 1
     # output: None if no float found (anymore in file
     #         [float, lineNumber, columnNumber]
-    # Notes: - lines are skipped until startTag is found
+    # Notes: - lines are skipped until start_tag is found
     #        - float_left and float_right may be located on different lines (when using ncdump)
     #        - the following self.parameters are lists containing a left and a right value (using ilr to access it):
     #          __linenumber[ilr]  : counts the number of lines read from file
     #          __words[ilr]       : containing the words read from line. This itself is a list
     #          __columnNumber[ilr]: counts the number of words already "popped" from __words[ilr]
-    #          __startTag[ilr]    : Initially, startTag[left]==startTag[right]. startTag is set to None when found.
+    #          __start_tag[ilr]    : Initially, start_tag[left]==start_tag[right]. start_tag is set to None when found.
     #                               This may happen a-synchronous!
     #        - __parseText__ used to read a full file, returning a list of reals (with their position indices).
     #          But this list can be that huge that Python runs out of memory.
     #          Therefore __parseText__ now returns only a single real (with its position indices).
-    def __parseText__(self, fileHandle, ilr):
+    def __parseText__(self, file_handle, ilr):
         result = None
         while True:
             if len(self.__words[ilr]) == 0:
                 self.__columnNumber[ilr] = 0
-                line = fileHandle.readline()
+                line = file_handle.readline()
                 if line == "":
                     # Finished reading file. No float to return
                     break
                 self.__lineNumber[ilr] += 1
-                if self.__startTag[ilr] is not None:
-                    if str(line).find(self.__startTag[ilr]) > -1:
-                        # startTag found: start parsing, set startTag to None
-                        self.__startTag[ilr] = None
+                if self.__start_tag[ilr] is not None:
+                    if str(line).find(self.__start_tag[ilr]) > -1:
+                        # start_tag found: start parsing, set start_tag to None
+                        self.__start_tag[ilr] = None
                     else:
-                        # startTag not found yet: skip this line
+                        # start_tag not found yet: skip this line
                         continue
                 # Replace the separator characters into spaces and split
                 self.__words[ilr] = str.translate(line, self.__sepToSpace).split()
@@ -190,26 +191,26 @@ class AsciiComparer(IComparer):
                 if len(self.__words[ilr]) == 0:
                     # This line does not contain words. Continue with reading next line
                     continue
-            aWord = self.__words[ilr].pop(0)
+            a_word = self.__words[ilr].pop(0)
             self.__columnNumber[ilr] += 1
             if (
-                str(aWord).lower().find("#inf") > -1
-                or str(aWord).lower().find("#ind") > -1
-                or str(aWord).lower().find("#nan") > -1
+                str(a_word).lower().find("#inf") > -1
+                or str(a_word).lower().find("#ind") > -1
+                or str(a_word).lower().find("#nan") > -1
             ):
                 raise TestCaseFailure(
                     "Error during comparing: NaN found ("
-                    + str(aWord)
+                    + str(a_word)
                     + ') in file "'
-                    + str(fileHandle.name)
+                    + str(file_handle.name)
                     + '", line '
                     + str(self.__lineNumber[ilr])
                     + " word "
                     + str(self.__columnNumber[ilr])
                 )
             try:
-                aFloat = float(aWord)
-                result = [aFloat, self.__lineNumber[ilr], self.__columnNumber[ilr]]
+                a_float = float(a_word)
+                result = [a_float, self.__lineNumber[ilr], self.__columnNumber[ilr]]
                 # Yes, we have a float. Break out of while loop
                 break
             except:

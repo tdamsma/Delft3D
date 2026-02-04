@@ -5,6 +5,7 @@ Copyright (C)  Stichting Deltares, 2026
 
 import os
 import shutil
+from pathlib import Path
 from typing import Optional
 
 from src.config.credentials import Credentials
@@ -22,20 +23,23 @@ class LocalNetHandler(IHandler):
     # input: from, to and optional credentials
     def download(
         self,
-        from_path: str,
-        to_path: str,
+        from_path: Path | str,
+        to_path: Path,
         credentials: Credentials,
         version: Optional[str],
         logger: ILogger,
     ) -> None:
+        if isinstance(from_path, str):
+            raise TypeError("from_path must be of type Path for LocalNetHandler")
+
         handler = ResolveHandler.detect(from_path, logger, credentials)
-        rtp = Paths().rebuildToLocalPath(to_path)
+        rtp = Paths().rebuild_to_local_path(to_path)
         if handler == HandlerType.PATH:
-            rfp = Paths().rebuildToLocalPath(from_path)
+            rfp = Paths().rebuild_to_local_path(from_path)
             logger.debug(f"copying locally from {os.path.abspath(rfp)} to {os.path.abspath(rfp)}")
             shutil.copytree(os.path.abspath(rfp), os.path.abspath(rtp))
         if handler == HandlerType.NET:
-            server, folder, rest = Paths().splitNetworkPath(from_path)
+            server, folder, rest = Paths().split_network_path(from_path)
             mp, nm = mount_network_drive(server, folder, credentials, logger)
             logger.debug(f"mounted share to {mp}")
             e = None

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import List, Tuple
 
 from src.config.file_check import FileCheck
@@ -13,8 +14,8 @@ class IComparer(ABC):
     @abstractmethod
     def compare(
         self,
-        left_path: str,
-        right_path: str,
+        left_path: Path,
+        right_path: Path,
         file_check: FileCheck,
         testcase_name: str,
         logger: ILogger,
@@ -23,9 +24,9 @@ class IComparer(ABC):
 
         Parameters
         ----------
-        left_path : str
+        left_path : Path
             Path to the first file.
-        right_path : str
+        right_path : Path
             Path to the second file.
         file_check : FileCheck
             File check information.

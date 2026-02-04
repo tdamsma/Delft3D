@@ -6,6 +6,7 @@ Copyright (C)  Stichting Deltares, 2026
 import os
 import urllib.parse as parse
 import urllib.request as url_lib
+from pathlib import Path
 from typing import Optional
 
 from src.config.credentials import Credentials
@@ -13,18 +14,22 @@ from src.utils.handlers.i_handler import IHandler
 from src.utils.logging.i_logger import ILogger
 
 
-# Upload and download for http(s) paths
 class HTTPHandler(IHandler):
+    """Upload and download for http(s) paths."""
+
     # Download data from location
     # input: from (assumes this is network), to and optional credentials
     def download(
         self,
-        from_path: str,
-        to_path: str,
+        from_path: Path | str,
+        to_path: Path,
         credentials: Credentials,
         version: Optional[str],
         logger: ILogger,
     ) -> None:
+        if isinstance(from_path, Path):
+            raise TypeError("from_path must be of type str for HTTPHandler")
+
         fn = from_path.split("/")[-1]
         if not os.path.exists(to_path):
             os.makedirs(to_path)

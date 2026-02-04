@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Optional
 
 from src.config.credentials import Credentials
@@ -6,11 +7,13 @@ from src.utils.logging.i_logger import ILogger
 
 
 class IHandler(ABC):
+    """Interface for download handlers."""
+
     @abstractmethod
     def download(
         self,
-        from_path: str,
-        to_path: str,
+        from_path: Path | str,
+        to_path: Path,
         credentials: Credentials,
         version: Optional[str],
         logger: ILogger,
@@ -19,7 +22,7 @@ class IHandler(ABC):
 
         Parameters
         ----------
-        from_path : str
+        from_path : str | Path
             Original path.
         to_path : str
             Destination path.

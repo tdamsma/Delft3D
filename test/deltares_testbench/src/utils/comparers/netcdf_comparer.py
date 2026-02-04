@@ -7,6 +7,7 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 import netCDF4 as nc
@@ -175,8 +176,8 @@ class NetcdfComparer(IComparer):
 
     def compare(
         self,
-        left_path: str,
-        right_path: str,
+        left_path: Path,
+        right_path: Path,
         file_check: FileCheck,
         testcase_name: str,
         logger: ILogger,

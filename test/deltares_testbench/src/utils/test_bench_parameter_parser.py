@@ -6,6 +6,7 @@ Copyright (C)  Stichting Deltares, 2026
 import getpass
 import os
 from argparse import ArgumentParser, Namespace
+from pathlib import Path
 from typing import Any, List, Optional
 
 from src.config.credentials import Credentials
@@ -66,7 +67,13 @@ class TestBenchParameterParser:
         settings.filter = args.filter
         # Determine type of run
         settings.run_mode = cls.__get_argument_value("run_mode", args) or ModeType.LIST
-        settings.config_file = cls.__get_argument_value("config", args) or "config.xml"
+
+        config_arg = cls.__get_argument_value("config", args)
+        if isinstance(config_arg, str) and str(config_arg) != "":
+            settings.config_file = Path(config_arg)
+        else:
+            settings.config_file = Path("config.xml")
+
         settings.credentials = cls.__get_credentials(args, settings.teamcity, settings.log_level)
 
         settings.skip_post_processing = cls.__get_argument_value("skip_post_processing", args) or False

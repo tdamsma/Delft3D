@@ -1,8 +1,8 @@
 import glob
 import os
-import pathlib as pl
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from typing import List
 from unittest.mock import MagicMock, PropertyMock, call
 
@@ -36,34 +36,36 @@ class FakeDownloadMode(Enum):
 
 def patch_fake_download(mocker: MockerFixture, fs: FakeFilesystem, mode: FakeDownloadMode) -> None:
     def _fake_download(
-        from_path: str,
-        to_path: str,
+        from_path: Path,
+        to_path: Path,
         programs,
         logger,
         credentials,
         version,
     ) -> None:
+        to_path_str = str(to_path)
+
         match mode:
             case FakeDownloadMode.ALL:
-                fs.makedirs(to_path, exist_ok=True)
+                fs.makedirs(to_path_str, exist_ok=True)
                 return
             case FakeDownloadMode.REFS_ONLY:
-                if to_path.startswith("/refs"):
-                    fs.makedirs(to_path, exist_ok=True)
+                if to_path_str.startswith("/refs"):
+                    fs.makedirs(to_path_str, exist_ok=True)
                 return
             case FakeDownloadMode.FILES:
-                if to_path.startswith("/refs"):
-                    fs.makedirs(to_path, exist_ok=True)
-                elif to_path.startswith("/cases"):
-                    fs.makedirs(to_path, exist_ok=True)
-                    fs.makedirs(f"{to_path}/sub", exist_ok=True)
-                    fs.create_file(f"{to_path}/sub/real.txt", contents="hello")
+                if to_path_str.startswith("/refs"):
+                    fs.makedirs(to_path_str, exist_ok=True)
+                elif to_path_str.startswith("/cases"):
+                    fs.makedirs(to_path_str, exist_ok=True)
+                    fs.makedirs(str(to_path / "sub"), exist_ok=True)
+                    fs.create_file(str(to_path / "sub" / "real.txt"), contents="hello")
             case FakeDownloadMode.OVERWRITE:
-                if to_path.startswith("/refs"):
-                    fs.makedirs(to_path, exist_ok=True)
-                elif to_path.startswith("/cases"):
-                    fs.makedirs(to_path, exist_ok=True)
-                    fs.create_file(f"{to_path}/file.txt", contents="new")
+                if to_path_str.startswith("/refs"):
+                    fs.makedirs(to_path_str, exist_ok=True)
+                elif to_path_str.startswith("/cases"):
+                    fs.makedirs(to_path_str, exist_ok=True)
+                    fs.create_file(str(to_path / "file.txt"), contents="new")
 
     mocker.patch("src.suite.test_set_runner.HandlerFactory.download", side_effect=_fake_download)
 
@@ -92,8 +94,10 @@ class TestComparisonRunner:
         runner.run_tests_sequentially()
 
         # Assert
-        ref_path = Paths().rebuildToLocalPath(Paths().mergeFullPath("references", "win64", "Name_1"))
-        case_path = Paths().rebuildToLocalPath(Paths().mergeFullPath("cases", "win64", "Name_1"))
+        ref_path = Paths().rebuild_to_local_path(
+            Paths().merge_full_path(Path("references"), Path("win64"), Path("Name_1"))
+        )
+        case_path = Paths().rebuild_to_local_path(Paths().merge_full_path(Path("cases"), Path("win64"), Path("Name_1")))
         expected_log_message1 = f"Downloading reference result, {ref_path} from https://deltares.nl/win64/abc/prefix"
         expected_log_message2 = f"Downloading input of case, {case_path} from https://deltares.nl/win64/abc/prefix"
         assert call(expected_log_message1) in testcase_logger.debug.call_args_list
@@ -153,8 +157,12 @@ class TestComparisonRunner:
         runner.run_tests_sequentially()
 
         # Assert
-        ref_path = Paths().rebuildToLocalPath(Paths().mergeFullPath("references", "win64", "testname"))
-        case_path = Paths().rebuildToLocalPath(Paths().mergeFullPath("cases", "win64", "testname"))
+        ref_path = Paths().rebuild_to_local_path(
+            Paths().merge_full_path(Path("references"), Path("win64"), Path("testname"))
+        )
+        case_path = Paths().rebuild_to_local_path(
+            Paths().merge_full_path(Path("cases"), Path("win64"), Path("testname"))
+        )
         expected_log_message1 = f"Downloading reference result, {ref_path} from https://deltares.nl/win64/abc/prefix"
         expected_log_message2 = f"Downloading input of case, {case_path} from https://deltares.nl/win64/abc/prefix"
         assert call(expected_log_message1) in testcase_logger.debug.call_args_list
@@ -164,7 +172,7 @@ class TestComparisonRunner:
     def test_prepare_case_uses_dvc(self, mocker: MockerFixture) -> None:
         # Arrange
         settings = TestBenchSettings()
-        settings.local_paths = LocalPaths(cases_path="data/cases", references_path="data/cases")
+        settings.local_paths = LocalPaths(cases_path=Path("data/cases"), references_path=Path("data/cases"))
         settings.command_line_settings.skip_run = True
         settings.command_line_settings.skip_download = []
         testcase_path = TestCasePath(prefix="abc/prefix", version="DVC")
@@ -240,7 +248,7 @@ class TestComparisonRunner:
         # Arrange
         settings = TestBenchSettings()
         settings.command_line_settings.skip_download = list(PathType)  # Please skip downloading anything.
-        settings.command_line_settings.config_file = "some.xml"
+        settings.command_line_settings.config_file = Path("some.xml")
         settings.local_paths = LocalPaths()
         settings.command_line_settings.parallel = False
         logger = MagicMock(spec=ConsoleLogger)
@@ -271,7 +279,7 @@ class TestComparisonRunner:
             "Banana_1", ignore_testcase=True, locations=[ref_location, case_location]
         )
         config2 = TestComparisonRunner.create_test_case_config("Banana_2", locations=[ref_location, case_location])
-        settings.command_line_settings.config_file = "some.xml"
+        settings.command_line_settings.config_file = Path("some.xml")
         xml_configs = [config1, config2]
         settings.local_paths = LocalPaths()
         settings.command_line_settings.skip_download = list(PathType)  # Please skip downloading anything.
@@ -335,9 +343,9 @@ class TestComparisonRunner:
         return_code_mock = mocker.patch(
             "src.suite.test_case.Program.last_return_code", new_callable=PropertyMock, side_effect=[1, 0]
         )
-        # Make `getError` first return an error, then no error.
+        # Make `get_error` first return an error, then no error.
         return_values = iter([RuntimeError("Failed to frobnicate"), None])
-        mocker.patch("src.suite.test_case.Program.getError", side_effect=lambda: next(return_values))
+        mocker.patch("src.suite.test_case.Program.get_error", side_effect=lambda: next(return_values))
         # Make the return code of the program `1`, and then `0`.
         return_code_mock.side_effect = [1, 0]
 
@@ -353,7 +361,7 @@ class TestComparisonRunner:
         # Arrange
         settings = TestBenchSettings()
         settings.command_line_settings.skip_download = []
-        settings.local_paths = LocalPaths(cases_path="/cases", references_path="/refs")
+        settings.local_paths = LocalPaths(cases_path=Path("/cases"), references_path=Path("/refs"))
         ref_location = TestComparisonRunner.create_location(name="reference", location_type=PathType.REFERENCE)
         case_location = TestComparisonRunner.create_location(name="case", location_type=PathType.INPUT)
         config = TestComparisonRunner.create_test_case_config(
@@ -365,7 +373,7 @@ class TestComparisonRunner:
 
         patch_fake_download(mocker, fs, FakeDownloadMode.ALL)
 
-        expected_work_path = "/cases/win64/Banana_1_work"
+        expected_work_path = str(Path("/cases/win64/Banana_1") / "_work")
 
         # Act
         runner.run_test_case(config=config, run_data=run_data)
@@ -381,7 +389,7 @@ class TestComparisonRunner:
         settings.command_line_settings.skip_download = []
         settings.command_line_settings.skip_run = True
         settings.command_line_settings.skip_post_processing = True
-        settings.local_paths = LocalPaths(cases_path="/cases", references_path="/refs")
+        settings.local_paths = LocalPaths(cases_path=Path("/cases"), references_path=Path("/refs"))
 
         ref_location = TestComparisonRunner.create_location(name="reference", location_type=PathType.REFERENCE)
         case_location = TestComparisonRunner.create_location(name="case", location_type=PathType.INPUT)
@@ -396,7 +404,7 @@ class TestComparisonRunner:
         run_data = RunData(1, 1)
 
         expected_local_input_path = "/cases/win64/Name_1"
-        expected_work_path = expected_local_input_path + "_work"
+        expected_work_path = Path(expected_local_input_path) / "_work"
 
         patch_fake_download(mocker, fs, FakeDownloadMode.REFS_ONLY)
 
@@ -415,7 +423,7 @@ class TestComparisonRunner:
         settings.command_line_settings.skip_download = []
         settings.command_line_settings.skip_run = True
         settings.command_line_settings.skip_post_processing = True
-        settings.local_paths = LocalPaths(cases_path="/cases", references_path="/refs")
+        settings.local_paths = LocalPaths(cases_path=Path("/cases"), references_path=Path("/refs"))
 
         ref_location = TestComparisonRunner.create_location(name="reference", location_type=PathType.REFERENCE)
         case_location = TestComparisonRunner.create_location(name="case", location_type=PathType.INPUT)
@@ -430,7 +438,7 @@ class TestComparisonRunner:
         run_data = RunData(1, 1)
 
         expected_local_input_path = "/cases/win64/Name_1"
-        expected_work_path = expected_local_input_path + "_work"
+        expected_work_path = Path(expected_local_input_path) / "_work"
 
         patch_fake_download(mocker, fs, FakeDownloadMode.FILES)
 
@@ -448,7 +456,7 @@ class TestComparisonRunner:
         settings.command_line_settings.skip_download = []
         settings.command_line_settings.skip_run = True
         settings.command_line_settings.skip_post_processing = True
-        settings.local_paths = LocalPaths(cases_path="/cases", references_path="/refs")
+        settings.local_paths = LocalPaths(cases_path=Path("/cases"), references_path=Path("/refs"))
 
         ref_location = TestComparisonRunner.create_location(name="reference", location_type=PathType.REFERENCE)
         case_location = TestComparisonRunner.create_location(name="case", location_type=PathType.INPUT)
@@ -463,11 +471,11 @@ class TestComparisonRunner:
         run_data = RunData(1, 1)
 
         expected_local_input_path = "/cases/win64/Name_1"
-        expected_work_path = expected_local_input_path + "_work"
+        expected_work_path = Path(expected_local_input_path) / "_work"
 
-        fs.makedirs(expected_work_path, exist_ok=True)
-        fs.create_file(f"{expected_work_path}/file.txt", contents="old")
-        fs.create_file(f"{expected_work_path}/old.txt", contents="should be removed")
+        fs.makedirs(str(expected_work_path), exist_ok=True)
+        fs.create_file(str(expected_work_path / "file.txt"), contents="old")
+        fs.create_file(str(expected_work_path / "old.txt"), contents="should be removed")
 
         patch_fake_download(mocker, fs, FakeDownloadMode.OVERWRITE)
 
@@ -475,9 +483,9 @@ class TestComparisonRunner:
         runner.run_test_case(config=config, run_data=run_data)
 
         # Assert
-        with open(f"{expected_work_path}/file.txt") as f:
+        with open(expected_work_path / "file.txt") as f:
             assert f.read() == "new"
-        assert not fs.exists(f"{expected_work_path}/old.txt")
+        assert not fs.exists(str(expected_work_path / "old.txt"))
 
     @staticmethod
     def create_test_case_config(
@@ -497,8 +505,7 @@ class TestComparisonRunner:
 
         if locations is None:
             locations = []
-        else:
-            config.locations = locations
+        config.locations = locations
 
         return config
 
@@ -525,4 +532,4 @@ class TestComparisonRunner:
 
     @staticmethod
     def assertIsFile(path: str) -> None:
-        assert pl.Path(path).resolve().is_file(), f"File does not exist: {str(path)}"
+        assert Path(path).resolve().is_file(), f"File does not exist: {str(path)}"

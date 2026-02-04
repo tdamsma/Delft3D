@@ -3,6 +3,7 @@
 Copyright (C)  Stichting Deltares, 2025
 """
 
+from pathlib import Path
 from typing import List
 
 from src.config.credentials import Credentials
@@ -16,7 +17,7 @@ class CommandLineSettings:
 
     log_level: LogLevel = LogLevel.INFO
     run_mode: ModeType = ModeType.COMPARE
-    config_file: str = ""
+    config_file: Path = Path("")
     credentials: Credentials = Credentials()
     filter: str = ""
     skip_run: bool = False

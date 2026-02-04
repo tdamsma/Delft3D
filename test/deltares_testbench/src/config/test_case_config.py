@@ -4,7 +4,8 @@ Copyright (C)  Stichting Deltares, 2026
 """
 
 # Test case configuration
-from typing import List, Optional
+from pathlib import Path
+from typing import List
 
 from src.config.dependency import Dependency
 from src.config.file_check import FileCheck
@@ -19,10 +20,10 @@ class TestCaseConfig:
     # constructor: initialize variables
     def __init__(self) -> None:
         self.__name: str = ""
-        self.__path: Optional[TestCasePath] = None
-        self.__dependency: Optional[Dependency] = None
+        self.__path: TestCasePath | None = None
+        self.__dependency: Dependency | None = None
         self.__locations: List[Location] = []
-        self.__shell: Optional[ProgramConfig] = None
+        self.__shell: ProgramConfig | None = None
         self.__shell_arguments = []
         self.__program_configs = []
         self.__errors: List[str] = []
@@ -31,8 +32,8 @@ class TestCaseConfig:
         self.__ref_run_time: float = -1
         self.__run_time: float = 0
         self.__overrule_ref_max_run_time: bool = False
-        self.__absolute_test_case_path: str = ""
-        self.__absolute_test_case_reference_path: str = ""
+        self.__absolute_test_case_path: Path = Path("")
+        self.__absolute_test_case_reference_path: Path = Path("")
         self.__run_file = ""
         self.__ignore = False
         self.__process_count: int = 1
@@ -47,21 +48,21 @@ class TestCaseConfig:
         self.__name = value
 
     @property
-    def path(self) -> Optional[TestCasePath]:
+    def path(self) -> TestCasePath | None:
         """Relative paths for test case."""
         return self.__path
 
     @path.setter
-    def path(self, value: Optional[TestCasePath]) -> None:
+    def path(self, value: TestCasePath | None) -> None:
         self.__path = value
 
     @property
-    def dependency(self) -> Optional[Dependency]:
+    def dependency(self) -> Dependency | None:
         """Data that the testcase depends on."""
         return self.__dependency
 
     @dependency.setter
-    def dependency(self, value: Optional[Dependency]) -> None:
+    def dependency(self, value: Dependency | None) -> None:
         self.__dependency = value
 
     @property
@@ -74,21 +75,21 @@ class TestCaseConfig:
         self.__locations = value
 
     @property
-    def absolute_test_case_path(self) -> str:
+    def absolute_test_case_path(self) -> Path:
         """Absolute file system path to test case."""
         return self.__absolute_test_case_path
 
     @absolute_test_case_path.setter
-    def absolute_test_case_path(self, value: str) -> None:
+    def absolute_test_case_path(self, value: Path) -> None:
         self.__absolute_test_case_path = value
 
     @property
-    def absolute_test_case_reference_path(self) -> str:
+    def absolute_test_case_reference_path(self) -> Path:
         """Absolute file system path to reference data for test case."""
         return self.__absolute_test_case_reference_path
 
     @absolute_test_case_reference_path.setter
-    def absolute_test_case_reference_path(self, value: str) -> None:
+    def absolute_test_case_reference_path(self, value: Path) -> None:
         self.__absolute_test_case_reference_path = value
 
     @property
@@ -150,12 +151,12 @@ class TestCaseConfig:
         self.__errors = value
 
     @property
-    def shell(self) -> Optional[ProgramConfig]:
+    def shell(self) -> ProgramConfig | None:
         """Specific shell for this case configuration."""
         return self.__shell
 
     @shell.setter
-    def shell(self, value: Optional[ProgramConfig]) -> None:
+    def shell(self, value: ProgramConfig | None) -> None:
         self.__shell = value
 
     @property

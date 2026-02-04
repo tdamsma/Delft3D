@@ -102,8 +102,8 @@ class TestCaseData:
             name=config.name,
             case_dir=case_dir / utils.to_unix_path(case_loc.from_path) / config.name,
             reference_dir=reference_dir / utils.to_unix_path(reference_loc.from_path) / config.name,
-            case_prefix=cls.__to_s3_path(case_loc) / config.path.prefix,
-            reference_prefix=cls.__to_s3_path(reference_loc) / config.path.prefix,
+            case_prefix=cls.__to_s3_path(case_loc) / utils.to_unix_path(str(config.path.prefix)),
+            reference_prefix=cls.__to_s3_path(reference_loc) / utils.to_unix_path(str(config.path.prefix)),
             version=rewind_timestamp,
             file_checks=config.checks,
             max_run_time=config.max_run_time,
@@ -323,7 +323,7 @@ class ConfigParser:
             raise ValueError("Not a testbench config")
 
         # Now that we're pretty sure we're reading a TestBench config file: Parse the XML.
-        self._settings.config_file = str(config)
+        self._settings.config_file = config
         xml_config = self._xml_parser.load(self._settings, self._logger)
 
         test_cases = sorted(

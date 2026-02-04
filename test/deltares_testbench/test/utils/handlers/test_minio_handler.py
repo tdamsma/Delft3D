@@ -45,7 +45,7 @@ class TestMinioHandler:
         # Act
         HandlerFactory.download(
             from_path,
-            "test/data",
+            Path("test/data"),
             programs=[],
             logger=logger,
             credentials=mocker.Mock(username="user", password="pass"),
@@ -92,7 +92,7 @@ class TestMinioHandler:
         with pytest.raises(ValueError):
             HandlerFactory.download(
                 from_path,
-                "test/data",
+                Path("test/data"),
                 programs=[],
                 logger=mocker.Mock(),
                 credentials=mocker.Mock(),
@@ -118,7 +118,7 @@ class TestMinioHandler:
         # Act
         HandlerFactory.download(
             "https://s3.deltares.nl/bucket_name/prefix",
-            "test/data",
+            Path("test/data"),
             version=None,  # Version is not set.
             programs=[],
             credentials=mocker.Mock(username="user", password="pass"),

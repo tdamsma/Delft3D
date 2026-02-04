@@ -8,6 +8,7 @@ import ssl
 import urllib.parse as parse
 import urllib.request as url_lib
 from abc import ABC
+from pathlib import Path
 from typing import Optional
 from urllib.error import HTTPError, URLError
 
@@ -20,12 +21,12 @@ class ResolveHandler(ABC):
     """Detect type of handler behind a path."""
 
     @classmethod
-    def detect(cls, path: str, logger: ILogger, credentials: Optional[Credentials] = None) -> HandlerType:
+    def detect(cls, path: Path | str, logger: ILogger, credentials: Optional[Credentials] = None) -> HandlerType:
         """Detect which protocol handler is needed for the path.
 
         Parameters
         ----------
-        path : str
+        path : Path
             URL.
         credentials : Optional[Credentials]
             Credentials to use.
@@ -35,22 +36,23 @@ class ResolveHandler(ABC):
         HandlerType
             Detected handler type.
         """
-        logger.debug(f"detecting handler for {path}")
+        path_str = str(path)
+        logger.debug(f"detecting handler for {path_str}")
 
-        if path.endswith(".dvc"):
+        if path_str.endswith(".dvc"):
             return HandlerType.DVC
         elif re.search(
-            r"^\\(\\)?[A-Za-z0-9]+|^\/\/[A-Za-z0-9]+", path
+            r"^\\(\\)?[A-Za-z0-9]+|^\/\/[A-Za-z0-9]+", path_str
         ):  # assume network path starts with either [//] or [\\]
             return HandlerType.NET
-        elif re.search(r"[A-Za-z]{1}\:\\|^\/{1}[A-Za-z0-9]|\.\.", path):  # assume local path handler [X:\] or [/]
+        elif re.search(r"[A-Za-z]{1}\:\\|^\/{1}[A-Za-z0-9]|\.\.", path_str):  # assume local path handler [X:\] or [/]
             return HandlerType.PATH
-        elif re.search(r"^ftp(s)?://", path):
+        elif re.search(r"^ftp(s)?://", path_str):
             return HandlerType.FTP
-        elif re.match(r"^https://minio", path) or re.match(r"^https://s3.deltares.nl", path):
+        elif re.match(r"^https://minio", path_str) or re.match(r"^https://s3.deltares.nl", path_str):
             return HandlerType.MINIO
         else:
-            return cls.__detect_by_opening_url(path, logger, credentials)
+            return cls.__detect_by_opening_url(path_str, logger, credentials)
 
     @classmethod
     def __detect_by_opening_url(cls, path: str, logger: ILogger, credentials: Optional[Credentials]) -> HandlerType:

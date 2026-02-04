@@ -5,12 +5,14 @@ Copyright (C)  Stichting Deltares, 2026
 
 import multiprocessing
 import os
+import re
 import shutil
 import sys
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from multiprocessing.pool import AsyncResult
 from multiprocessing.synchronize import Condition
+from pathlib import Path
 from typing import Iterable, List, Optional
 
 from src.config.location import Location
@@ -43,7 +45,7 @@ class TestSetRunner(ABC):
         self.__logger = logger
         self.__duration = None
         self.programs: List[Program] = []
-        self.skip_download = settings.command_line_settings.skip_download
+        self.skip_download: List[PathType] = settings.command_line_settings.skip_download or []
         self.finished_tests: int = 0
 
     @property
@@ -82,10 +84,12 @@ class TestSetRunner(ABC):
 
         try:
             self.programs = list(self.__update_programs())
-        except Exception:
+        except Exception as exc:
+            self.__logger.exception(f"Failed to update programs: {repr(exc)}")
             if self.__settings.command_line_settings.teamcity:
                 sys.stderr.write("##teamcity[testStarted name='Update programs']\n")
                 sys.stderr.write("##teamcity[testFailed name='Update programs' message='Exception occurred']\n")
+            raise
 
         self.__download_dependencies()
         log_sub_header("Running tests", self.__logger)
@@ -250,8 +254,8 @@ class TestSetRunner(ABC):
             if not skip_postprocessing:
                 log_sub_header("Postprocessing testcase, checking directories...", logger)
 
-                if not os.path.exists(config.absolute_test_case_path):
-                    raise TestCaseFailure("Could not locate case data at: " + str(config.absolute_test_case_path))
+                if not config.absolute_test_case_path.exists():
+                    raise TestCaseFailure(f"Could not locate case data at: {str(config.absolute_test_case_path)}")
 
                 # execute concrete method in subclass
                 test_result = self.post_process(config, logger, run_data)
@@ -404,61 +408,59 @@ class TestSetRunner(ABC):
                         and loc.type == PathType.CHECK
                     ):
                         # if the program is local, use the existing location
-                        sourceLocation = Paths().mergeFullPath(loc.root, loc.from_path)
-                        if Paths().isPath(sourceLocation):
-                            absLocation = os.path.abspath(
-                                Paths().mergeFullPath(sourceLocation, program_configuration.path)
+                        source_location = Paths().merge_full_path(Path(loc.root), Path(loc.from_path))
+                        if Paths().is_path(source_location):
+                            abs_location = (
+                                Paths().merge_full_path(source_location, Path(program_configuration.path)).resolve()
                             )
-                            if ResolveHandler.detect(absLocation, self.__logger, None) == HandlerType.PATH:
-                                if not os.path.exists(absLocation):
-                                    self.__logger.warning(f"could not yet detect specified program {absLocation}")
+                            if ResolveHandler.detect(abs_location, self.__logger, None) == HandlerType.PATH:
+                                if not abs_location.exists():
+                                    self.__logger.warning(f"could not yet detect specified program {abs_location}")
                                 #                                   raise SystemExit("Program does not exist")
                                 else:
                                     self.__logger.debug(
-                                        f"detected local path for program {program_configuration.name}, using {absLocation}"
+                                        f"detected local path for program {program_configuration.name}, using {abs_location}"
                                     )
-                                program_configuration.absolute_bin_path = absLocation
+                                program_configuration.absolute_bin_path = abs_location
                         # else download it from a remote location
                         else:
                             if loc.version:
                                 to = loc.to_path + "_" + loc.version
                             else:
                                 to = loc.to_path
-                            program_local_path = Paths().rebuildToLocalPath(
-                                os.path.join(self.__settings.local_paths.engines_path, to)
+                            program_local_path = Path(
+                                Paths().rebuild_to_local_path(Path(self.__settings.local_paths.engines_path) / to)
                             )
 
                             # if the program is remote (network or other) and it does not exist locally, download it
-                            if not os.path.exists(program_local_path):
+                            if not program_local_path.exists():
                                 self.__logger.debug(
-                                    f"Downloading program, {program_configuration.name} from {sourceLocation}"
+                                    f"Downloading program, {program_configuration.name} from {source_location}"
                                 )
                                 HandlerFactory.download(
-                                    sourceLocation,
+                                    source_location,
                                     program_local_path,
                                     self.programs,
                                     self.__logger,
                                     loc.credentials,
                                     loc.version,
                                 )
-                            program_configuration.absolute_bin_path = os.path.abspath(
-                                Paths().mergeFullPath(program_local_path, program_configuration.path)
+                            program_configuration.absolute_bin_path = (
+                                Paths().merge_full_path(program_local_path, Path(program_configuration.path)).resolve()
                             )
 
             # If a program does not have a network path, and path is not a relative or absolute path, we assume the system can find it
-            elif not Paths().isPath(program_configuration.path):
+            elif not Paths().is_path(program_configuration.path):
                 program_configuration.absolute_bin_path = program_configuration.path
             # Otherwise we need to construct the path from the given information
             else:
                 # Construct the absolute binary path for the program
-                absbinpath = os.path.abspath(Paths().rebuildToLocalPath(program_configuration.path))
-                if os.path.exists(absbinpath):
+                absbinpath = Path(Paths().rebuild_to_local_path(program_configuration.path)).resolve()
+                if absbinpath.exists():
                     program_configuration.absolute_bin_path = absbinpath
                 # If the local program does not exist, and a network path is not given we are going to crash
                 else:
-                    raise SystemExit(
-                        "Could not find " + program_configuration.name + " at given location " + absbinpath
-                    )
+                    raise SystemExit(f"Could not find {program_configuration.name} at given location {absbinpath}")
             self.__logger.debug(
                 f"Binary path for program {program_configuration.name}: {program_configuration.absolute_bin_path}"
             )
@@ -470,15 +472,15 @@ class TestSetRunner(ABC):
             envparams = program_configuration.environment_variables
             for envparam in envparams:
                 if envparams[envparam][0] == "path" and str(envparams[envparam][1]).find("[") == -1:
-                    pp = Paths().rebuildToLocalPath(envparams[envparam][1])
-                    if not Paths().isAbsolute(pp):
+                    pp = Paths().rebuild_to_local_path(envparams[envparam][1])
+                    if not Paths().is_absolute(pp):
                         if program_local_path:
-                            pp = os.path.abspath(Paths().mergeFullPath(program_local_path, pp))
-                        envparams[envparam] = [envparams[envparam][0], pp]
+                            pp = Paths().merge_full_path(program_local_path, Path(pp)).resolve()
+                        envparams[envparam] = [envparams[envparam][0], os.fspath(pp)]
                     else:
                         envparams[envparam] = [
                             envparams[envparam][0],
-                            envparams[envparam][1],
+                            os.fspath(envparams[envparam][1]),
                         ]
 
             # Add search paths to the program(configure)
@@ -486,36 +488,38 @@ class TestSetRunner(ABC):
             # add all subdirectories from this level downwards to searchPaths
             # It's quite crude, but this way, all Delft3D programs are able to find each other.
             if program_configuration.add_search_paths:
-                pltIndex = max(
-                    program_configuration.absolute_bin_path.rfind("win"),
-                    program_configuration.absolute_bin_path.rfind("lnx"),
-                    program_configuration.absolute_bin_path.rfind("linux"),
-                    program_configuration.absolute_bin_path.rfind("x64"),
+                abs_bin_path_str = os.fspath(program_configuration.absolute_bin_path)
+
+                plt_index = max(
+                    abs_bin_path_str.rfind("win"),
+                    abs_bin_path_str.rfind("lnx"),
+                    abs_bin_path_str.rfind("linux"),
+                    abs_bin_path_str.rfind("x64"),
                 )
-                if pltIndex > -1:
-                    separatorIndex = max(
-                        program_configuration.absolute_bin_path[pltIndex:].find("\\"),
-                        program_configuration.absolute_bin_path[pltIndex:].find("/"),
+                if plt_index > -1:
+                    separator_index = max(
+                        abs_bin_path_str[plt_index:].find("\\"),
+                        abs_bin_path_str[plt_index:].find("/"),
                     )
-                    pltPath = program_configuration.absolute_bin_path[: pltIndex + separatorIndex]
-                    self.__logger.debug("Path: " + pltPath)
-                    searchPaths = Paths().findAllSubFolders(
-                        pltPath, program_configuration.exclude_search_paths_containing
+                    plt_path = abs_bin_path_str[: plt_index + separator_index]
+                    self.__logger.debug("Path: " + plt_path)
+                    search_paths = Paths().find_all_sub_folders(
+                        Path(plt_path), program_configuration.exclude_search_paths_containing
                     )
                 else:
                     # No win/lnx/linux found in AbsoluteBinPath:
                     # Just add AbsoluteBinPath and its subFolders
-                    searchPaths = Paths().findAllSubFolders(
-                        program_configuration.absolute_bin_path,
+                    search_paths = Paths().find_all_sub_folders(
+                        Path(abs_bin_path_str),
                         program_configuration.exclude_search_paths_containing,
                     )
                 # Add explicitly named searchPaths, rebuild when needed
-                for aPath in program_configuration.search_paths:
-                    aRebuildPath = Paths().rebuildToLocalPath(aPath)
-                    if not Paths().isAbsolute(aRebuildPath) and program_local_path:
-                        aRebuildPath = Paths().mergeFullPath(program_local_path, aRebuildPath)
-                    searchPaths.append(aRebuildPath)
-                program_configuration.search_paths = searchPaths
+                for a_path in program_configuration.search_paths:
+                    a_rebuild_path = Paths().rebuild_to_local_path(a_path)
+                    if not Paths().is_absolute(a_rebuild_path) and program_local_path:
+                        a_rebuild_path = Paths().merge_full_path(program_local_path, Path(a_rebuild_path))
+                    search_paths.append(Path(a_rebuild_path))
+                program_configuration.search_paths = search_paths
 
             # Initialize the program
             yield Program(program_configuration, self.settings)
@@ -575,40 +579,53 @@ class TestSetRunner(ABC):
             )
             raise TestBenchError(error_message)
 
-    def __build_remote_path(self, config: TestCaseConfig, location: Location) -> str:
+    def __build_remote_path(self, config: TestCaseConfig, location: Location) -> Path | str:
         """Build the remote path to download from."""
-        if config.path.version == "DVC":
-            remote_path = Paths().mergeFullPath(location.root, config.path.prefix)
-            if location.type == PathType.INPUT:
-                remote_path = Paths().mergeFullPath(remote_path, "input.dvc")
-            elif location.type == PathType.REFERENCE and location.from_path != "":
-                remote_path = Paths().mergeFullPath(remote_path, f"reference_{location.from_path}.dvc")
-            else:
-                error_message = (
-                    f"Could not build remote path for {config.name}"
-                    f", only input and reference (with OS spec) paths are supported for DVC downloads."
-                )
-                raise TestBenchError(error_message)
+        if Paths().is_url(location.root):
+            remote_path = "/".join(
+                [
+                    str(location.root).rstrip("/"),
+                    str(location.from_path).strip("/"),
+                    str(config.path.prefix).strip("/"),
+                ]
+            )
         elif config.path:
-            remote_path = Paths().mergeFullPath(location.root, location.from_path, config.path.prefix)
+            if config.path.version == "DVC":
+                remote_path = Paths().merge_full_path(Path(location.root), Path(config.path.prefix))
+                if location.type == PathType.INPUT:
+                    remote_path = Paths().merge_full_path(Path(remote_path), Path("input.dvc"))
+                elif location.type == PathType.REFERENCE and location.from_path != "":
+                    remote_path = Paths().merge_full_path(
+                        Path(remote_path), Path(f"reference_{location.from_path}.dvc")
+                    )
+                else:
+                    error_message = (
+                        f"Could not build remote path for {config.name}"
+                        f", only input and reference (with OS spec) paths are supported for DVC downloads."
+                    )
+                    raise TestBenchError(error_message)
+            else:
+                remote_path = Paths().merge_full_path(
+                    Path(location.root), Path(location.from_path), Path(config.path.prefix)
+                )
         else:
             # For input_path/reference_path cases, use location paths directly
-            remote_path = Paths().mergeFullPath(location.root, location.from_path)
+            remote_path = Paths().merge_full_path(Path(location.root), Path(location.from_path))
 
-        if Paths().isPath(remote_path):
-            remote_path = os.path.abspath(remote_path)
+        if Paths().is_path(remote_path):
+            remote_path = Path(remote_path).resolve()
 
         return remote_path
 
-    def __build_local_path(self, config: TestCaseConfig, location: Location) -> str:
+    def __build_local_path(self, config: TestCaseConfig, location: Location) -> Path:
         """Build the local path to download to."""
         base_path = self.__get_destination_directory(location.type)
         if config.path.version == "DVC":
-            local_path = Paths().mergeFullPath(location.root, config.path.prefix)
+            local_path = Paths().merge_full_path(Path(location.root), Path(config.path.prefix))
             if location.type == PathType.INPUT:
-                local_path = Paths().mergeFullPath(local_path, "input")
+                local_path = Paths().merge_full_path(local_path, Path("input"))
             elif location.type == PathType.REFERENCE and location.from_path != "":
-                local_path = Paths().mergeFullPath(local_path, f"reference_{location.from_path}")
+                local_path = Paths().merge_full_path(local_path, Path(f"reference_{location.from_path}"))
             else:
                 error_message = (
                     f"Could not build local path for {config.name}"
@@ -616,101 +633,109 @@ class TestSetRunner(ABC):
                 )
                 raise TestBenchError(error_message)
         else:
-            local_path = Paths().rebuildToLocalPath(Paths().mergeFullPath(base_path, location.to_path, config.name))
+            local_path = Paths().rebuild_to_local_path(
+                Paths().merge_full_path(Path(base_path), Path(location.to_path), Path(config.name))
+            )
 
-        return local_path
+        return Path(local_path)
 
     def __download_location_with_retries(
-        self, config: TestCaseConfig, location: Location, remote_path: str, local_path: str, logger: ILogger
+        self, config: TestCaseConfig, location: Location, remote_path: Path | str, local_path: Path, logger: ILogger
     ) -> None:
         """Download files for a location with retry logic."""
-        attempts = 0
         max_attempts = 3
 
-        for _ in range(max_attempts):
+        for attempt in range(1, max_attempts + 1):
             try:
                 self.__download_single_location(config, location, remote_path, local_path, logger)
-                break
+                return
             except Exception as e:
-                error_message = f"Unable to download testcase (attempt {attempts})"
-
-                if attempts < max_attempts:
-                    logger.warning(error_message)
+                error = getattr(e, "message", repr(e))
+                if attempt < max_attempts:
+                    logger.warning(f"Unable to download testcase (attempt {attempt}): {error}")
                 else:
-                    error = getattr(e, "message", repr(e))
                     error_message = f"Unable to download testcase: {error}"
                     raise TestBenchError(error_message) from e
 
-    def __copy_to_work_folder(self, local_path: str, logger: ILogger) -> None:
+    def __copy_to_work_folder(self, local_path: Path, logger: ILogger) -> None:
         """Copy downloaded files to work folder if needed."""
-        copy_path = local_path + "_work"
-        if not os.path.exists(local_path):
+        copy_path = local_path / "_work"
+        if not local_path.exists():
             logger.warning(f"Work path does not exist, cannot create work copy: {local_path}")
             return
 
         # Clean work directory if it exists
-        if os.path.exists(copy_path):
+        if copy_path.exists():
             delete_directory(copy_path, logger)
 
         # Copy input to work directory
         logger.debug(f"Copying input from {local_path} to {copy_path}")
-        if os.path.isdir(local_path):
+        if local_path.is_dir():
             shutil.copytree(local_path, copy_path, symlinks=False, ignore_dangling_symlinks=True)
         else:
-            os.makedirs(os.path.dirname(copy_path) or ".", exist_ok=True)
+            copy_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(local_path, copy_path)
 
     def __download_single_location(
-        self, config: TestCaseConfig, location: Location, remote_path: str, local_path: str, logger: ILogger
+        self,
+        config: TestCaseConfig,
+        location: Location,
+        remote_path: Path | str,
+        local_path: Path,
+        logger: ILogger,
     ) -> None:
         """Download files for a single location attempt."""
         version = config.path.version if config.path else None
         self.__download_files(location, remote_path, local_path, location.type, version, logger)
 
-    def __get_destination_directory(self, location_type: PathType) -> Optional[str]:
+    def __get_destination_directory(self, location_type: PathType) -> Path:
         """Get the destination directory based on location type."""
         if location_type == PathType.INPUT:
             return self.__settings.local_paths.cases_path
-        elif location_type == PathType.REFERENCE:
+        if location_type == PathType.REFERENCE:
             return self.__settings.local_paths.reference_path
-        return None
+        raise TestBenchError(f"Unsupported location type for destination directory: {location_type}")
 
-    def __set_absolute_paths(self, config: TestCaseConfig, location_type: PathType, local_path: str) -> None:
+    def __set_absolute_paths(self, config: TestCaseConfig, location_type: PathType, local_path: Path) -> None:
         """Set absolute paths on the config based on location type."""
         if location_type == PathType.INPUT:
-            config.absolute_test_case_path = local_path + "_work"
+            config.absolute_test_case_path = local_path / "_work"
         elif location_type == PathType.REFERENCE:
             config.absolute_test_case_reference_path = local_path
 
     def __download_files(
         self,
         location: Location,
-        remote_path: str,
-        local_path: str,
+        remote_path: Path | str,
+        local_path: Path,
         location_type: PathType,
         version: Optional[str],
         logger: ILogger,
     ) -> None:
         version = location.version or version
+
         if location_type == PathType.INPUT:
             location_description = "input of case"
         elif location_type == PathType.REFERENCE:
             location_description = "reference result"
         elif location_type == PathType.DEPENDENCY:
             location_description = "dependency"
+        else:
+            location_description = "unknown location type"
 
+        remote_path_str = self.__normalize_remote_path(remote_path)
         if location_type in self.skip_download:
             logger.info(f"Skipping {location_description} download (skip download argument)")
             return
         elif version == "DVC":
-            logger.debug(f"Downloading {location_description}, from DVC file at {remote_path}")
+            logger.debug(f"Downloading {location_description}, from DVC file at {remote_path_str}")
         else:
-            logger.debug(f"Downloading {location_description}, {local_path} from {remote_path}")
+            logger.debug(f"Downloading {location_description}, {local_path} from {remote_path_str}")
 
         # Download location on local system is always cleaned before start
         try:
             HandlerFactory.download(
-                remote_path,
+                remote_path_str,
                 local_path,
                 self.programs,
                 logger,
@@ -719,8 +744,15 @@ class TestSetRunner(ABC):
             )
         except Exception as exception:
             # We need always case input data
-            logger.exception(f"Could not download from {remote_path}")
+            logger.exception(f"Could not download from {remote_path_str}")
             raise exception
+
+    @staticmethod
+    def __normalize_remote_path(remote_path: Path | str) -> str:
+        path_str = str(remote_path)
+        if re.match(r"^(https?|ftp):/", path_str) and not re.match(r"^(https?|ftp)://", path_str):
+            return re.sub(r"^([A-Za-z]+):/", r"\1://", path_str, count=1)
+        return path_str
 
     def __download_config_dependencies(self, config: TestCaseConfig, logger: ILogger) -> None:
         if not config.dependency:
@@ -733,19 +765,30 @@ class TestSetRunner(ABC):
         location = next(loc for loc in config.locations if loc.type == PathType.INPUT)
         destination_dir = self.__settings.local_paths.cases_path
 
-        local_path = Paths().rebuildToLocalPath(
-            Paths().mergeFullPath(
-                destination_dir,
-                location.to_path,
-                config.dependency.local_dir,
+        local_path = Path(
+            Paths().rebuild_to_local_path(
+                Paths().merge_full_path(
+                    Path(destination_dir),
+                    Path(location.to_path),
+                    Path(config.dependency.local_dir),
+                )
             )
         )
 
-        if os.path.exists(local_path):
+        if local_path.exists():
             logger.info("Dependency directory already exists: Skipping download")
             return
 
-        remote_path = Paths().mergeFullPath(location.root, location.from_path, config.dependency.cases_path)
+        remote_path = Paths().merge_full_path(
+            Path(location.root),
+            Path(location.from_path),
+            Path(config.dependency.cases_path),
+        )
+        remote_path_str = self.__normalize_remote_path(remote_path)
+        if Paths.is_url(remote_path_str):
+            remote_path = remote_path_str
+        else:
+            remote_path = Path(remote_path_str)
         dependency_version = config.dependency.version
         if dependency_version is None:
             logger.warning("The dependency version timestamp is missing, downloading the 'latest' version")

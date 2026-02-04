@@ -4,7 +4,7 @@ Copyright (C)  Stichting Deltares, 2026
 """
 
 import filecmp
-import os
+from pathlib import Path
 from typing import List, Tuple
 
 from src.config.file_check import FileCheck
@@ -22,8 +22,8 @@ class ContentComparer(IComparer):
     # output: list of (file_check, parameter, ResultComparison) tuples
     def compare(
         self,
-        left_path: str,
-        right_path: str,
+        left_path: Path,
+        right_path: Path,
         file_check: FileCheck,
         testcase_name: str,
         logger: ILogger,
@@ -34,8 +34,8 @@ class ContentComparer(IComparer):
         comparison_result = ComparisonResult()
 
         filename = file_check.name
-        left_file_name = os.path.join(left_path, filename)
-        right_file_name = os.path.join(right_path, filename)
+        left_file_name = left_path / filename
+        right_file_name = right_path / filename
         try:
             equal = filecmp.cmp(left_file_name, right_file_name)
             if equal:

@@ -1,5 +1,7 @@
 import enum
 from datetime import datetime, timedelta, timezone
+from os import fspath
+from pathlib import Path
 from typing import Iterator, List
 
 from s3_path_wrangler.paths import S3Path
@@ -61,7 +63,7 @@ def ceil_dt(dt: datetime, delta: timedelta) -> datetime:
     return zero + (quo + 1) * delta if rem else dt
 
 
-def to_unix_path(path: str) -> str:
+def to_unix_path(path: str | Path) -> str:
     r"""Convert Windows path separators with Unix path separators.
 
     Both kind of path separators work on Windows, on Unix only the
@@ -72,7 +74,8 @@ def to_unix_path(path: str) -> str:
     >>> to_unix_path(r'\foo\bar/qux\quux')
     '/foo/bar/qux/quux'
     """
-    return path.replace("\\", "/")
+    path_str = fspath(path)
+    return path_str.replace("\\", "/")
 
 
 def resolve_relative(path: str) -> str:
