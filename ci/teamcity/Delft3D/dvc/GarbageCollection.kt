@@ -38,14 +38,14 @@ object DvcGarbageCollection : BuildType({
 	    id = "DvcGcExecute"
 	    scriptContent = """
                 git status
-                git log  
+                git branch  
         		uv venv --python=3.12 .venv
                 uv pip sync test/deltares_testbench/pip/lnx-dev-requirements.txt
                 source .venv/bin/activate
                 export AWS_ACCESS_KEY_ID='%s3_delft3d_testbench_accesskey%'
                 export AWS_SECRET_ACCESS_KEY='%s3_delft3d_testbench_secret%'
                 dvc config -l
-                dvc gc -A --cloud -v -f -r storage
+                # dvc gc -A --cloud -v -f -r storage
                 """
         }
     }
