@@ -44,7 +44,7 @@ object DvcGarbageCollection : BuildType({
                 export AWS_SECRET_ACCESS_KEY='%s3_delft3d_testbench_secret%'
                 dvc config -l
                 dvc fetch -A -R 
-                dvc gc -A --cloud -v -f -r storage
+                dvc gc -A --cloud -v -r storage --dry
                 """
         }
     }
