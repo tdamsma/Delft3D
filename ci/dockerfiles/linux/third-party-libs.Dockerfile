@@ -707,7 +707,7 @@ EOT
 COPY --from=uuid --link /usr/local /usr/local/
 COPY --from=metis --link /usr/local /usr/local/
 COPY --from=petsc --link /usr/local/ /usr/local/
-COPY --from=netcdf --link /usr/local /usr/local/
+# COPY --from=netcdf --link /usr/local /usr/local/
 COPY --from=gdal --link /usr/local/ /usr/local/
 COPY --from=esmf --link /usr/local/ /usr/local/
 COPY --from=boost --link /usr/local/ /usr/local/

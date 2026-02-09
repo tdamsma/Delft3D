@@ -1,72 +1,112 @@
 from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+from conan.tools.cmake import (
+    CMake,
+    CMakeDeps,
+    CMakeToolchain,
+    cmake_layout,
+)
 from conan.tools.scm import Git
 
 
-class netcdf_fortranRecipe(ConanFile):
+class NetcdfFortranRecipe(ConanFile):
     name = "netcdf-fortran"
-    version = "4.6.2"
+    #version = "4.6.2"
     package_type = "library"
 
-    # Optional metadata
     license = "MIT"
-    author = "Unidata"
     url = "https://github.com/Unidata/netcdf-fortran"
-    description = "NetCDF Fortran library for scientific data storage."
-    topics = ("netcdf", "fortran", "scientific", "data")
+    description = "NetCDF Fortran library"
+    topics = ("netcdf", "fortran", "hdf5", "mpi")
 
-    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {
+        "shared": [True, False],
+        "fPIC": [True, False],
+    }
+    default_options = {
+        "shared": False,
+        "fPIC": True,
+    }
 
-    def config_options(self):
-        # disable DAP support, this requires dependencies like openssl that are not needed
-        self.options["netcdf"].dap = False
-        if self.settings.os == "Windows":
-            self.options.rm_safe("fPIC")
-
-    def configure(self):
-        if self.options.shared:
-            self.options.rm_safe("fPIC")
-
-    def layout(self):
-        cmake_layout(self)
-
+    # -------------------------------------------------------------------------
+    # Dependency graph (THIS is where correctness matters)
+    # -------------------------------------------------------------------------
     def requirements(self):
-        self.requires("netcdf/4.8.1", transitive_headers=True)
-
-    def source(self):
-        git = Git(self)
-        git.clone(
-            url="https://github.com/Unidata/netcdf-fortran.git",
-            target=".",
-            args=["--branch", "v4.6.2", "--depth", "1"],
+   
+        self.requires(
+            "hdf5/1.14.3",
+            options={
+              "parallel": True,
+              "enable_fortran": True,
+              "enable_cxx" : False
+            },
         )
 
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        # Work around bug in conan relating to CheckLibraryExists, see https://github.com/conan-io/conan/issues/12180
-        tc.cache_variables["CMAKE_TRY_COMPILE_CONFIGURATION"] = str(
-            self.settings.build_type
+        self.requires(
+            "netcdf/4.8.1",
+            options={
+              "shared": False,
+              "fPIC": True,
+              "netcdf4": True,
+              "with_hdf5": True,
+              "cdf5": True,
+              "dap": False,
+              "byterange": False,
+                     
+            },
+            transitive_headers=True,
         )
-        # Do not build tests or examples
-        tc.variables["ENABLE_TESTS"] = False
-        tc.variables["BUILD_EXAMPLES"] = False
+
         
-        tc.generate()
 
+    # -------------------------------------------------------------------------
+    def config_options(self):
+      if self.settings.os == "Windows":
+        self.options.rm_safe("fPIC")
+
+    # -------------------------------------------------------------------------
+    def layout(self):
+      cmake_layout(self)
+
+    # -------------------------------------------------------------------------
+    def source(self):
+      git = Git(self)
+      git.clone(
+        url="https://github.com/Unidata/netcdf-fortran.git",
+        target=".",
+        args=["--branch", "v4.6.2", "--depth", "1"],
+      )
+
+    # -------------------------------------------------------------------------
+    def generate(self):
+      deps = CMakeDeps(self)
+      deps.generate()
+
+      tc = CMakeToolchain(self)
+
+      # Ensure correct try-compile behavior (Conan bug workaround)
+      tc.cache_variables["CMAKE_TRY_COMPILE_CONFIGURATION"] = str(
+        self.settings.build_type
+      )
+
+      # Disable unnecessary components
+      tc.variables["ENABLE_TESTS"] = False
+      tc.variables["BUILD_EXAMPLES"] = False
+
+      tc.generate()
+
+    # -------------------------------------------------------------------------
     def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.build()
+      cmake = CMake(self)
+      cmake.configure()
+      cmake.build()
 
+    # -------------------------------------------------------------------------
     def package(self):
-        cmake = CMake(self)
-        cmake.install()
+      cmake = CMake(self)
+      cmake.install()
 
+    # -------------------------------------------------------------------------
     def package_info(self):
-        self.cpp_info.libs = ["netcdff"]
-        self.cpp_info.includedirs.append("include")
+      self.cpp_info.libs = ["netcdff"]
+      

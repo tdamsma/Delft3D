@@ -81,8 +81,8 @@ class Hdf5Conan(ConanFile):
         self.requires("libaec/1.0.6")
       elif self.options.szip_support == "with_szip":
         self.requires("szip/2.1.1")
-      if self.options.parallel:
-        self.requires("openmpi/[>=4.1.0 <5]")
+     # if self.options.parallel:
+      #  self.requires("openmpi/[>=4.1.0 <5]")
 
     def validate(self):
       if self.options.parallel and not self.options.enable_unsupported:
@@ -176,8 +176,8 @@ class Hdf5Conan(ConanFile):
         hdf5_requirements.append("libaec::libaec")
       elif self.options.szip_support == "with_szip":
         hdf5_requirements.append("szip::szip")
-      if self.options.parallel:
-        hdf5_requirements.append("openmpi::openmpi")
+      #if self.options.parallel:
+       # hdf5_requirements.append("openmpi::openmpi")
 
       return {
         "hdf5_c": {"component": "C", "alias_target": "hdf5", "requirements": hdf5_requirements},
