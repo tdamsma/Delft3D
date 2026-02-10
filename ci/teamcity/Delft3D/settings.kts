@@ -10,7 +10,7 @@ import Delft3D.template.*
 import Delft3D.ciUtilities.*
 import Delft3D.verschilanalyse.*
 
-version = "2025.07"
+version = "2025.11"
 
 project {
 
