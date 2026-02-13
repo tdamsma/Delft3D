@@ -43,7 +43,7 @@ class NetcdfFortranRecipe(ConanFile):
         )
 
         self.requires(
-            "netcdf/4.8.1",
+            "netcdf/4.9.2",
             options={
               "shared": False,
               "fPIC": True,

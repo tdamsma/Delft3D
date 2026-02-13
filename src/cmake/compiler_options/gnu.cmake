@@ -8,7 +8,7 @@ endif(WIN32)
 
 if (UNIX)
     # Set optional flags:
-    message(STATUS "Setting Fortran compiler flags in Unix")
+    message(STATUS "GNU Setting Fortran compiler flags in Unix")
 
     set(CMAKE_CXX_FLAGS_RELEASE      "-O2 -fPIC -fopenmp")
     set(CMAKE_C_FLAGS_RELEASE        "-O2 -fPIC -fopenmp")

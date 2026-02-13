@@ -32,8 +32,8 @@ set(shp_module ${third_party_open_path}/shapelib/${cmake_directory})
 set(proj_module ${checkout_src_root}/third_party_open/proj)
 
 # netcdf
-set(netcdf_module ${third_party_open_path}/netcdf/${cmake_directory})
-set(netcdf_version "netcdf-c-4.9.2")
+#set(netcdf_module ${third_party_open_path}/netcdf/${cmake_directory})
+#set(netcdf_version "netcdf-c-4.9.2")
 # polypack
 set(polypack_module ${third_party_open_path}/polypack)
 
@@ -60,7 +60,9 @@ set(intelredist_module ${third_party_open_path}/intelredist)
 set(gdal_module ${third_party_open_path}/gdal)
 set(zlib_module ${third_party_open_path}/zlib)
 set(curl_module ${third_party_open_path}/curl)
-set(hdf5_module ${third_party_open_path}/hdf5)
+#set(hdf5_module ${third_party_open_path}/hdf5)
+
+
 set(microsoftredist_module ${third_party_open_path}/microsoftredist)
 
 # getopt

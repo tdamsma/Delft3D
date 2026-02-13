@@ -367,7 +367,7 @@ ESM_Alloc (
 int
 ESM_Free (
     int     contextid,
-    char *  name
+    const char *  name
     ) {
 
     int return_value = -999;

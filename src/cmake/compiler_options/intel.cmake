@@ -62,7 +62,7 @@ endif(WIN32)
 
 if (UNIX)
     # Set optional flags:
-    message(STATUS "Setting Fortran compiler flags in Unix")
+    message(STATUS "Intel Setting Fortran compiler flags in Unix")
     # On Linux preprocessing is on by default, but the flag is inserted for
     # at least one C file as well (netCDF). Use a neutral flag to avoid problems
     # Disable diagnostic indicating that ifort is deprecated (10448)

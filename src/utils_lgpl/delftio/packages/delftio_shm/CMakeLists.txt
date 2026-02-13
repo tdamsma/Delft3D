@@ -25,10 +25,13 @@ if(WIN32)
 endif(WIN32)
 
 # Define library
+
 include_directories(${header_path} ${checkout_src_root}/utils_lgpl/esmfsm/include)
 set(library_name delftio_shm)
 add_library(${library_name} ${source}
                             ${headers})
+                            
+
 if(UNIX)
     target_compile_options(${library_name} PRIVATE ${cpp_compiler_flags})        
 endif(UNIX)

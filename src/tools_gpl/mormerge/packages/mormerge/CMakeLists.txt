@@ -20,7 +20,7 @@ set(executable_name mormerge)
 add_executable(${executable_name}   ${source_files}
                                     ${rc_version_file})
 
-
+target_link_options(${executable_name} PRIVATE -Wl,--no-as-needed)
 # Define precompilation flags
 set_source_files_properties(${fortran_version_files}
                             PROPERTIES COMPILE_OPTIONS "${file_preprocessor_flag}")
@@ -54,7 +54,7 @@ if (WIN32)
 endif(WIN32)
 
 if(UNIX)
-    target_link_libraries(${executable_name} ${oss_dependencies})
+   # target_link_libraries(${executable_name} ${oss_dependencies})
     set_property(TARGET ${executable_name} PROPERTY LINKER_LANGUAGE Fortran)
 endif()
 include_directories(${version_include_dir}

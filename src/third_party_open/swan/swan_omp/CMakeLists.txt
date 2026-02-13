@@ -1,7 +1,8 @@
 # Shared definitions
 
 message(STATUS "swan omp:")
-
+find_package(MPI REQUIRED)
+find_package(HDF5 CONFIG REQUIRED)
 # Don't put the Fortran modules of the SWAN OpenMP executable build in a central location
 unset(CMAKE_Fortran_MODULE_DIRECTORY)
 
@@ -27,7 +28,12 @@ set(executable_name swan_omp)
 add_executable(${executable_name}   ${headers}
                                     ${rc_version_file}
                                     ${executable_files})
-
+target_link_libraries(${executable_name}
+    PRIVATE
+        hdf5::hdf5
+        MPI::MPI_C
+        MPI::MPI_CXX
+)
 target_link_libraries(${executable_name} PRIVATE no_compiler_warnings)
 
 # Set dependencies
@@ -35,7 +41,12 @@ if (WIN32)
     set(exe_dependencies netcdf-fortran::netcdf-fortran)
 
     target_link_libraries(${executable_name} PRIVATE ${exe_dependencies})
-
+target_link_libraries(${executable_name}
+    PRIVATE
+        hdf5::hdf5
+        MPI::MPI_C
+        MPI::MPI_CXX
+)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../include"
                         ${version_include_dir})
 
@@ -48,7 +59,12 @@ endif(WIN32)
 if(UNIX)
     target_link_libraries(${executable_name} PRIVATE
          netcdf-fortran::netcdf-fortran)
-
+    target_link_libraries(${executable_name}
+    PRIVATE
+        hdf5::hdf5
+        MPI::MPI_C
+        MPI::MPI_CXX
+)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../include"
                         ${version_include_dir}
                         ${CMAKE_BINARY_DIR}/fortran_module_dir)

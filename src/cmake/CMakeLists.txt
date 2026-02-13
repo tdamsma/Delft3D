@@ -33,7 +33,10 @@ set(CONFIGURATION_TYPE "ALL" CACHE STRING "Sets the configuration to be generate
 message(STATUS "build nr: ${COMMIT_VERSION}")
 # Set this to true to group all predefined projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
+# Specify C++ standard for all targets, disable compiler specific extentions
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 # Set compiler flags
 enable_language(Fortran C CXX)
 

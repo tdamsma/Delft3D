@@ -43,6 +43,7 @@ set(oss_dependencies_general control_lib
                             rr_rtc_tools
                             wl_openmi_support
                             esmfsm
+                            netcdf-fortran::netcdf-fortran
                             )
 
 
@@ -60,7 +61,7 @@ endif(UNIX)
 
 if (WIN32)
     set(oss_dependencies ${oss_dependencies_general}
-                        netcdf-fortran::netcdf-fortran)
+                        )
 
     target_link_libraries(${executable_name} ${oss_dependencies})
 endif(WIN32)

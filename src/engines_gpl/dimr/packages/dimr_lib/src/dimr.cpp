@@ -122,8 +122,8 @@ Dimr::Dimr(void) {
     dirSeparator = "\\";
 #endif
     // Do not remove the next two lines; they ensure that the version numbers are added to the binary
-    char* dimrlibversion = getversionidstring_dimr_lib();
-    char* dimrurl = geturlstring_dimr_lib();
+    const char* dimrlibversion = getversionidstring_dimr_lib();
+    const char* dimrurl = geturlstring_dimr_lib();
     this->timerStartStamp = clock->Epoch();
     this->timerSumStamp = 0;
 }
@@ -2154,7 +2154,7 @@ void Dimr::timerFinish(void)
 
 
 //------------------------------------------------------------------------------
-void Dimr::char_to_ints(char* line, int** iarr, int* count) {
+void Dimr::char_to_ints(const char* line, int** iarr, int* count) {
     std::stringstream stream(line);
     // TODO: support also:
     // The processes may be specified as a space separated list with series compressed using colons
