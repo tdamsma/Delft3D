@@ -95,7 +95,7 @@ object LinuxBuild : BuildType({
               conan remote add deltaresconandev "%deltaresconandev_url%" --force --index=0
               conan remote remove conancenter
               ## little hack for adding 2024.2 to intel compiles (its not in the settings.yml that get generated)
-              sed -i 's/"2024.1",/"2024.1","2024.2",/g' ~/.conan2/settings.yml
+              sed -i 's/"2024.1",/"2024.1","2024.2",/g' ${'$'}PWD/.conan2/settings.yml
               ## make sure we have a default profile
               conan profile detect
               ## install packages and there dependencies using the default linux profile 
