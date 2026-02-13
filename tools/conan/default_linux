@@ -3,7 +3,7 @@ os=Linux
 arch=x86_64
 build_type=Release
 compiler=intel-cc
-compiler.cppstd=23
+compiler.cppstd=17
 compiler.version=2024.2
 compiler.mode=icx
 ## compiler.libcxx=libstdc++
@@ -17,9 +17,9 @@ tools.intel:installation_path="/opt/intel/oneapi"
 ## force is needed to prevent a error from happening. If not there it will call error 3 while executing cmake zlib
 tools.intel:setvars_args=--force
 
-tools.build:compiler_executables={"c": "/opt/intel/oneapi/compiler/2024.2/bin/icx","cpp": "/opt/intel/oneapi/compiler/2024.2/bin/icpx", "fortran": "/opt/intel/oneapi/compiler/2024.2/bin/ifx"}
+tools.build:compiler_executables={"c": "/opt/intel/oneapi/mpi/2021.13/bin/mpiicx","cpp": "/opt/intel/oneapi/mpi/2021.13/bin/mpicxx", "fortran": "/opt/intel/oneapi/mpi/2021.13/bin/mpiifx"}
 
 [buildenv]
 CC=/opt/intel/oneapi/mpi/2021.13/bin/mpiicx
-CXX=/opt/intel/oneapi/mpi/2021.13/bin/mpiicpx
+CXX=/opt/intel/oneapi/mpi/2021.13/bin/mpicxx
 FC=/opt/intel/oneapi/mpi/2021.13/bin/mpiifx
