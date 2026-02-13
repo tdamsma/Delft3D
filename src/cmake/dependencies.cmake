@@ -1,5 +1,5 @@
-# NetCDF
-find_package(netcdf REQUIRED)
+# NetCDF (CASE IS IMPORTANT!!)
+find_package(netCDF REQUIRED)
 find_package(netcdf-fortran REQUIRED)
 
 if(UNIX AND NOT APPLE)
