@@ -39,15 +39,17 @@ changes to the software that produce differences above tolerances in any test ca
 The trouble is that we need to store the test case input and reference files somewhere.
 
 Just like our code, our test case data changes over time.
-New functionality requires new test cases. It should be possible to create new
+New functionality requires new test cases. So it should be possible to create new
 test cases as new features are introduced. Sometimes either the input files or 
 reference files for an existing test case need to be updated. For instance, the input
 files may be using deprecated or obsolete functionality. 
-A change in the software may produce differences above tolerances, but the differences are 
-actually deemed to be an improvement. In the latter case the reference files need to be 
-updated. A history of test case data emerges over time. We want to be able to
+A change in the software may produce differences above tolerances. Sometimes the 
+differences are actually regarded as an improvement. In that case the reference files 
+need to be updated. Over time, a history of test case data emerges. We want to be able to
 roll back to a specific version of the software and run the test cases with the test
-case data as it was at the time that version of the software was made.
+case data as it was at the time that version of the software was made. Furthermore,
+we want developers to be able to make changes to test case data simultaneously without 
+unnecessary conflicts.
 
 We already version our software with `git`. Ideally, we
 could track all of our test case data with `git` as well. This way, our test
