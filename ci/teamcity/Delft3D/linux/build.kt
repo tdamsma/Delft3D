@@ -63,7 +63,6 @@ object LinuxBuild : BuildType({
     
 
     steps {
-        mergeTargetBranch {}
         script {
             name = "Add version attributes"
             workingDir = "./src/version_includes"
