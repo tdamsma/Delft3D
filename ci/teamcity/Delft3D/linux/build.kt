@@ -102,7 +102,7 @@ object LinuxBuild : BuildType({
               conan install --profile:build=tools/conan/default_linux --profile:host=tools/conan/default_linux --build=missing --output-folder=./build/ conanfile.py 
               ## pushback packages that we have created so that any update gets into nexus (We dont need the next person then to build it again :) )
               conan upload "*" -r deltaresconandev --confirm
-               source /etc/bashrc
+              source /etc/bashrc
               export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${'$'}PKG_CONFIG_PATH
               export LD_LIBRARY_PATH=/usr/local/lib:${'$'}LD_LIBRARY_PATH
               export CMAKE_PREFIX_PATH=/usr/local:${'$'}CMAKE_PREFIX_PATH
