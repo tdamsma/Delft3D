@@ -2,13 +2,13 @@
 
 ## Table of contents
 - [Introduction](#introduction)
-- [Versioning the test case data](#versioning-the-test-case-data)
-- [DVC (Data Version Control)](#dvc-data-version-control)
+- [Why we version the test case data](#why-we-version-the-test-case-data)
+- [DVC: Data Version Control](#dvc-data-version-control)
 - [HOW TO: Download test case data](#how-to-download-test-case-data)
-- [HOW TO: Update test case data (in your own branch)](#how-to-update-test-case-data-in-your-own-branch)
+- [HOW TO: Update test case data](#how-to-update-test-case-data)
     - [Updating a single test case](#updating-a-single-test-case)
     - [Updating multiple test cases](#updating-multiple-test-cases)
-- [HOW TO: Add test case data (in your own branch)](#how-to-add-test-case-data-in-your-own-branch)
+- [HOW TO: Add test case datas](#how-to-add-test-case-data)
 - [HOW TO: Clean up the test case data](#how-to-clean-up-the-test-case-data-from-your-hard-drive)
 - [HOW TO: See the changes to the test case data between different commits](#how-to-see-the-changes-to-the-test-case-data-between-different-commits)
 
@@ -29,7 +29,7 @@ This document does not contain any information about config files for
 `TestBench.py`. If you need help writing or updating a config file, you can take
 a look at the [`TestBench.py documentation`](./doc/readme-testbench.pdf)
 
-## Versioning the test case data
+## Why we version the test case data
 Running a test case with `TestBench.py` performs the following steps:
 1. Download the test case input files.
 2. Download the test case reference (output) files.
@@ -81,7 +81,7 @@ update existing test case data. Updates to the test case data can be done in a b
 multiple developers should be able to make changes to the test case data simultaneously in 
 different branches, without unnecessary conflicts.
 
-## DVC (Data Version Control)
+## DVC: Data Version Control
 
 [DVC](https://dvc.org/) is the tool we've chosen to version our test case data. It replaces
 the "MinIO tools" that we developed in-house. If you're familiar with the MinIO tools, you'll
@@ -190,7 +190,7 @@ dvc pull data/cases/e02_dflowfm/f040_subsidence/c*/input.dvc
 dvc pull @(ls .\data\cases\e02_dflowfm\f040_subsidence\c*\input.dvc)
 ```
 
-## HOW TO: Update test case data (in your own branch)
+## HOW TO: Update test case data
 Updating the test case data means changing the content of the `input`, `doc` and/or 
 `reference_{win,lnx}64.xml` directories. This changes their respective content hashes,
 leading to a change in the corresponding `.dvc` files. Let's first see how to update the
@@ -304,7 +304,7 @@ Note: If the test cases you need to update don't fit neatly in a single glob pat
 also store a list of paths to `.dvc` files in a variable. Then you can use your shell's variable
 expansion to make the commands above work for the exact set of test cases you're working on.
 
-## HOW TO: Add test case data (in your own branch)
+## HOW TO: Add test case data
 To add a test case data you need to create a new subdirectory in the directory tree inside
 `test/deltares_testbench/data/cases`. Before you can start you will need to know which
 "engine" and "functionality group" the test case belongs to. So you know which subdirectory
