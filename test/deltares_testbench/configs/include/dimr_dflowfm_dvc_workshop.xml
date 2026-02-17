@@ -1,5 +1,5 @@
 <testCases xmlns="http://schemas.deltares.nl/deltaresTestbench_v3">
-  <testCase name="e02_f040_c01_uniform_ibed_1" ref="dflowfm_default">
+  <testCase name="e02_f040_c01_uniform_ibed_1" ref="dflowfm_config">
     <path version="DVC">e02_dflowfm/f040_subsidence/c01_uniform_ibed_1</path>
     <maxRunTime>7.5000000</maxRunTime>
     <checks>
