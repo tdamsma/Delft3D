@@ -62,6 +62,8 @@ test/deltares_testbench/data/cases/*
 /tools/conan/recipes/*/build/**
 /tools/conan/recipes/*/*/build/**
 /tools/conan/recipes/build/**
-
+.conan2/**
+.conan2_win/**
 #jetbrains
 .cache/jb/**
+
