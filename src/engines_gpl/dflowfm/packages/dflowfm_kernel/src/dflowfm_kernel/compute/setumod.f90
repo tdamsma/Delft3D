@@ -144,7 +144,7 @@ contains
       end if
 
       if (kmx == 0 .and. newcorio == 1 .and. Perot_type /= NOT_DEFINED) then
-         call set_V_2D_default(jasfer3D)
+         call set_V_2D_default(lnx1D, lnx, jasfer3D)
       else
          !$OMP PARALLEL DO                           &
          !$OMP PRIVATE(L,LL,Lb,Lt,k1,k2,cs,sn,hmin,fcor,vcor)
@@ -698,7 +698,7 @@ contains
 
    !> Compute viscosity and stress for 2D links (vectorized proof of concept)
    !! Computes for ALL links, caller zeros dry links afterward
-   subroutine compute_viscosity_and_stress_vectorized(lnx1D, lnx,Smagorinsky, Elder, vicouv, javiusp, nshiptxy, vicuship, ja_timestep_auto_visc, jawave, swave, roller, nuhfac, rhomean, jsferic, jasfer3D)
+   subroutine compute_viscosity_and_stress_vectorized(lnx1D, lnx, Smagorinsky, Elder, vicouv, javiusp, nshiptxy, vicuship, ja_timestep_auto_visc, jawave, swave, roller, nuhfac, rhomean, jsferic, jasfer3D)
       use precision, only: dp
       use m_flowgeom, only: ln, acl, wui, dx, csu, snu, wu
       use m_physcoef, only: vonkar, sag
@@ -717,7 +717,7 @@ contains
 
       real(kind=dp) :: vksag6
 
-      integer :: L, L1, L2, k1, k2
+      integer :: L, k1, k2
       real(kind=dp) :: vicc, vicl, dxiAu, viscosity_max_limit
       real(kind=dp) :: nuhroller
       real(kind=dp) :: shearvar
@@ -854,7 +854,7 @@ contains
             dvx2_ = -suxL
             dvy2_ = -suyL
          end if
-         if (hu(L) > 0) then
+         if (hu(L) > 0 .and. L > lnx1D) then
             vicLU(L) = vicL ! Total viscosity
             viu(L) = max(0.0_dp, vicL - vicc) ! Modeled turbulent part only
          end if
@@ -878,12 +878,14 @@ contains
    end subroutine compute_viscosity_and_stress_vectorized
 
    !> Set tangential velocity v(L) for newcorio=1, kmx=0 case
-   subroutine set_V_2D_default(jasfer3D)
+   subroutine set_V_2D_default(lnx1d, lnx, jasfer3D)
       use precision, only: dp
       use m_flow, only: hu, v
-      use m_flowgeom, only: lnx, lnx1D, csu, snu, acL
+      use m_flowgeom, only: csu, snu, acL
       use m_prefetch, only: csb_1, snb_1, csb_2, snb_2, ucx_1, ucy_1, ucx_2, ucy_2
 
+      integer, intent(in) :: lnx1d !> 1D link count for loop bounds and array sizes, should match m_flowgeom lnx1D
+      integer, intent(in) :: lnx !> total link count for loop bounds and array sizes, should match m_flowgeom lnx
       integer, intent(in) :: jasfer3D !> jasfer3D flag for coordinate transformation, should match m_sferic jasfer3D
 
       integer :: L
@@ -892,7 +894,7 @@ contains
       real(kind=dp) :: v_
 
       !$OMP SIMD
-      do L = lnx1D + 1, lnx
+      do L = 1, lnx
          if (jasfer3D) then
             ucx_link_1 = +csb_1(L) * ucx_1(L) + snb_1(L) * ucy_1(L)
             ucy_link_1 = -snb_1(L) * ucx_1(L) + csb_1(L) * ucy_1(L)
@@ -910,7 +912,7 @@ contains
          sn = snu(L)
          v_ = acL_LL * (-sn * ucx_link_1 + cs * ucy_link_1) + &
               acL_iv * (-sn * ucx_link_2 + cs * ucy_link_2)
-         if (hu(L) > 0.0_dp) then
+         if (L > lnx1D .and. hu(L) > 0.0_dp) then
             v(L) = v_
          end if
       end do
