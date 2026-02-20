@@ -260,8 +260,6 @@
      x = c_loc(au)
   case("au_nostrucs") !<  [m2] flow area     (m2)   at u point {"location": "edge", "shape": ["lnkx"]}
      x = c_loc(au_nostrucs)
-  case("hu") !<  [m] upwind waterheight at u-point; for 3D layers the distance from the top of layer to the bed (m) {"location": "edge", "shape": ["lnx"]}
-     x = c_loc(hu)
   case("frcu") !<  [TODO] friction coefficient set by initial fields {"location": "edge", "shape": ["lnx"]}
      x = c_loc(frcu)
   case("viusp") !<  [m2/s] user defined spatial eddy viscosity coefficient at u point (m2/s) {"location": "edge", "shape": ["lnx"]}
@@ -302,8 +300,6 @@
      x = c_loc(iadv)
   case("dx") !<  [m] link length (m) {"location": "edge", "shape": ["lnx"]}
      x = c_loc(dx)
-  case("wu") !<  [m] link initial width (m), if < 0 pointer to convtab {"location": "edge", "shape": ["lnx"]}
-     x = c_loc(wu)
   case("wu_mor") !<  [m] morphologically active width (m), if < 0 pointer to convtab {"location": "edge", "shape": ["lnx"]}
      x = c_loc(wu_mor)
   case("wu1D2D") !<  [m] Custom input for 1D2D link widths. {"location": "edge", "shape": ["lnx1D"]}

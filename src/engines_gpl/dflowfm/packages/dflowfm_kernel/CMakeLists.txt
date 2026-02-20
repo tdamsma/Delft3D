@@ -255,6 +255,11 @@ set_source_files_properties(${fortran_version_files}
                             ${CMAKE_CURRENT_SOURCE_DIR}/${dflowfm_kernel_compute_waves_path}/fetch_proc.F90
                             PROPERTIES COMPILE_OPTIONS "${file_preprocessor_flag}")
 
+# set AVX flags for vectorized setumod, will generate "fat" binary ensuring compatibility on older CPUs
+set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${dflowfm_kernel_compute_path}/setumod.f90
+    APPEND PROPERTY COMPILE_OPTIONS "/arch:CORE-AVX512" "/Qopt-zmm-usage:high"
+)
+
 # Define preprocessor definitions
 if (WIN32)
     set_target_properties(${library_name} PROPERTIES COMPILE_FLAGS ${openmp_flag})

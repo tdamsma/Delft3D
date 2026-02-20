@@ -41,7 +41,7 @@ if (WIN32)
     set(codecov_flag                          /Qcov-gen)
     set(profiling_flag                        /Qprof-gen:srcpos)
     set(srcrootdir_code_cov                   /Qprof-src-root ${src_root_dir})
-
+    set(align_array_64byte_flag               /align:array64byte)
     # Store debug info inside objects instead of pdbs when building, pbds are created by linker after.
     # Since we build with /MP, multiple processes might write into the same PDB otherwise, causing corrupt PDB errors.
     # CMAKE_Fortran_FLAGS_DEBUG contains /debug:full by default, which creates a PDB before linking, but specifying /Z7 after overrides this behavior.
@@ -99,11 +99,14 @@ if (UNIX)
     set(flush_to_zero_flag                       "-ftz")
     set(traceback_flag                           "-traceback")
     set(heap_arrays_100_flag                     "-heap-arrays 100")
+    set(align_array_64byte_flag                  "-align array64byte")
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
     # Set debug flags:
     string(APPEND CMAKE_Fortran_FLAGS_DEBUG " ${check_stack_flag} ${check_bounds_flag} ${traceback_flag} ${check_pointers_flag} ${floating_point_exception_flag}")
 endif(UNIX)
+
+string(APPEND CMAKE_Fortran_FLAGS " ${align_array_64byte_flag}")
 
 set(qauto_threaded_flags "SHELL:${automatic_local_variable_storage_flag}" "SHELL:${generate_reentrancy_threaded_flag}")
 set(waq_default_flags ${file_preprocessor_flag} ${traceback_flag})
