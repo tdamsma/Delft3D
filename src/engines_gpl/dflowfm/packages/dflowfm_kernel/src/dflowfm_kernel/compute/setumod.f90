@@ -218,7 +218,7 @@ contains
       if (newcorio == 1 .and. icorio > 0) then
          if (icorio <= 20 .and. kmx == 0) then
 
-            call compute_coriolis_correction_2D_default(icorio, jsferic, jasfer3D, jacorioconstant, fcorio, trshcorio, Corioadamsbashfordfac)
+            call compute_coriolis_correction_2D_default(lnx1D, lnx, icorio, jsferic, jasfer3D, jacorioconstant, fcorio, trshcorio, Corioadamsbashfordfac)
 
          else if (icorio < 40) then
             fcor1 = fcorio
@@ -975,14 +975,16 @@ contains
 !! Module arrays modified:
 !!   - adve, fvcoro
 !! Adams Bashford is copied 3x as a compromise
-   subroutine compute_coriolis_correction_2D_default(icorio, jsferic, jasfer3D, jacorioconstant, fcorio, trshcorio, Corioadamsbashfordfac)
+   subroutine compute_coriolis_correction_2D_default(lnx1d, lnx, icorio, jsferic, jasfer3D, jacorioconstant, fcorio, trshcorio, Corioadamsbashfordfac)
 
       use precision, only: dp
-      use m_flowgeom, only: ln, acL, csu, snu, lnx, lnx1D
+      use m_flowgeom, only: ln, acL, csu, snu
       use m_flow, only: hu, adve, fvcoro, fcori
       use m_prefetch, only: ucxq_1, ucyq_1, ucxq_2, ucyq_2, csb_1, snb_1, csb_2, snb_2
 
       !> intent in conditionals so that compiler can assume constants and optimize accordingly
+      integer, intent(in) :: lnx1d !> 1D link count for loop bounds and array sizes, should match m_flowgeom lnx1D
+      integer, intent(in) :: lnx !> total link count for loop bounds and array sizes, should match m_flowgeom lnx
       integer, intent(in) :: icorio !< coriolis type, should match m_flowparameters icorio
       integer, intent(in) :: jsferic !< sferic type, should match m_sferic jsferic
       integer, intent(in) :: jasfer3D !< 3D sferic coordinates flag, should match m_sferic jasfer3D
@@ -1011,10 +1013,10 @@ contains
             end do
          end if
          !$OMP SIMD
-         do L = lnx1D + 1, lnx
+         do L = 1, lnx
             fvcor = calculate_coriolis_force(fcor1_(L), fcor2_(L), jasfer3D, acL(L), csu(L), snu(L), ucxq_1(L), ucyq_1(L), ucxq_2(L), ucyq_2(L), csb_1(L), snb_1(L), csb_2(L), snb_2(L), hmin_(L), trshcorio)
 
-            if (hu(L) > 0.0_dp) then
+            if (L > lnx1D .and. hu(L) > 0.0_dp) then
                adve(L) = adve(L) - fvcor
 
                if (Corioadamsbashfordfac > 0.0_dp) then
@@ -1027,11 +1029,11 @@ contains
          end do
       else if (spatial_coriolis .and. icorio == 5) then !> separate loop to prevent double memory access for fcor1 & fcor2 in performance sensitive loop
          !$OMP SIMD
-         do L = lnx1D + 1, lnx
+         do L = 1, lnx
             fcor = fcori(L)
             fvcor = calculate_coriolis_force(fcor, fcor, jasfer3D, acL(L), csu(L), snu(L), ucxq_1(L), ucyq_1(L), ucxq_2(L), ucyq_2(L), csb_1(L), snb_1(L), csb_2(L), snb_2(L), hmin_(L), trshcorio)
 
-            if (hu(L) > 0.0_dp) then
+            if (L > lnx1D .and. hu(L) > 0.0_dp) then
                adve(L) = adve(L) - fvcor
 
                if (Corioadamsbashfordfac > 0.0_dp) then
@@ -1049,10 +1051,10 @@ contains
          end if
 
          !$OMP SIMD
-         do L = lnx1D + 1, lnx
+         do L = 1, lnx
             fvcor = calculate_coriolis_force(fcorio, fcorio, jasfer3D, acL(L), csu(L), snu(L), ucxq_1(L), ucyq_1(L), ucxq_2(L), ucyq_2(L), csb_1(L), snb_1(L), csb_2(L), snb_2(L), hmin_(L), trshcorio)
 
-            if (hu(L) > 0.0_dp) then
+            if (L > lnx1D .and. hu(L) > 0.0_dp) then
                adve(L) = adve(L) - fvcor
 
                if (Corioadamsbashfordfac > 0.0_dp) then
