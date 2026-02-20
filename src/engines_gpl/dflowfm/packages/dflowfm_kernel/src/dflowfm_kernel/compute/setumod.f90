@@ -379,7 +379,7 @@ contains
          if (kmx == 0) then
 
             if (istresstyp == 2 .or. istresstyp == 3) then ! first set stressvector in cell centers
-               call compute_viscosity_and_stress_vectorized(Smagorinsky, Elder, vicouv, javiusp, nshiptxy, vicuship, ja_timestep_auto_visc, jawave, swave, roller, nuhfac, rhomean, jsferic, jasfer3D)
+               call compute_viscosity_and_stress_vectorized(lnx1D, lnx, Smagorinsky, Elder, vicouv, javiusp, nshiptxy, vicuship, ja_timestep_auto_visc, jawave, swave, roller, nuhfac, rhomean, jsferic, jasfer3D)
             else
                !$OMP PARALLEL DO                                  &
                !$OMP PRIVATE(L,k1,k2)
@@ -698,9 +698,9 @@ contains
 
    !> Compute viscosity and stress for 2D links (vectorized proof of concept)
    !! Computes for ALL links, caller zeros dry links afterward
-   subroutine compute_viscosity_and_stress_vectorized(Smagorinsky, Elder, vicouv, javiusp, nshiptxy, vicuship, ja_timestep_auto_visc, jawave, swave, roller, nuhfac, rhomean, jsferic, jasfer3D)
+   subroutine compute_viscosity_and_stress_vectorized(lnx1D, lnx,Smagorinsky, Elder, vicouv, javiusp, nshiptxy, vicuship, ja_timestep_auto_visc, jawave, swave, roller, nuhfac, rhomean, jsferic, jasfer3D)
       use precision, only: dp
-      use m_flowgeom, only: lnx, lnx1d, ln, acl, wui, dx, csu, snu, wu
+      use m_flowgeom, only: ln, acl, wui, dx, csu, snu, wu
       use m_physcoef, only: vonkar, sag
       use m_flow, only: vol1, hu, u1, v, frcu, ifrcutp, vicushp, viclu, viu, viusp, dvxc, dvyc
       use m_get_chezy, only: get_chezy
@@ -710,6 +710,7 @@ contains
       use m_waveconst, only: WAVE_SURFBEAT
       use m_flowtimes, only: dti
 
+      integer, intent(in) :: lnx1D, lnx
       real(dp), intent(in) :: Smagorinsky, Elder, vicouv, vicuship, nuhfac, rhomean
       integer, intent(in) :: javiusp, nshiptxy, ja_timestep_auto_visc
       integer, intent(in) :: jawave, swave, roller, jsferic, jasfer3D
@@ -730,8 +731,6 @@ contains
       real(kind=dp) :: ucx_link_1, ucy_link_1, ucx_link_2, ucy_link_2
       real(kind=dp) :: dvx1_, dvy1_, dvx2_, dvy2_
 
-      L1 = lnx1D + 1
-      L2 = lnx
       vksag6 = vonkar * sag / 6.0_dp
 
       if (.not. allocated(dvx1)) then
@@ -744,14 +743,14 @@ contains
 
       !precompute indirect volumes and conditionals (visc_limit)
       if (ja_timestep_auto_visc == 0) then
-         do L = L1, L2
+         do L = 1, lnx
             k1 = ln(1, L)
             k2 = ln(2, L)
             volmin(L) = min(vol1(k1), vol1(k2))
          end do
       end if
       if ((jawave == WAVE_SURFBEAT) .and. (swave == 1) .and. (roller == 1)) then
-         do L = L1, L2
+         do L = 1, lnx
             k1 = ln(1, L)
             k2 = ln(2, L)
             drl(L) = acL(L) * DR(k1) + (1 - acL(L)) * DR(k2)
@@ -763,7 +762,7 @@ contains
       end if
 
       !$OMP SIMD
-      do L = L1, L2
+      do L = 1, lnx
          vicL = 0.0_dp
          wuiL = wui(L)
          wuL = 1.0_dp / wuiL
@@ -859,15 +858,15 @@ contains
             vicLU(L) = vicL ! Total viscosity
             viu(L) = max(0.0_dp, vicL - vicc) ! Modeled turbulent part only
          end if
-         dvx1(L) = merge(dvx1_, 0.0_dp, hu(L) > 0)
-         dvy1(L) = merge(dvy1_, 0.0_dp, hu(L) > 0)
-         dvx2(L) = merge(dvx2_, 0.0_dp, hu(L) > 0)
-         dvy2(L) = merge(dvy2_, 0.0_dp, hu(L) > 0)
+         dvx1(L) = merge(dvx1_, 0.0_dp, hu(L) > 0 .and. L > lnx1D)
+         dvy1(L) = merge(dvy1_, 0.0_dp, hu(L) > 0 .and. L > lnx1D)
+         dvx2(L) = merge(dvx2_, 0.0_dp, hu(L) > 0 .and. L > lnx1D)
+         dvy2(L) = merge(dvy2_, 0.0_dp, hu(L) > 0 .and. L > lnx1D)
 
       end do
       dvxc = 0.0_dp
       dvyc = 0.0_dp
-      do L = L1, L2 !> accumulate link stress at nodes
+      do L = 1, lnx !> accumulate link stress at nodes
          k1 = ln(1, L)
          k2 = ln(2, L)
 
