@@ -1,0 +1,53 @@
+--- fortran/src/H5Pff.F90
++++ fortran/src/H5Pff.F90
+@@ -1,4 +1,5 @@
+ #ifdef H5_HAVE_PARALLEL
++#ifdef H5_HAVE_SUBFILING_VFD
+ !> \addtogroup FH5P
+ !> @{
+   !> @brief H5FD_subfiling_params_t derived type used in the subfiling VFD.
+@@ -30,6 +31,7 @@
+     INTEGER(C_INT32_T) :: thread_pool_size !< Number of I/O concentrator worker threads to use
+   END TYPE H5FD_ioc_config_t
+ !> @}
++#endif
+ #endif
+ CONTAINS
+ !>
+@@ -5320,6 +5322,7 @@
+   END SUBROUTINE h5pset_fapl_mpio_f
+ 
+ #ifdef H5_HAVE_SUBFILING_VFD
++! === WIN-ONLY: Subfiling/IOC not supported on Windows - removed ===
+ !>
+ !! NAME
+ !!  h5pset_fapl_subfiling_f
+@@ -5370,6 +5373,7 @@
+   END SUBROUTINE h5pset_fapl_subfiling_f
+ #endif
+ 
++#ifdef H5_HAVE_SUBFILING_VFD
+ !>
+ !! NAME
+ !!  h5pget_fapl_subfiling_f
+@@ -5420,6 +5424,7 @@
+   END SUBROUTINE h5pget_fapl_subfiling_f
+ #endif
+ 
++#ifdef H5_HAVE_IOC_VFD
+ !>
+ !! NAME
+ !!  h5pset_fapl_ioc_f
+@@ -5470,6 +5475,7 @@
+   END SUBROUTINE h5pset_fapl_ioc_f
+ #endif
+ 
++#ifdef H5_HAVE_IOC_VFD
+ !>
+ !! NAME
+ !!  h5pget_fapl_ioc_f
+@@ -5520,6 +5526,7 @@
+   END SUBROUTINE h5pget_fapl_ioc_f
+ #endif
+ 
++! === WIN-ONLY: End of removed Subfiling/IOC Fortran wrappers ===

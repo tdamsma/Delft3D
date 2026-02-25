@@ -31,8 +31,35 @@ class NetcdfFortranRecipe(ConanFile):
     # -------------------------------------------------------------------------
     # Dependency graph (THIS is where correctness matters)
     # -------------------------------------------------------------------------
-    def requirements(self):
-   
+    def requirements(self): 
+      if self.settings.os == "Windows":
+        self.requires(
+          "hdf5/1.14.3",
+          options={
+            "parallel": True,
+            "enable_fortran": False,
+            "enable_cxx" : False,
+            "shared": True,
+            "with_zlib": True
+          }
+        )
+        self.requires(
+          "netcdf/4.9.3",
+          options={
+            "shared": True,
+            #"fPIC": True,
+            "netcdf4": True,
+            "with_hdf5": True,
+            "cdf5": True,
+            "dap": False,
+            "byterange": False,
+
+          },
+          transitive_libs=True,
+          transitive_headers=True,
+        )
+        
+      else: 
         self.requires(
             "hdf5/1.14.3",
             options={
@@ -40,13 +67,13 @@ class NetcdfFortranRecipe(ConanFile):
               "enable_fortran": True,
               "enable_cxx" : False
             },
+            
         )
-
         self.requires(
             "netcdf/4.9.2",
             options={
               "shared": False,
-              "fPIC": True,
+              #"fPIC": True,
               "netcdf4": True,
               "with_hdf5": True,
               "cdf5": True,
@@ -55,13 +82,11 @@ class NetcdfFortranRecipe(ConanFile):
                      
             },
             transitive_headers=True,
-        )
-
-        
-
+          )
+      
     # -------------------------------------------------------------------------
     def config_options(self):
-      if self.settings.os == "Windows":
+      if self.settings.os == "Windows":    
         self.options.rm_safe("fPIC")
 
     # -------------------------------------------------------------------------

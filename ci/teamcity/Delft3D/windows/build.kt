@@ -37,6 +37,13 @@ object WindowsBuild : BuildType({
         param("enable_code_coverage_flag", "OFF")
         select("build_type", "Release", display = ParameterDisplay.PROMPT, options = listOf("Release", "Debug"))
         select("product", "auto-select", display = ParameterDisplay.PROMPT, options = listOf("auto-select", "all-testbench", "fm-suite", "d3d4-suite", "fm-testbench", "d3d4-testbench", "waq-testbench", "part-testbench", "rr-testbench", "wave-testbench", "swan-testbench"))
+        param("env.CONAN_LOGIN_USERNAME_DELTARESCONAN", DslContext.getParameter("conan.username"))
+        param("env.CONAN_PASSWORD_DELTARESCONAN", DslContext.getParameter("conan.password"))
+        param("env.CONAN_LOGIN_USERNAME_DELTARESCONANDEV", DslContext.getParameter("conan.username"))
+        param("env.CONAN_PASSWORD_DELTARESCONANDEV", DslContext.getParameter("conan.password"))
+        param("deltaresconan_url", DslContext.getParameter("conan.deltaresconan"))
+        param("deltaresconandev_url", DslContext.getParameter("conan.deltaresconandev"))
+     
     }
 
     vcs {
@@ -75,6 +82,10 @@ object WindowsBuild : BuildType({
         script {
             name = "Build"
             scriptContent = """
+              
+                
+              
+              
                 call C:/set-env-vs2022.cmd
                 cmake ./src/cmake -G %generator% -T fortran=%intel_fortran_compiler% -D CMAKE_BUILD_TYPE=%build_type% -D CONFIGURATION_TYPE:STRING=%product% -B build_%product% -D CMAKE_INSTALL_PREFIX=build_%product%/install -D ENABLE_CODE_COVERAGE=%enable_code_coverage_flag%
                 if %%errorlevel%% neq 0 exit /b %%errorlevel%%

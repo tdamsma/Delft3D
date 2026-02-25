@@ -51,11 +51,12 @@ class Hdf5Conan(ConanFile):
     }
 
     def export_sources(self):
+      # if self.settings.os == "Windows":
       export_conandata_patches(self)
 
     def config_options(self):
       if self.settings.os == "Windows":
-        del self.options.fPIC
+        self.options.rm_safe("fPIC")
 
     def configure(self):
       if self.options.shared:
@@ -74,7 +75,10 @@ class Hdf5Conan(ConanFile):
 
     def requirements(self):
       if self.options.with_zlib:
-        self.requires("zlib/[>=1.2.11 <2]")
+       # if self.settings.os == "Windows":
+         # self.requires("zlib/[>=1.2.11 <2]",options={"shared":True})
+        #else:
+          self.requires("zlib/[>=1.2.11 <2]")
       if self.options.with_zlibng:
         self.requires("zlib-ng/2.2.2")
       if self.options.szip_support == "with_libaec":
@@ -156,16 +160,26 @@ class Hdf5Conan(ConanFile):
       tc.variables["HDF5_BUILD_JAVA"] = False
       tc.variables["ALLOW_UNSUPPORTED"] = self.options.enable_unsupported
       if self.options.enable_fortran:
-        tc.variables["CMAKE_Fortran_MODULE_DIRECTORY"] = f"{self.build_folder}/mod"
+        tc.variables["CMAKE_Fortran_MODULE_DIRECTORY"] = os.path.join(self.build_folder,"mod").replace("\\","/")
+      if self.settings.build_type == "Debug":
+        # Force the standard Windows debug postfix ("_D") for all libs, including Fortran
+        tc.variables["CMAKE_DEBUG_POSTFIX"] = "_D"
       tc.generate()
 
     def build(self):
+     # if self.settings.os == "Windows":
       apply_conandata_patches(self)
       # Do not force PIC
       replace_in_file(self, os.path.join(self.source_folder, "CMakeLists.txt"),
                       "set (CMAKE_POSITION_INDEPENDENT_CODE ON)", "")
       cmake = CMake(self)
       cmake.configure()
+      # if self.settings.os =="Windows":
+      #   if self.settings.compiler == "msvc":
+      #      cmake.build(args=["--", "/m:1"])   # MSBuild
+      #   else:
+      #     cmake.build(args=["--", "-j1"]) 
+      # else:    
       cmake.build()
 
     def _components(self):
