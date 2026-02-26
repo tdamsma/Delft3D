@@ -83,11 +83,25 @@ object WindowsBuild : BuildType({
             name = "Build"
             scriptContent = """
               
+                pip install uv
+                set UV_PROJECT_ENVIRONMENT=.venv-windows
+                uv sync 
+                .venv-windows\Scripts\activate
+                set CONAN_HOME=C:/work/.conan2_win
                 
-              
-              
+                conan remote add local-recipes C:/work/tools/conan/ --type=local-recipes-index --force --index=0
+                conan remote add deltaresconan https://artifacts.deltares.nl/repository/conan-internal/ --force --index=2
+                conan remote add deltaresconandev https://artifacts.deltares.nl/repository/conan-dev/ --force --index=1
+                conan remote remove conancenter
+                
+                sed -i 's/"2024.1",/"2024.1","2024.2",/g' %CD%/.conan2_win/settings.yml
+                conan profile detect
+                
+                conan install --profile:build=tools/conan/default_msvc --profile:host=tools/conan/default_msvc --build=missing --output-folder=../build/ conanfile.py 
+                conan upload "*" -r deltaresconandev --confirm  
+                                              
                 call C:/set-env-vs2022.cmd
-                cmake ./src/cmake -G %generator% -T fortran=%intel_fortran_compiler% -D CMAKE_BUILD_TYPE=%build_type% -D CONFIGURATION_TYPE:STRING=%product% -B build_%product% -D CMAKE_INSTALL_PREFIX=build_%product%/install -D ENABLE_CODE_COVERAGE=%enable_code_coverage_flag%
+                cmake ./src/cmake -G %generator% -T fortran=%intel_fortran_compiler% -D CMAKE_BUILD_TYPE=%build_type% -D CONFIGURATION_TYPE:STRING=%product% -B build_%product% -D CMAKE_INSTALL_PREFIX=build_%product%/install -D ENABLE_CODE_COVERAGE=%enable_code_coverage_flag%  -D CMAKE_TOOLCHAIN_FILE=../build/build/generators/conan_toolchain.cmake
                 if %%errorlevel%% neq 0 exit /b %%errorlevel%%
 
                 cmake --build ./build_%product% -j --target install --config %build_type%

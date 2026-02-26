@@ -6,3 +6,8 @@ if(UNIX AND NOT APPLE)
     message(STATUS "Defining linux macro")
     add_compile_definitions(linux)
 endif()
+
+if(WIN32)
+    message(STATUS "Defining Windows deprecated WIN32 macro")
+    add_compile_definitions(WIN32)
+endif()

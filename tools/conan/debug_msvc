@@ -10,7 +10,7 @@ os=Windows
 
 [conf]
 tools.build:compiler_executables={"fortran": "ifx"}
-tools.cmake.cmaketoolchain:extra_variables={"CMAKE_Fortran_COMPILER": "ifx", "CMAKE_GENERATOR_TOOLSET":"fortran=ifx","CMAKE_Fortran_COMPILER_ID":"IntelLLVM"}
+tools.cmake.cmaketoolchain:extra_variables={  "CMAKE_TRY_COMPILE_TARGET_TYPE": "STATIC_LIBRARY","CMAKE_Fortran_COMPILER": "ifx", "CMAKE_GENERATOR_TOOLSET":"fortran=ifx", "CMAKE_Fortran_COMPILER_ID":"IntelLLVM", "CMAKE_C_COMPILER_ID":"IntelLLVM" }
 tools.build:jobs=1
 
 
