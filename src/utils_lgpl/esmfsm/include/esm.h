@@ -112,7 +112,7 @@ ESM_Alloc (
 int
 ESM_Free (
     int     contextid,
-    char *  name
+    const char *  name
     );
 
 int
@@ -133,7 +133,7 @@ ESM_Error (
 
 int
 ESM_TraceFile (
-    char *  filename
+    const char *  filename
     );
 
 int

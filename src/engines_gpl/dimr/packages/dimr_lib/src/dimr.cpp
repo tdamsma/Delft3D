@@ -1566,7 +1566,7 @@ void Dimr::scanComponent(XmlTree* xmlComponent, dimr_component* newComp) {
         // No <process> specified, default: only run on rank #0.
         log->Write(ALL, my_rank, "INFO: \"<process>\" not specified for component \"%s\". Assuming it only runs on rank #0.", newComp->name);
         newComp->numProcesses = 1;
-        char* defaultProc = "0";
+        const char* defaultProc = "0";
         char_to_ints(defaultProc, &(newComp->processes), &(newComp->numProcesses));
 
         newComp->onThisRank = (my_rank == 0);

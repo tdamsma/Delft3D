@@ -45,18 +45,22 @@ const char * getversionstring_dimr_lib(void)
 	return modname_version;
 }
 
-const char* getfullversionstring_dimr_lib(void) {
+const char * getfullversionstring_dimr_lib(void)
+{
 	return modname_version_full;
 }
 
-const char* getshortversionstring_dimr_lib(void) {
+const char * getshortversionstring_dimr_lib(void)
+{
 	return modname_version_short;
 }
 
-const char* geturlstring_dimr_lib(void) {
+const char * geturlstring_dimr_lib(void)
+{
 	return modname_url;
 }
 
-const char* getversionidstring_dimr_lib(void) {
+const char * getversionidstring_dimr_lib(void)
+{
 	return modname_version_id;
 }

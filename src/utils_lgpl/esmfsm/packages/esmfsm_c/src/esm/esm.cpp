@@ -494,7 +494,7 @@ ESM_Error (
 
 int
 ESM_TraceFile (
-    char *  filename
+    const char *  filename
     ) {
 
     int return_value = -999;

@@ -97,7 +97,7 @@ Component::Step (
     double stepSize
     ) {
 
-    const char* message = "A DeltaresHydro component's Step method was not overridden";
+    const char * message = "A DeltaresHydro component's Step method was not overridden";
     printf ("ERROR: %s\n", message);
 
     // This throw is not caught, even though the invocation of Run() is in
@@ -115,7 +115,7 @@ Component::Finish (
     void
     ) {
 
-    const char* message = "A DeltaresHydro component's Finish method was not overridden";
+    const char * message = "A DeltaresHydro component's Finish method was not overridden";
     printf ("ERROR: %s\n", message);
 
     // This throw is not caught, even though the invocation of Run() is in
@@ -133,7 +133,7 @@ Component::GetStartTime (
     void
     ) {
 
-    const char* message = "A DeltaresHydro component's GetStartTime method was not overridden";
+    const char * message = "A DeltaresHydro component's GetStartTime method was not overridden";
     printf ("ERROR: %s\n", message);
 
     // This throw is not caught, even though the invocation of Run() is in
@@ -152,7 +152,7 @@ Component::GetEndTime (
     void
     ) {
 
-    const char* message = "A DeltaresHydro component's GetEndTime method was not overridden";
+    const char * message = "A DeltaresHydro component's GetEndTime method was not overridden";
     printf ("ERROR: %s\n", message);
 
     // This throw is not caught, even though the invocation of Run() is in
@@ -171,7 +171,7 @@ Component::GetCurrentTime (
     void
     ) {
 
-    const char* message = "A DeltaresHydro component's GetCurrentTime method was not overridden";
+    const char * message = "A DeltaresHydro component's GetCurrentTime method was not overridden";
     printf ("ERROR: %s\n", message);
 
     // This throw is not caught, even though the invocation of Run() is in
@@ -190,7 +190,7 @@ Component::GetTimeStep (
     void
     ) {
 
-    const char* message = "A DeltaresHydro component's GetTimeStep method was not overridden";
+    const char * message = "A DeltaresHydro component's GetTimeStep method was not overridden";
     printf ("ERROR: %s\n", message);
 
     // This throw is not caught, even though the invocation of Run() is in

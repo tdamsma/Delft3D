@@ -546,7 +546,8 @@ void D3dFlowContext::DumpEsmContext(void)
 }
 
 
-void D3dFlowContext::CMapLog(const char* format, /* I: 'fprintf-format' for print of log */
+void D3dFlowContext::CMapLog(
+    const char      * format,     /* I: 'fprintf-format' for print of log */
     ...             /* I: arguments of log message (should be
                     terminated with NULL)       */
     )

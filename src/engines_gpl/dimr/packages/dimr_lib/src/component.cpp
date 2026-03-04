@@ -52,7 +52,7 @@ Component::~Component(void) {}
 
 void Component::Run(void)
 {
-   const char* message = "A Dimr component's Run method was not overridden";
+   const char * message = "A Dimr component's Run method was not overridden";
    printf("ERROR: %s\n", message);
 
    // This throw is not caught, even though the invocation of Run() is in
@@ -69,7 +69,7 @@ void
 Component::Init(void)
 {
 
-   const char* message = "A Dimr component's Init method was not overridden";
+   const char * message = "A Dimr component's Init method was not overridden";
    printf("ERROR: %s\n", message);
 
    // This throw is not caught, even though the invocation of Run() is in
@@ -84,7 +84,7 @@ Component::Init(void)
 
 void Component::Step(double stepSize)
 {
-    const char* message = "A Dimr component's Step method was not overridden";
+   const char * message = "A Dimr component's Step method was not overridden";
    printf("ERROR: %s\n", message);
 
    // This throw is not caught, even though the invocation of Run() is in
