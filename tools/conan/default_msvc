@@ -13,9 +13,7 @@ tools.build:compiler_executables={"fortran": "ifx"}
 tools.cmake.cmaketoolchain:extra_variables={"CMAKE_Fortran_COMPILER": "ifx", "CMAKE_GENERATOR_TOOLSET":"fortran=ifx","CMAKE_Fortran_COMPILER_ID":"IntelLLVM","CMAKE_C_COMPILER_ID": "IntelLLVM"}
 tools.build:jobs=1
 
-
 [buildenv]
 I_MPI_ROOT=C:/Program Files (x86)/Intel/oneAPI/mpi/latest
-CMAKE_Fortran_COMPILER=ifx
-CMAKE_C_COMPILER_ID=IntelLLVM
+CMAKE_Fortran_COMPILER=ifx\
 FC=ifx
