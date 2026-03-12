@@ -61,12 +61,7 @@ ParseMapperConfigString (
     int         iii;                // auxiliary integer variable
     int         retVal = HY_OK;     // return value
         FILE      * refinementFile;     // file to pass refinement factor to flow
-<<<<<<< HEAD
-    const char* refFileName = "TMP_refinement";
-=======
     const char      * refFileName = "TMP_refinement";
->>>>>>> main
-
     int mStartLeft , nStartLeft , mEndLeft , nEndLeft;
     int mStartRight, nStartRight, mEndRight, nEndRight;
     char dumNameLeft[200], dumNameRight[200];
