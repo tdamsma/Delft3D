@@ -469,7 +469,7 @@ class TestSetRunner(ABC):
                 from src.config.credentials import Credentials
 
                 handler = DvcHandler()
-                handler.download_batch(dvc_files, credentials or Credentials(), self.__logger)
+                handler.download_batch(dvc_files, credentials or Credentials(), self.__logger, jobs=6)
             except Exception as exception:
                 self.__logger.error(f"Batch DVC download failed: {exception}")
                 for config in dvc_configs:
