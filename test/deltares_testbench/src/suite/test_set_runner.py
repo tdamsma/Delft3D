@@ -449,7 +449,21 @@ class TestSetRunner(ABC):
             return
 
         self.__apply_dvc_paths(all_dvc_locations)
+
+        # Copy DVC dependencies now that the batch checkout has made the data available.
+        self.__copy_dvc_dependencies(dvc_configs)
+
         log_separator(self.__logger, char="-")
+
+    def __copy_dvc_dependencies(self, dvc_configs: list[TestCaseConfig]) -> None:
+        """Copy DVC dependency data to the expected location next to each test case's input."""
+        configs_with_deps = [c for c in dvc_configs if c.dependency and c.dependency.version == "DVC"]
+        if not configs_with_deps:
+            return
+
+        log_sub_header("Copying DVC dependencies", self.__logger)
+        for config in configs_with_deps:
+            self.__download_config_dependencies(config, self.__logger)
 
     def __collect_dvc_locations(self, dvc_configs: list[TestCaseConfig]) -> list[DvcLocationInfo]:
         """Validate each DVC config and collect its downloadable locations."""
@@ -558,7 +572,10 @@ class TestSetRunner(ABC):
                 self.cleanup_failed_preparation(info.config)
 
     def __download_dependencies(self) -> None:
-        configs_to_handle = [c for c in self.__settings.configs_to_run if c.dependency]
+        # DVC dependencies are handled after the DVC batch checkout in __prepare_dvc_test_cases.
+        configs_to_handle = [
+            c for c in self.__settings.configs_to_run if c.dependency and not (c.dependency.version == "DVC")
+        ]
         if len(configs_to_handle) == 0:
             return
 
