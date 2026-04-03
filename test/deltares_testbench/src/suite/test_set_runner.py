@@ -440,6 +440,11 @@ class TestSetRunner(ABC):
             for dvc_location in all_dvc_locations
             if dvc_location.location.type not in self.skip_download
         ]
+
+        # Include dependency .dvc files in the batch download
+        dependency_dvc_files = self.__collect_dependency_dvc_files(dvc_configs)
+        dvc_files.extend(dependency_dvc_files)
+
         if not self.__batch_download_dvc(dvc_files, all_dvc_locations, dvc_configs):
             return
 
@@ -487,6 +492,27 @@ class TestSetRunner(ABC):
                 )
             )
         return infos
+
+    def __collect_dependency_dvc_files(self, dvc_configs: list[TestCaseConfig]) -> list[str]:
+        """Collect .dvc file paths for DVC dependencies so they are included in the batch download."""
+        seen: set[str] = set()
+        dvc_files: list[str] = []
+        for config in dvc_configs:
+            if not config.dependency or config.dependency.version != "DVC":
+                continue
+            location = next((loc for loc in config.locations if loc.type == PathType.INPUT), None)
+            if location is None:
+                continue
+            dep_dvc_path = os.path.abspath(
+                Paths().rebuildToLocalPath(
+                    Paths().mergeFullPath(location.root, location.from_path, config.dependency.cases_path, "input.dvc")
+                )
+            )
+            if dep_dvc_path not in seen and os.path.isfile(dep_dvc_path):
+                seen.add(dep_dvc_path)
+                dvc_files.append(dep_dvc_path)
+                self.__logger.debug(f"Including dependency DVC file: {dep_dvc_path}")
+        return dvc_files
 
     def __batch_download_dvc(
         self,
@@ -914,6 +940,32 @@ class TestSetRunner(ABC):
 
         destination_dir = self.__settings.local_paths.cases_path
 
+        if dependency_version == "DVC":
+            # DVC dependencies are already checked out at {location.root}/{cases_path}/input/.
+            # Place the dependency as a sibling of the test case's input directory,
+            # so that relative paths like ../local_dir resolve correctly from input_work.
+            local_path = Paths().rebuildToLocalPath(
+                Paths().mergeFullPath(location.root, config.path.prefix, config.dependency.local_dir)
+            )
+            if os.path.isdir(local_path) and any(os.scandir(local_path)):
+                logger.info("Dependency directory already exists: Skipping download")
+                return
+
+            source_input_path = Path(
+                Paths().rebuildToLocalPath(
+                    Paths().mergeFullPath(location.root, location.from_path, config.dependency.cases_path, "input")
+                )
+            )
+            if source_input_path.is_dir():
+                logger.info(f"Copying DVC dependency from {source_input_path} to {local_path}")
+                shutil.copytree(str(source_input_path), local_path, dirs_exist_ok=True)
+            else:
+                logger.error(
+                    f"DVC dependency source not found at {source_input_path}. "
+                    "Ensure the dependency's .dvc files have been checked out."
+                )
+            return
+
         local_path = Paths().rebuildToLocalPath(
             Paths().mergeFullPath(
                 destination_dir,
@@ -922,7 +974,7 @@ class TestSetRunner(ABC):
             )
         )
 
-        if os.path.exists(local_path):
+        if os.path.isdir(local_path) and any(os.scandir(local_path)):
             logger.info("Dependency directory already exists: Skipping download")
             return
 
