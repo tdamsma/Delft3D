@@ -295,10 +295,25 @@ def extract_testcase_data(xml_file_path: Path, base_url: str, s3_bucket: str) ->
 
 def is_case_with_doc_folder(directory: Path) -> bool:
     """Return True if the given directory is a 'case' folder."""
-    glob_pattern = "data/cases/[eE]*/[fF]*/[cC]*/input"
+    parts = directory.parts
 
-    matches_pattern = directory.match(glob_pattern) or directory.match(f"**/{glob_pattern}")
-    if not matches_pattern:
+    # Must end with 'input' and contain at least: data/cases/eXX/fXX/cXX/input
+    if len(parts) < 6 or parts[-1] != "input":
+        return False
+
+    try:
+        data_idx = parts.index("data")
+    except ValueError:
+        return False
+
+    if data_idx + 4 >= len(parts) or parts[data_idx + 1] != "cases":
+        return False
+
+    e_part = parts[data_idx + 2]
+    f_part = parts[data_idx + 3]
+    c_part = parts[data_idx + 4]
+
+    if not (e_part.lower().startswith("e") and f_part.lower().startswith("f") and c_part.lower().startswith("c")):
         return False
 
     if not directory.exists() or not directory.is_dir():

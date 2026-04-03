@@ -70,6 +70,9 @@ def _fake_add_directory_factory(responses: dict[Path, list[Path]]) -> MagicMock:
     [
         Path("data/cases/E07_sobek/F61_rws_acceptance/C13_maas_14_js4/input"),
         Path("data/cases/e07_sobek/f61_rws_acceptance/c13_maas_14_js4/input"),
+        Path("data/cases/e02_dflowfm/f010_structures/c102_custompoints_dambreak/T1_normal_noCustomPoints/input"),
+        Path("data/cases/e02_dflowfm/f107_1d2d_validation/c01_1d-2d-urban/T1/input"),
+        Path("data/cases/e02_dflowfm/f151_1d2d_acceptance_rural/c11_dar-es-salaam/dflowfm/testmodel/input"),
     ],
 )
 def test_is_case_folder_valid_pattern_with_doc(fs: FakeFilesystem, case_path: Path) -> None:
