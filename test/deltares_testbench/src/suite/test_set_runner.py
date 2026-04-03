@@ -912,50 +912,25 @@ class TestSetRunner(ABC):
         )
         logger.debug(f"Dependency local_dir: {config.dependency.local_dir}, cases_path: {config.dependency.cases_path}")
 
-        # For DVC dependencies, download data and create a working copy at the dependency source location
-        if dependency_version == "DVC" and config.path and config.path.version == "DVC":
-            logger.debug("Using DVC-specific dependency download logic")
-            source_input_path = Path(self.__settings.local_paths.cases_path) / config.dependency.cases_path / "input"
-            remote_path = Paths().mergeFullPath(location.root, config.dependency.cases_path, "input.dvc")
+        destination_dir = self.__settings.local_paths.cases_path
 
-            logger.debug(f"Dependency download - remote: {remote_path}, source: {source_input_path}")
+        local_path = Paths().rebuildToLocalPath(
+            Paths().mergeFullPath(
+                destination_dir,
+                location.to_path,
+                config.dependency.local_dir,
+            )
+        )
 
-            # Ensure the DVC dependency source data is downloaded
-            if not source_input_path.exists() or not any(source_input_path.iterdir()):
-                self.__download_files(
-                    location, remote_path, str(source_input_path), PathType.DEPENDENCY, dependency_version, logger
-                )
-
-            # Create input_work copy for the test run to use
-            work_path = source_input_path.with_name(f"{source_input_path.name}_work")
-            if not work_path.exists():
-                if source_input_path.exists() and any(source_input_path.iterdir()):
-                    logger.debug(f"Creating dependency work folder: {work_path}")
-                    self.__copy_to_work_folder(source_input_path, logger)
-                else:
-                    logger.warning(f"DVC dependency source not found at {source_input_path}")
-            else:
-                logger.debug(f"Dependency work folder already exists: {work_path}")
+        if os.path.exists(local_path):
+            logger.info("Dependency directory already exists: Skipping download")
             return
-        else:
-            logger.debug("Using legacy dependency download logic")
-            # Use existing logic for non-DVC dependencies
-            local_path = Path(self.__settings.local_paths.cases_path) / location.to_path / config.dependency.local_dir
 
-            if dependency_version == "DVC":
-                remote_path = Paths().mergeFullPath(location.root, config.dependency.cases_path, "input.dvc")
-            else:
-                remote_path = Paths().mergeFullPath(location.root, location.from_path, config.dependency.cases_path)
-
-        logger.debug(f"Dependency download - remote: {remote_path}, local: {local_path}")
-
-        if local_path.exists() and any(local_path.iterdir()):
-            logger.info("Dependency directory already exists and has content: Skipping download")
-            return
+        remote_path = Paths().mergeFullPath(location.root, location.from_path, config.dependency.cases_path)
 
         if dependency_version is None:
             logger.warning("The dependency version timestamp is missing, downloading the 'latest' version")
         else:
             logger.info(f"Dependency version timestamp: {dependency_version}")
 
-        self.__download_files(location, remote_path, str(local_path), PathType.DEPENDENCY, dependency_version, logger)
+        self.__download_files(location, remote_path, local_path, PathType.DEPENDENCY, dependency_version, logger)
