@@ -1,6 +1,8 @@
 import argparse
+import os
 import platform
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -48,11 +50,17 @@ def clean_data() -> None:
     DATA_REFS.mkdir(parents=True, exist_ok=True)
 
 
+def _remove_readonly(func, path, _excinfo):
+    """Error handler for shutil.rmtree to clear read-only flags on Windows."""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
+
 def clean_dvc_cache() -> None:
     """Wipe the DVC cache."""
     print(f"  Cleaning DVC cache at {DVC_CACHE_DIR} ...")
     if DVC_CACHE_DIR.exists():
-        shutil.rmtree(DVC_CACHE_DIR)
+        shutil.rmtree(DVC_CACHE_DIR, onerror=_remove_readonly)
     DVC_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
