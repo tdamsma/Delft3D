@@ -95,20 +95,21 @@ class XmlFileWithTestCaseData:
     def __update_local_paths(self, root: etree._Element, namespace: dict[str, str]) -> None:
         """Update local paths to use ./data/cases."""
         # Update testCasesDir
-        test_cases_dir = root.find("./tb:config/tb:localPaths/tb:testCasesDir", namespace)
+        test_cases_dir = root.find(".//tb:localPaths/tb:testCasesDir", namespace)
         if test_cases_dir is not None:
             test_cases_dir.text = "./data/cases"
 
         # Update referenceDir
-        reference_dir = root.find("./tb:config/tb:localPaths/tb:referenceDir", namespace)
+        reference_dir = root.find(".//tb:localPaths/tb:referenceDir", namespace)
         if reference_dir is not None:
             reference_dir.text = "./data/cases"
 
     def __update_location_roots(self, root: etree._Element, namespace: dict[str, str]) -> None:
         """Update location roots to use local paths.
 
-        Only locations that are referenced by (default) testcases are updated.
-        Unreferenced locations are left unchanged.
+        Locations referenced by (default) testcases are always updated.
+        When no testcase references are found (e.g. in a standalone configuration file),
+        the well-known 'cases' and 'reference_results' locations are updated.
         """
         referenced_location_names: set[str] = set()
         testcase_locations = root.findall(".//tb:testCase/tb:location", namespace)
@@ -117,7 +118,10 @@ class XmlFileWithTestCaseData:
             if ref:
                 referenced_location_names.add(ref)
 
-        config_locations = root.findall("./tb:config/tb:locations/tb:location", namespace)
+        if not referenced_location_names:
+            referenced_location_names = {"cases", "reference_results"}
+
+        config_locations = root.findall(".//tb:locations/tb:location", namespace)
         for config_location in config_locations:
             name = config_location.get("name")
             if not name or name not in referenced_location_names:

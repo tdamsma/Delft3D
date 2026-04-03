@@ -1,6 +1,7 @@
 """Unit tests for XML file with testcase data migration."""
 
 import re
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -707,3 +708,68 @@ def test_verify_and_filter_returns_all_when_all_missing() -> None:
 
     assert len(skipped) == 1
     assert xml_data.testcases == []
+
+
+def test_migration_updates_standalone_configuration_xml(tmp_path: Path) -> None:
+    """Test that migration updates location roots and local paths in a standalone
+    configuration.xml where <config> is the root element and no testcases exist."""
+    # Arrange
+    version = "2025-01-15T10:00:00"
+
+    # Create a standalone configuration.xml with <config> as root (no testcases)
+    configuration_xml = textwrap.dedent(
+        """\
+        <config xmlns="http://schemas.deltares.nl/deltaresTestbench_v3">
+          <localPaths>
+            <testCasesDir>./data/cases</testCasesDir>
+            <enginesDir>./data/engines</enginesDir>
+            <referenceDir>./data/reference_results</referenceDir>
+          </localPaths>
+          <locations>
+            <location name="reference_results">
+              <credential ref="commandline"/>
+              <root>{server_base_url}/references</root>
+            </location>
+            <location name="cases">
+              <credential ref="commandline"/>
+              <root>{server_base_url}/cases</root>
+            </location>
+            <location name="engines">
+              <root>./data/engines</root>
+            </location>
+          </locations>
+        </config>
+        """
+    )
+    include_dir = tmp_path / "include"
+    include_dir.mkdir()
+    config_file = include_dir / "configuration.xml"
+    config_file.write_text(configuration_xml, encoding="utf-8")
+
+    # Create a main XML that xi:includes the configuration.xml
+    xi_include = '<xi:include href="include/configuration.xml"/>'
+    main_xml_content = make_test_case_config_xml(
+        test_case_path=TestCasePath("test/case", version=version),
+        case_root="{server_base_url}/cases",
+        reference_root="{server_base_url}/references",
+        include=xi_include,
+    )
+    main_file = tmp_path / "main_config.xml"
+    main_file.write_bytes(main_xml_content.read())
+
+    xml_data = XmlFileWithTestCaseData(main_file, [])
+
+    # Act
+    xml_data.migrate_xml_to_dvc()
+
+    # Assert - configuration.xml location roots should be updated
+    config_content = config_file.read_text(encoding="utf-8")
+
+    assert get_location_root(config_content, "cases") == "./data/cases"
+    assert get_location_root(config_content, "reference_results") == "./data/cases"
+    assert get_location_root(config_content, "engines") == "./data/engines"
+    assert "{server_base_url}" not in config_content
+
+    # Assert - referenceDir in localPaths should also be updated
+    assert ">./data/reference_results<" not in config_content
+    assert "<referenceDir>./data/cases</referenceDir>" in config_content
