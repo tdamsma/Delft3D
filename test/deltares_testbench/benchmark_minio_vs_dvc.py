@@ -136,6 +136,17 @@ def run_benchmark(label: str, config: str, username: str, password: str) -> floa
         proc.wait()
     duration = time.monotonic() - start
 
+    if proc.returncode != 0:
+        print(f"\n  WARNING: {label} exited with return code {proc.returncode}")
+        if proc.returncode < 0:
+            import signal
+
+            try:
+                sig = signal.Signals(-proc.returncode).name
+            except (ValueError, AttributeError):
+                sig = str(-proc.returncode)
+            print(f"  Process was killed by signal {sig}")
+
     print(f"\n  Wall time for {label}: {duration:.3f}s")
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -157,8 +168,8 @@ def main() -> None:
     parser.add_argument("--only", choices=["minio", "dvc"], help="Run only one of the benchmarks.")
     args = parser.parse_args()
 
-    minio_config = f"configs/dwaq_dpart/{PLATFORM_DIR}/dwaq_minio.xml"
-    dvc_config = f"configs/dwaq_dpart/{PLATFORM_DIR}/dwaq_dvc.xml"
+    minio_config = "configs/delft3d4/delft3d_lnx64_hp_flow.xml"
+    dvc_config = "configs/delft3d4/delft3d_lnx64_hp_flow_dvc.xml"
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Benchmark results will be saved to: {RESULTS_DIR}")
