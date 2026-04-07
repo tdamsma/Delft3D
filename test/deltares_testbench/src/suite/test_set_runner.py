@@ -248,7 +248,7 @@ class TestSetRunner(ABC):
                 # DVC data is batch-downloaded upfront; create a fresh work copy for this run.
                 if config.absolute_test_case_path:
                     work_path = Path(config.absolute_test_case_path)
-                    if work_path.name.endswith("_work"):
+                    if work_path.name.endswith("_work") and not work_path.exists():
                         source_path = work_path.with_name(work_path.name[:-5])
                         self.__copy_to_work_folder(source_path, logger)
 
@@ -453,7 +453,20 @@ class TestSetRunner(ABC):
         # Copy DVC dependencies now that the batch checkout has made the data available.
         self.__copy_dvc_dependencies(dvc_configs)
 
+        self.__create_dvc_work_copies(dvc_configs)
+
         log_separator(self.__logger, char="-")
+
+    def __create_dvc_work_copies(self, dvc_configs: list[TestCaseConfig]) -> None:
+        """Create _work copies of all DVC input directories serially."""
+        for config in dvc_configs:
+            if not config.absolute_test_case_path:
+                continue
+            work_path = Path(config.absolute_test_case_path)
+            if work_path.name.endswith("_work"):
+                source_path = work_path.with_name(work_path.name[:-5])
+                if source_path.is_dir():
+                    self.__copy_to_work_folder(source_path, self.__logger)
 
     def __copy_dvc_dependencies(self, dvc_configs: list[TestCaseConfig]) -> None:
         """Copy DVC dependency data to the expected location next to each test case's input."""
