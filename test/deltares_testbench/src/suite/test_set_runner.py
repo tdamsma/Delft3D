@@ -3,6 +3,7 @@
 Copyright (C)  Stichting Deltares, 2026
 """
 
+import gc
 import multiprocessing
 import os
 import shutil
@@ -106,6 +107,10 @@ class TestSetRunner(ABC):
 
         # Prepare DVC cases: batch-download all .dvc files in one command
         self.__prepare_dvc_test_cases()
+
+        # Free memory accumulated during DVC preparation (repo objects, file
+        # indices, etc.) so the forked worker pool starts with a lean parent.
+        gc.collect()
 
         results = (
             self.run_tests_in_parallel()
