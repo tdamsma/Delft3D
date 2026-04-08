@@ -178,11 +178,11 @@ def main() -> None:
     minio_time = None
     dvc_time = None
 
-    if args.only != "dvc":
-        minio_time = run_benchmark("minio", minio_config, args.username, args.password)
-
     if args.only != "minio":
         dvc_time = run_benchmark("dvc", dvc_config, args.username, args.password)
+
+    if args.only != "dvc":
+        minio_time = run_benchmark("minio", minio_config, args.username, args.password)
 
     # ── Summary ──────────────────────────────────────────────────────────
     print()
