@@ -58,7 +58,7 @@ contains
     subroutine test_compute_bubblescreen_area() bind(C)
         use fm_external_forcings_data, only: t_BubbleScreen
         use m_cell_geometry, only: ba
-
+        use m_partitioninfo, only: jampi
         ! Local variables
         type(t_BubbleScreen) :: bubblescreen !< Bubble screen data structure
         integer :: i !< Loop index
@@ -80,6 +80,7 @@ contains
         ! Setup - fill cell areas for flow cells in bubble screen
         call realloc(ba, n, fill=10.0_dp)
 
+        jampi = 0 ! compute_bubblescreen_area is mpi-aware routine
         ! Call function to test
         computed_area = compute_bubblescreen_area(bubblescreen)
 
