@@ -261,7 +261,7 @@ contains
          return
       else ! If locationFile is present, check if it has correct extension
          call resolvePath(readout_location_file, base_dir)
-         if (readout_location_file(len-3:len) /= '.pli') then ! Check if locationFile has .pli extension
+         if (readout_location_file(len - 3:len) /= '.pli') then ! Check if locationFile has .pli extension
             write (msgbuf, '(5a)') 'Incorrect locationFile specified in file ''', trim(file_name), ''': [', trim(group_name), ']. Location file should have ".pli" extension.'
             call err_flush()
             return

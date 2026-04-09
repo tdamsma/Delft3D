@@ -402,8 +402,8 @@ module fm_external_forcings_data
       real(kind=dp) :: total_area !< [m2] total area of the bubble screen, used for computing air discharge per unit area
    end type t_Bubblescreen
 
-   type (t_Bubblescreen), dimension(:), allocatable :: bubblescreens !< bubble screen data
-   real (kind=dp), allocatable, target :: bubblescreen_air_discharge(:) !< array to catch bubble screen air discharges
+   type(t_Bubblescreen), dimension(:), allocatable :: bubblescreens !< bubble screen data
+   real(kind=dp), allocatable, target :: bubblescreen_air_discharge(:) !< array to catch bubble screen air discharges
 
    ! Source/sink variables, to be moved to a separate module; see UNST-9614
    ! ====================================================================================================
@@ -415,24 +415,24 @@ module fm_external_forcings_data
 
    ! Source/sink identification and geometry. All except _indices are read from the extforce file.
    character(len=255), dimension(:), allocatable :: source_sink_name !< [-] Name of the source/sink. {size=(num_source_sink), former:srcname}
-   real(kind=dp), dimension(:,:), allocatable :: source_sink_x !< [m] x-coordinates of source/sink. {size=(num_source_sink,max_source_sink_polyline_points), former:xsrc}
-   real(kind=dp), dimension(:,:), allocatable :: source_sink_y !< [m] y-coordinates of source/sink. {size=(num_source_sink,max_source_sink_polyline_points), former:ysrc}
-   real(kind=dp), dimension(:,:), allocatable :: source_sink_z_bottom !< [m] z-level of bottom sink (1) and source (2). {size=(2,num_source_sink), former:zsrc}
-   real(kind=dp), dimension(:,:), allocatable :: source_sink_z_top !< [m] z-level of top sink (1) and source (2). {size=(2,num_source_sink), former:zsrc2}
-   integer, dimension(:,:), allocatable :: source_sink_indices !< [-] Index array of source/sinks. 1 = nodenr sink, 2 = kbot sink, 3 = ktop sink, 4 = nodenr source, 5 = kbot source, 6 = ktop source. {size=(6,num_source_sink), former:ksrc}
+   real(kind=dp), dimension(:, :), allocatable :: source_sink_x !< [m] x-coordinates of source/sink. {size=(num_source_sink,max_source_sink_polyline_points), former:xsrc}
+   real(kind=dp), dimension(:, :), allocatable :: source_sink_y !< [m] y-coordinates of source/sink. {size=(num_source_sink,max_source_sink_polyline_points), former:ysrc}
+   real(kind=dp), dimension(:, :), allocatable :: source_sink_z_bottom !< [m] z-level of bottom sink (1) and source (2). {size=(2,num_source_sink), former:zsrc}
+   real(kind=dp), dimension(:, :), allocatable :: source_sink_z_top !< [m] z-level of top sink (1) and source (2). {size=(2,num_source_sink), former:zsrc2}
+   integer, dimension(:, :), allocatable :: source_sink_indices !< [-] Index array of source/sinks. 1 = nodenr sink, 2 = kbot sink, 3 = ktop sink, 4 = nodenr source, 5 = kbot source, 6 = ktop source. {size=(6,num_source_sink), former:ksrc}
 
    ! Momentum variables. _area is specified in the extforce file.
    real(kind=dp), dimension(:), allocatable :: source_sink_area !< [m2] area of source/sink. If zero, source/sink transport no momentum. {size=(num_source_sink), former:arsrc}
-   real(kind=dp), dimension(:,:), allocatable :: source_sink_discharge_cosine !< [-] Cosine of discharge on sink side (1) and source side (2). {size=(2,num_source_sink), former:cssrc}
-   real(kind=dp), dimension(:,:), allocatable :: source_sink_discharge_sine !< [-] Sine of discharge on sink side (1) and source side (2). {size=(2,num_source_sink), former:snsrc}
-   
+   real(kind=dp), dimension(:, :), allocatable :: source_sink_discharge_cosine !< [-] Cosine of discharge on sink side (1) and source side (2). {size=(2,num_source_sink), former:cssrc}
+   real(kind=dp), dimension(:, :), allocatable :: source_sink_discharge_sine !< [-] Sine of discharge on sink side (1) and source side (2). {size=(2,num_source_sink), former:snsrc}
+
    ! Discharge variables. _all_discharges is read out from the *.tim/*.bc file using the EC module, while _water_discharge and _constituents are used for internal computations.
-   real(kind=dp), dimension(:,:), allocatable, target :: source_sink_all_discharges !< [m3/s,ppt,degC,kg/m3] Source/sink water discharge (1) and constituent concentrations of discharge (2:). {size=(numconst+1,num_source_sink), former:qstss}
+   real(kind=dp), dimension(:, :), allocatable, target :: source_sink_all_discharges !< [m3/s,ppt,degC,kg/m3] Source/sink water discharge (1) and constituent concentrations of discharge (2:). {size=(numconst+1,num_source_sink), former:qstss}
    real(kind=dp), dimension(:), target, allocatable :: source_sink_water_discharge !< [m3/s] Water discharge of source/sink. {size=(num_source_sink), former:qsrc}
-   real(kind=dp), dimension(:,:), allocatable :: source_sink_constituents !< [ppt,degC,kg/m3] Constituents of source/sink discharges. {size=(numconst,num_source_sink), former:ccsrc}
+   real(kind=dp), dimension(:, :), allocatable :: source_sink_constituents !< [ppt,degC,kg/m3] Constituents of source/sink discharges. {size=(numconst,num_source_sink), former:ccsrc}
 
    ! Miscellaneous variables.
-   real(kind=dp), dimension(:,:), allocatable :: source_sink_reduction !< [-] Source/sink reduction array for partitioned models. {size=(2*(numconst+1),num_source_sink), former:srsn}   
+   real(kind=dp), dimension(:, :), allocatable :: source_sink_reduction !< [-] Source/sink reduction array for partitioned models. {size=(2*(numconst+1),num_source_sink), former:srsn}
    integer, dimension(:), allocatable :: source_sink_max_xy_points !< [-] Maximum number of points per source.sink in source_sink_x, source_sink_y. {size=(num_source_sink), former:nxsrc}
    integer, dimension(:), allocatable :: source_sink_extraction_warning !< [-] Issue a warning message if the extraction flux exceeds the cell volume (0 = no message, 1 = sink extraction too large, 2 = source extraction too large). {size=(num_source_sink), former:jamess}
    logical :: source_sink_add_k_to_turkin !< [-] Add k of sources to turkin (.false. = no, .true. = yes). {former:addksources}
