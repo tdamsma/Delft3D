@@ -29,7 +29,7 @@
 !
 submodule(fm_external_forcings) fm_external_forcings_init
    use precision_basics, only: dp
-   implicit none
+   implicit none(type,external)
 
    integer, parameter :: INI_VALUE_LEN = 256
    integer, parameter :: INI_KEY_LEN = 32
@@ -143,7 +143,7 @@ contains
       end if
 
       ! Allocate source-sink related arrays now, just once, because otherwise realloc's in the loop would destroy target arrays in ecInstance.
-      max_num_src = compute_and_preinit_bubblescreens_sourcesinks(bnd_ptr, base_dir, file_name)
+      call init_bubblescreen_data(bnd_ptr, base_dir, file_name, max_num_src)
       max_num_src = max_num_src + tree_count_nodes_byname(bnd_ptr, 'sourcesink')
       
       if (max_num_src > 0) then
@@ -175,7 +175,7 @@ contains
             res = res .and. init_sourcesink_forcings(block_ptr, base_dir, file_name, group_name)
 
          case ('bubblescreen')
-            res = res .and. init_bubblescreen_forcings(block_ptr, base_dir, file_name, group_name)
+            res = res .and. init_bubblescreen_sourcesinks(block_ptr, base_dir, file_name, group_name)
 
          case default ! Unrecognized item in an ext block
             ! res remains unchanged: Not an error (support commented/disabled blocks in ext file)
@@ -1222,9 +1222,11 @@ contains
    !!
    !! Input is a loaded .ext file tree structure.
    !! Returns the resulting number of source sinks
-   function compute_and_preinit_bubblescreens_sourcesinks(bnd_ptr, base_dir, file_name) result(num_source_sinks)
+   subroutine init_bubblescreen_data(bnd_ptr, base_dir, file_name, num_source_sinks)
       use fm_external_forcings_data, only: num_source_sink
       use fm_external_forcings_utils, only: read_bubblescreen_forcing_attributes
+      use m_bubblescreen, only: compute_bubblescreen_area
+      use m_partitioninfo, only: jampi, reduce_double_sum, idomain, my_rank
       use m_filez, only: oldfil
       use m_reapol, only: reapol
       use tree_data_types, only: tree_data
@@ -1243,7 +1245,7 @@ contains
       type(tree_data), pointer, intent(in) :: bnd_ptr !< tree of extForceBnd-file's [boundary] blocks
       character(len=*), intent(in) :: base_dir !< Base directory of the ext file
       character(len=*), intent(in) :: file_name !< Name of the ext file, only used in error messages, actual data is read from block_ptr
-
+      integer, intent(out) :: num_source_sinks !< number of source sinks 
       ! Local variables
       logical :: is_successful
       integer :: cidx
@@ -1253,11 +1255,11 @@ contains
       integer :: jakdtree 
       integer :: k_start !< Bottom active layer index in a flowcell
       integer :: k_end !< Top active layer index in a flowcell
-      integer :: num_source_sinks
       integer :: num_items_in_file
       integer :: num_bubblescreens !< Number of bubblescreens in the ext file, used to allocate the bubblescreens array
       integer, dimension(:), allocatable :: crossed_cells
-
+      real(dp) :: local_area
+      real(kind=dp), dimension(1) :: area_array !< Array for parallel reduction of bubble screen area across partitions; size={1}
       character(len=:), allocatable :: discharge_input !< Bubblescreen discharge input file
       character(len=:), allocatable :: group_name !< Name of the block, only used in error messages
       character(len=:), allocatable :: id !< Bubblescreen id
@@ -1319,6 +1321,14 @@ contains
                      bubblescreen%flow_cells(cidx)%num_source_sinks = kmxn(crossed_cells(cidx))
                      num_source_sinks = num_source_sinks + bubblescreen%flow_cells(cidx)%num_source_sinks
                   end do
+                     local_area = compute_bubblescreen_area(bubblescreen)
+                     ! Reduce across all partitions if MPI is active
+                     if (jampi == 1) then
+                        call reduce_double_sum(1, [local_area], area_array)
+                        bubblescreen%total_area = area_array(1)
+                     else
+                        bubblescreen%total_area = local_area
+                     end if
                end if              
             end associate
 
@@ -1328,12 +1338,11 @@ contains
       call cleanup_cell_geom_polylines()
 
       
-   end function compute_and_preinit_bubblescreens_sourcesinks
+   end subroutine init_bubblescreen_data
 
 
-   !> Finish initialization of bubblescreen object and create the source/sink objects
-   !! also connect the EC module to bubblescreen_air_discharge
-   function init_bubblescreen_forcings(block_ptr, base_dir, file_name, group_name) result(is_successful)
+   !> Create bubblescreencreate the source/sink objects also connect the EC module to bubblescreen_air_discharge
+   function init_bubblescreen_sourcesinks(block_ptr, base_dir, file_name, group_name) result(is_successful)
       use fm_external_forcings_utils, only: read_bubblescreen_forcing_attributes
       use m_filez, only: oldfil
       use m_reapol, only: reapol
@@ -1408,10 +1417,6 @@ contains
 
                   bubble_source_count = bubble_source_count + 1
                end do
-
-               ! Fill in remaining bubblescreen flow cell data
-               bubblescreen%flow_cells(cidx)%num_source_sinks = bubble_source_count
-
             end do
          end associate
       end if
@@ -1428,7 +1433,7 @@ contains
 
       is_successful = .true.
 
-   end function init_bubblescreen_forcings
+   end function init_bubblescreen_sourcesinks
 
    !> Get several target grid properties for a given location type.
    !!

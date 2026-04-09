@@ -5,7 +5,6 @@ module m_bubblescreen
    use m_cell_geometry, only: ba
    use m_flow, only: kmx, zws, kbot, s1, vol1
    use m_get_kbot_ktop, only: getkbotktop
-   use m_partitioninfo, only: jampi, reduce_double_sum, idomain, my_rank
    use m_transport, only: numconst, constituents
    use messageHandling, only: err_flush, msgbuf, msg_flush
 
@@ -14,7 +13,6 @@ module m_bubblescreen
    private
 
    public :: update_bubblescreen_discharge_wrapper
-   public :: update_bubblescreen_discharge
    public :: convert_discharge_air_to_water
    public :: compute_bubblescreen_area
    public :: find_active_layer_interfaces
@@ -50,10 +48,7 @@ contains
       integer :: k_max_velocity !< Layer index for maximum downward velocity
       integer :: n !< 2D flow cell index; in {network_data::netcell}
       real(kind=dp) :: area_fraction !< Area fraction of the flow cell
-      real(kind=dp) :: local_area !< Area of the bubble screen in this partition
-      real(kind=dp), dimension(1) :: area_array !< Array for parallel reduction of bubble screen area across partitions; size={1}
       real(kind=dp) :: max_velocity !< Maximum downward vertical velocity for this flow cell
-      real(kind=dp) :: total_area !< Total area of the bubble screen
       real(kind=dp) :: water_discharge !< Water discharge for this bubble screen
       real(kind=dp), dimension(kmx) :: discharge_water !< [m3/s] Water discharge for all layers in 2D flow cell; size={kmx}
       real(kind=dp), dimension(numconst, kmx) :: discharge_constituents !< [kg/m3, ppt, degC] Constituent discharge concentration/temperature for all layers in 2D flow cell; size={numconst,kmx}
@@ -65,23 +60,13 @@ contains
 
       water_discharge = convert_discharge_air_to_water(air_discharge)
 
-      local_area = compute_bubblescreen_area(bubblescreen)
-
-      ! Reduce across all partitions if MPI is active
-      if (jampi == 1) then
-         call reduce_double_sum(1, [local_area], area_array)
-         total_area = area_array(1)
-      else
-         total_area = local_area
-      end if
-
       ! Compute vertical distribution for each flow cell
       do i_flow_cell = 1, bubblescreen%num_flow_cells
          flow_cell = bubblescreen%flow_cells(i_flow_cell)
          n = flow_cell%flownode_nr
 
          ! Compute maximum downward vertical velocity based on area fraction
-         area_fraction = ba(n) / total_area
+         area_fraction = ba(n) / bubblescreen%total_area
          max_velocity = -1.0_dp * water_discharge * area_fraction / ba(n)
 
          call find_active_layer_interfaces(n, bubblescreen%z_level, bubblescreen%id, k_start, k_stop, k_max_velocity)
@@ -118,6 +103,8 @@ contains
 
    !> Computes the total area of a bubble screen based on its flow cells
    pure function compute_bubblescreen_area(bubblescreen) result(area)
+      use m_partitioninfo, only: jampi, reduce_double_sum, idomain, my_rank
+
       ! Parameters
       type(t_BubbleScreen), intent(in) :: bubblescreen !< Bubble screen data structure
       real(kind=dp) :: area !< [m2] Area of the bubble screen
