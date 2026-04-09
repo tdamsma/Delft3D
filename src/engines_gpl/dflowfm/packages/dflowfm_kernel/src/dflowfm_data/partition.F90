@@ -3565,6 +3565,48 @@ contains
       return
    end subroutine reduce_int_max
 
+      !> For an array of fixed-length character strings, take the maximum (non-blank)
+   !! value over all subdomains, element-by-element, using a byte-wise MPI_MAX reduction.
+   !! If only one partition holds a non-blank value per element, that value wins.
+   subroutine reduce_char_array_max(N, slen, var)
+#ifdef HAVE_MPI
+      use mpi
+#endif
+      implicit none
+
+      integer,                                intent(in)    :: N    !< number of strings in the array
+      integer,                                intent(in)    :: slen !< fixed length of each string (in bytes)
+      character(len=slen), dimension(N),      intent(inout) :: var  !< array of strings to reduce
+
+      integer, dimension(:), allocatable :: ibuf_send
+      integer, dimension(:), allocatable :: ibuf_recv
+      integer :: i, j, idx, ierror
+
+#ifdef HAVE_MPI
+      allocate(ibuf_send(N * slen))
+      allocate(ibuf_recv(N * slen))
+
+      do i = 1, N
+         do j = 1, slen
+            idx = (i - 1) * slen + j
+            ibuf_send(idx) = ichar(var(i)(j:j))
+         end do
+      end do
+
+      call MPI_Allreduce(ibuf_send, ibuf_recv, N * slen, MPI_INTEGER, MPI_MAX, DFM_COMM_DFMWORLD, ierror)
+
+      do i = 1, N
+         do j = 1, slen
+            idx = (i - 1) * slen + j
+            var(i)(j:j) = char(ibuf_recv(idx))
+         end do
+      end do
+
+      deallocate(ibuf_send, ibuf_recv)
+#endif
+      return
+   end subroutine reduce_char_array_max
+
 !> reduce an integer, take global min
    subroutine reduce_int_min(var)
 #ifdef HAVE_MPI

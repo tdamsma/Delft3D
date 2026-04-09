@@ -41,6 +41,7 @@ module m_addsorsin
 
    public :: addsorsin
    public :: addsorsin_from_polyline_file
+   public :: add_source_sink_from_flownode
 
 contains
 
@@ -273,5 +274,47 @@ contains
 8888  continue
 
    end subroutine addsorsin
+
+      !> Add a point source-sink to the model directly from a known flow node, bypassing spatial search.
+   !! Only call this on the partition that owns the flow node.
+   !! The slot index must be globally consistent across all partitions.
+   subroutine add_source_sink_from_flownode(name, flownode, z_level, fixed_index, ierr)
+      use fm_external_forcings_data, only: num_source_sink, source_sink_x, source_sink_y, source_sink_max_xy_points, &
+         source_sink_indices, source_sink_z_bottom, source_sink_z_top, source_sink_area, &
+         source_sink_discharge_cosine, source_sink_discharge_sine, source_sink_name
+      use m_flowgeom, only: xz, yz
+      use dfm_error, only: DFM_NOERR
+
+      character(len=*), intent(in) :: name        !< Name of the source/sink.
+      integer, intent(in)          :: flownode    !< Flow node index owned by this partition.
+      real(kind=dp), intent(in)    :: z_level     !< [m] Vertical position of the source/sink (single z-level, no range).
+      integer, intent(in)          :: fixed_index !< Slot index to register into. Must be globally consistent across all partitions.
+      integer, intent(out)         :: ierr        !< Error code, DFM_NOERR if no error occurred.
+
+      num_source_sink = max(num_source_sink, fixed_index)
+      call reallocsrc(fixed_index, 1)
+
+      source_sink_x(fixed_index, 1)          = xz(flownode)
+      source_sink_y(fixed_index, 1)          = yz(flownode)
+      source_sink_max_xy_points(fixed_index) = 1
+      source_sink_name(fixed_index)          = name
+      source_sink_area(fixed_index)          = 0.0_dp
+
+      source_sink_indices(4, fixed_index)  = flownode
+      source_sink_z_bottom(2, fixed_index) = z_level
+      source_sink_z_top(2, fixed_index)    = z_level
+
+      source_sink_indices(1, fixed_index)  = 0
+      source_sink_z_bottom(1, fixed_index) = z_level
+      source_sink_z_top(1, fixed_index)    = z_level
+
+      source_sink_discharge_cosine(1, fixed_index) = 0.0_dp
+      source_sink_discharge_sine(1, fixed_index)   = 0.0_dp
+      source_sink_discharge_cosine(2, fixed_index) = 0.0_dp
+      source_sink_discharge_sine(2, fixed_index)   = 0.0_dp
+
+      ierr = DFM_NOERR
+
+   end subroutine add_source_sink_from_flownode
 
 end module m_addsorsin

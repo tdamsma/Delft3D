@@ -1320,17 +1320,16 @@ contains
                      bubblescreen%flow_cells(cidx)%num_source_sinks = kmxn(crossed_cells(cidx))
                      num_source_sinks = num_source_sinks + bubblescreen%flow_cells(cidx)%num_source_sinks
                   end do
-                  local_area = compute_bubblescreen_area(bubblescreen)
-                  ! Reduce across all partitions if MPI is active
-                  if (jampi == 1) then
-                     call reduce_double_sum(1, [local_area], area_array)
-                     bubblescreen%total_area = area_array(1)
-                  else
-                     bubblescreen%total_area = local_area
-                  end if
+               end if
+               local_area = compute_bubblescreen_area(bubblescreen)
+               ! Reduce across all partitions if MPI is active
+               if (jampi == 1) then
+                  call reduce_double_sum(1, [local_area], area_array)
+                  bubblescreen%total_area = area_array(1)
+               else
+                  bubblescreen%total_area = local_area
                end if
             end associate
-
          end if
       end do
 
@@ -1338,89 +1337,66 @@ contains
 
    end subroutine init_bubblescreen_data
 
-   !> Create bubblescreencreate the source/sink objects also connect the EC module to bubblescreen_air_discharge
-   function init_bubblescreen_sourcesinks(block_ptr, base_dir, file_name, group_name) result(is_successful)
+    function init_bubblescreen_sourcesinks(block_ptr, base_dir, file_name, group_name) result(is_successful)
       use fm_external_forcings_utils, only: read_bubblescreen_forcing_attributes
-      use m_filez, only: oldfil
-      use m_reapol, only: reapol
-      use messageHandling, only: err_flush, msgbuf, msg_flush
+      use messageHandling, only: err_flush, msgbuf
       use tree_data_types, only: tree_data
-      use m_polygon, only: xpl, ypl, zpl, npl
-      use m_cellmask_from_polygon_set, only: find_cells_crossed_by_polyline
-      use network_data
       use m_flow
       use fm_external_forcings_data
-      use m_addsorsin, only: addsorsin, addsorsin_from_polyline_file
+      use m_addsorsin, only: add_source_sink_from_flownode
       use m_bubblescreen
-      use m_setsorsin
       use m_missing, only: dmiss
+      use dfm_error, only: DFM_NOERR
+      use m_partitioninfo, only: jampi, reduce_int_sum, reduce_char_array_max
+      use m_reallocsrc, only: reallocsrc
 
-      ! Parameters
-      type(tree_data), pointer, intent(in) :: block_ptr !< Pointer to bubblescreen block in extforce file; child node of the extforce file tree
-      character(len=*), intent(in) :: base_dir !< Base directory of the ext file
-      character(len=*), intent(in) :: file_name !< Name of the ext file, only used in error messages, actual data is read from block_ptr
-      character(len=*), intent(in) :: group_name !< Name of the block, only used in error messages
+      type(tree_data), pointer, intent(in) :: block_ptr
+      character(len=*), intent(in) :: base_dir
+      character(len=*), intent(in) :: file_name
+      character(len=*), intent(in) :: group_name
 
-      ! Local variables
-      logical :: is_successful !< Success flag
-      integer :: cidx !< Index for crossed cells
-      integer :: i, bi !< Loop indices
-      integer :: ierr !< Error code
-      integer :: bubble_source_count
+      logical :: is_successful
+      integer :: cidx, i, bi, k_local, ierr, global_num_source_sink, local_num_source_sink
+      real(kind=dp) :: z_dummy
+      character(len=:), allocatable :: id, srcid, location_file, discharge_input
 
-      real(kind=dp) :: tmsx !< Temporary x-coordinate for bubblescreen source/sink
-      real(kind=dp) :: tmsy !< Temporary y-coordinate for bubblescreen source/sink
-      real(kind=dp) :: tmsz !< Temporary z-coordinate for bubblescreen source/sink
-      real(kind=dp) :: z_dummy !< Dummy readout variable for z_level
-
-      character(len=:), allocatable :: id !< Bubblescreen id
-      character(len=:), allocatable :: srcid !< Source id
-      character(len=:), allocatable :: location_file !< Bubblescreen location file
-      character(len=:), allocatable :: discharge_input !< Bubblescreen discharge input file
-
-      ! Initialization
       is_successful = .false.
-      bubble_source_count = 0
 
-      ! Read bubble screen attributes from the tree node
       is_successful = read_bubblescreen_forcing_attributes(block_ptr, base_dir, file_name, group_name, id, location_file, z_dummy, discharge_input)
-      if (is_successful) then
-         allocate (character(len=len_trim(id) + 50) :: srcid)
+      if (.not. is_successful) return
 
-         ! Find the bubblescreen with matching id
-         do i = 1, size(bubblescreens)
-            if (trim(bubblescreens(i)%id) == trim(id)) then
-               bi = i
-               exit
-            end if
-         end do
+      allocate (character(len=len_trim(id) + 50) :: srcid)
 
-         associate (bubblescreen => bubblescreens(bi))
-            do cidx = 1, size(bubblescreen%flow_cells)
-               ! For each crossed cell, create a bubblescreen source/sink object
-               tmsx = xzw(bubblescreen%flow_cells(cidx)%flownode_nr)
-               tmsy = yzw(bubblescreen%flow_cells(cidx)%flownode_nr)
-
-               bubblescreen%flow_cells(cidx)%start_index = num_source_sink + 1
-               do i = bubblescreen%flow_cells(cidx)%flowcell_start_index, &
-                  bubblescreen%flow_cells(cidx)%flowcell_start_index + bubblescreen%flow_cells(cidx)%num_source_sinks - 1
-                  write (srcid, '(A,I0)') trim(id), bubble_source_count + 1
-
-                  tmsz = (zws(i) + zws(i - 1)) / 2.0_dp
-                  call addsorsin(srcid, [tmsx], [tmsy], [tmsz, dmiss], [tmsz, dmiss], 0.0_dp, ierr)
-
-                  write (msgbuf, '(A, A, A, L, A, 3F12.3)') 'Added Bubblescreen: ', trim(srcid), "Status: ", is_successful, ", Location: ", tmsx, tmsy, tmsz
-                  call msg_flush()
-
-                  bubble_source_count = bubble_source_count + 1
+      do i = 1, size(bubblescreens)
+         if (trim(bubblescreens(i)%id) == trim(id)) then
+            bi = i
+            exit
+         end if
+      end do
+      ! Record baseline before any bubblescreen source sinks are added
+      global_num_source_sink = num_source_sink
+      associate (bubblescreen => bubblescreens(bi))
+         do cidx = 1, bubblescreen%num_flow_cells
+            associate (flow_cell => bubblescreen%flow_cells(cidx))
+               flow_cell%start_index = num_source_sink + 1
+               do k_local = 1, flow_cell%num_source_sinks
+                  write (srcid, '(A,I0)') trim(id), flow_cell%start_index + k_local - 1
+                  call add_source_sink_from_flownode(srcid, flow_cell%flownode_nr, &
+                     zws(flow_cell%flowcell_start_index + k_local - 1), flow_cell%start_index + k_local - 1, ierr)
                end do
-            end do
-         end associate
+            end associate
+         end do
+      end associate
+      if (jampi == 1) then 
+         local_num_source_sink = num_source_sink - global_num_source_sink
+         call reduce_int_sum(local_num_source_sink, num_source_sink) !> accumulate in num_source_sink
+         num_source_sink = global_num_source_sink + num_source_sink
+         call reallocsrc(num_source_sink, 0)
+              call reduce_char_array_max(num_source_sink - global_num_source_sink, len(source_sink_name(1)), &
+              source_sink_name(global_num_source_sink + 1:num_source_sink))
       end if
-
       is_successful = adduniformtimerelation_objects('bubblescreen_discharge', '', 'source sink', trim(id), 'discharge', &
                                                      trim(discharge_input), bi, 1, bubblescreen_air_discharge)
-
       if (.not. is_successful) then
          write (msgbuf, '(5a)') 'Error while processing ''', trim(file_name), ''': [', trim(group_name), ']. ' &
             //'Could not initialize discharge data in ''', trim(discharge_input), ''' for bubble screen with id='//trim(id)//'.'
