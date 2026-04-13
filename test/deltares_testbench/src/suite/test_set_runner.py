@@ -6,8 +6,11 @@ Copyright (C)  Stichting Deltares, 2026
 import gc
 import multiprocessing
 import os
+import queue
 import shutil
 import sys
+import threading
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -39,6 +42,12 @@ from src.utils.logging.test_loggers.i_test_logger import ITestLogger
 from src.utils.logging.test_loggers.test_result_type import TestResultType
 from src.utils.paths import Paths
 
+_DVC_STREAM_GROUP_SIZE = 10
+"""Number of DVC test-case configs fetched per batch in the streaming pipeline."""
+
+_DVC_STREAM_MIN_ALL_DVC_CASES = 30
+"""Minimum all-DVC testcase count before enabling streaming pipeline."""
+
 
 @dataclass(frozen=True)
 class DvcLocationInfo:
@@ -60,6 +69,10 @@ class TestSetRunner(ABC):
         self.programs: List[Program] = []
         self.skip_download = settings.command_line_settings.skip_download
         self.finished_tests: int = 0
+        # Set by the background DVC thread; main thread joins the thread
+        # before dispatching DVC test cases to the pool.
+        self._dvc_thread: Optional[threading.Thread] = None
+        self._dvc_error: Optional[str] = None
 
     @property
     def settings(self) -> TestBenchSettings:
@@ -105,18 +118,20 @@ class TestSetRunner(ABC):
         self.__download_dependencies()
         log_sub_header("Running tests", self.__logger)
 
-        # Prepare DVC cases: batch-download all .dvc files in one command
-        self.__prepare_dvc_test_cases()
+        if self.__should_use_dvc_streaming_pipeline():
+            results = self.run_dvc_parallel_pipeline()
+        else:
+            # Kick off DVC download in a background thread so that non-DVC tests
+            # can be dispatched and start running while the download proceeds.
+            # The parallel/sequential runners will join the thread before
+            # dispatching any DVC test cases.
+            self.__start_dvc_preparation()
 
-        # Free memory accumulated during DVC preparation (repo objects, file
-        # indices, etc.) so the forked worker pool starts with a lean parent.
-        gc.collect()
-
-        results = (
-            self.run_tests_in_parallel()
-            if self.__settings.command_line_settings.parallel
-            else self.run_tests_sequentially()
-        )
+            results = (
+                self.run_tests_in_parallel()
+                if self.__settings.command_line_settings.parallel
+                else self.run_tests_sequentially()
+            )
 
         log_separator(self.__logger, char="-", with_new_line=True)
 
@@ -130,6 +145,26 @@ class TestSetRunner(ABC):
 
         self.__duration = datetime.now() - start_time
 
+    def __should_use_dvc_streaming_pipeline(self) -> bool:
+        """Decide when the DVC streaming pipeline is likely beneficial.
+
+        Streaming improves throughput for mixed workloads and larger all-DVC
+        runs, but can be slower for small all-DVC sets due to repeated
+        fetch/checkout overhead.
+        """
+        if not self.__settings.command_line_settings.parallel:
+            return False
+
+        dvc_count = sum(1 for c in self.__settings.configs_to_run if c.path and c.path.version == "DVC")
+        if dvc_count == 0:
+            return False
+
+        non_dvc_count = len(self.__settings.configs_to_run) - dvc_count
+        if non_dvc_count > 0:
+            return True
+
+        return dvc_count >= _DVC_STREAM_MIN_ALL_DVC_CASES
+
     def run_tests_sequentially(self) -> List[TestCaseResult]:
         """Run the test configurations sequentially and returns the results.
 
@@ -140,9 +175,14 @@ class TestSetRunner(ABC):
         """
         n_testcases = len(self.__settings.configs_to_run)
         results: List[TestCaseResult] = []
+        dvc_joined = False
 
         for i_testcase, config in enumerate(self.__settings.configs_to_run):
             run_data = RunData(i_testcase + 1, n_testcases)
+
+            if not dvc_joined and config.path and config.path.version == "DVC":
+                self.__wait_for_dvc_preparation()
+                dvc_joined = True
 
             try:
                 result = self.run_test_case(config, run_data)
@@ -157,6 +197,11 @@ class TestSetRunner(ABC):
 
     def run_tests_in_parallel(self) -> List[TestCaseResult]:
         """Run the test configurations in parallel and returns the results.
+
+        Non-DVC test cases are dispatched immediately.  When a DVC test case
+        is encountered the dispatcher joins the background DVC preparation
+        thread first, so that the data is guaranteed to be on disk before the
+        worker starts.
 
         Returns
         -------
@@ -177,9 +222,16 @@ class TestSetRunner(ABC):
             result_futures: List[AsyncResult] = []
             in_use = process_manager.Value("i", 0)
             idle_process = process_manager.Condition()
+            dvc_joined = False
 
             for i_testcase, config in enumerate(self.__settings.configs_to_run):
                 run_data = RunData(i_testcase + 1, n_testcases)
+
+                # Before dispatching the first DVC test, wait for the
+                # background DVC download thread to finish.
+                if not dvc_joined and config.path and config.path.version == "DVC":
+                    self.__wait_for_dvc_preparation()
+                    dvc_joined = True
 
                 with idle_process:
                     while in_use.value + config.process_count > max_processes:
@@ -202,6 +254,203 @@ class TestSetRunner(ABC):
             for result in result_futures:
                 results.append(result.get())
         return results
+
+    def run_dvc_parallel_pipeline(self) -> List[TestCaseResult]:
+        """Run tests in parallel with streaming DVC fetch.
+
+        A background thread fetches DVC data in groups of
+        ``_DVC_STREAM_GROUP_SIZE`` configs.  Each group is dispatched to the
+        worker pool as soon as its data is available, overlapping network I/O
+        with test execution.  Non-DVC test cases are dispatched immediately.
+
+        Returns
+        -------
+        List[TestCaseResult]
+            List of test results.
+        """
+        pipeline_start = time.perf_counter()
+        all_configs = self.__settings.configs_to_run
+        n_testcases = len(all_configs)
+
+        # Separate DVC and non-DVC configs, keeping their original indices.
+        dvc_indexed: list[tuple[int, TestCaseConfig]] = []
+        non_dvc_indexed: list[tuple[int, TestCaseConfig]] = []
+        for i, config in enumerate(all_configs):
+            if config.path and config.path.version == "DVC":
+                dvc_indexed.append((i, config))
+            else:
+                non_dvc_indexed.append((i, config))
+
+        config_process_count = sum(c.process_count for c in all_configs)
+        max_processes = min(config_process_count, multiprocessing.cpu_count())
+
+        self.__logger.info(
+            f"DVC streaming pipeline: {max_processes} processes, "
+            f"{len(dvc_indexed)} DVC + {len(non_dvc_indexed)} non-DVC configs"
+        )
+
+        # Queue carries indexed config groups; None is the sentinel.
+        ready_queue: queue.Queue[list[tuple[int, TestCaseConfig]] | None] = queue.Queue()
+
+        dvc_configs_only = [c for _, c in dvc_indexed]
+        producer = threading.Thread(
+            target=self.__dvc_fetch_producer,
+            args=(dvc_configs_only, ready_queue, dvc_indexed),
+            name="dvc-streaming-producer",
+            daemon=True,
+        )
+        producer.start()
+
+        process_manager = multiprocessing.Manager()
+
+        with multiprocessing.Pool(processes=max_processes) as pool:
+            self.finished_tests = 0
+            result_futures: List[AsyncResult] = []
+            in_use = process_manager.Value("i", 0)
+            idle_process = process_manager.Condition()
+
+            # Phase 1: dispatch non-DVC configs immediately.
+            for i_testcase, config in non_dvc_indexed:
+                run_data = RunData(i_testcase + 1, n_testcases)
+
+                with idle_process:
+                    while in_use.value + config.process_count > max_processes:
+                        idle_process.wait()
+                    in_use.value += config.process_count
+
+                result_futures.append(
+                    pool.apply_async(
+                        self.run_test_case,
+                        [config, run_data, in_use, idle_process],
+                        callback=self.__log_successful_test,
+                        error_callback=self.__log_failed_test,
+                    )
+                )
+
+            # Phase 2: stream DVC configs as groups become ready.
+            while True:
+                group = ready_queue.get()
+                if group is None:
+                    break
+                for i_testcase, config in group:
+                    run_data = RunData(i_testcase + 1, n_testcases)
+
+                    with idle_process:
+                        while in_use.value + config.process_count > max_processes:
+                            idle_process.wait()
+                        in_use.value += config.process_count
+
+                    result_futures.append(
+                        pool.apply_async(
+                            self.run_test_case,
+                            [config, run_data, in_use, idle_process],
+                            callback=self.__log_successful_test,
+                            error_callback=self.__log_failed_test,
+                        )
+                    )
+
+            producer.join()
+            pool.close()
+            pool.join()
+
+            results: List[TestCaseResult] = []
+            for future in result_futures:
+                results.append(future.get())
+        self.__logger.info(f"DVC streaming pipeline finished in {time.perf_counter() - pipeline_start:.2f}s")
+        return results
+
+    def __dvc_fetch_producer(
+        self,
+        dvc_configs: list[TestCaseConfig],
+        ready_queue: "queue.Queue[list[tuple[int, TestCaseConfig]] | None]",
+        dvc_indexed: list[tuple[int, TestCaseConfig]],
+    ) -> None:
+        """Background thread: fetch DVC data in groups and enqueue ready configs."""
+        producer_start = time.perf_counter()
+        try:
+            log_sub_header("DVC streaming: collecting targets", self.__logger)
+
+            all_dvc_locations = self.__collect_dvc_locations(dvc_configs)
+            credentials = self.__find_dvc_credentials(all_dvc_locations)
+
+            # Map config id → its DvcLocationInfos.
+            config_loc_map: dict[int, list[DvcLocationInfo]] = {}
+            for info in all_dvc_locations:
+                config_loc_map.setdefault(id(info.config), []).append(info)
+
+            # Only keep configs whose locations were successfully collected.
+            valid_indexed = [(i, c) for i, c in dvc_indexed if id(c) in config_loc_map]
+
+            # Fetch dependency .dvc files up-front in one batch.
+            dep_dvc_files = self.__collect_dependency_dvc_files(dvc_configs)
+
+            handler = DvcHandler()
+
+            if dep_dvc_files:
+                self.__logger.info(f"DVC streaming: fetching {len(dep_dvc_files)} dependency targets")
+                dep_fetch_start = time.perf_counter()
+                handler.download_batch(dep_dvc_files, credentials, self.__logger)
+                self.__logger.info(
+                    f"DVC streaming: dependency prefetch finished in {time.perf_counter() - dep_fetch_start:.2f}s"
+                )
+
+            # Process in groups.
+            group_size = _DVC_STREAM_GROUP_SIZE
+            n_groups = (len(valid_indexed) + group_size - 1) // group_size
+
+            for g in range(n_groups):
+                group_indexed = valid_indexed[g * group_size : (g + 1) * group_size]
+                group_configs = [c for _, c in group_indexed]
+
+                # Collect DVC files and location infos for this group.
+                group_dvc_files: list[str] = []
+                group_loc_infos: list[DvcLocationInfo] = []
+                for config in group_configs:
+                    locs = config_loc_map.get(id(config), [])
+                    group_loc_infos.extend(locs)
+                    for loc_info in locs:
+                        if loc_info.location.type not in self.skip_download:
+                            group_dvc_files.append(loc_info.remote_path)
+
+                # Fetch + checkout this group.
+                fetch_ok = True
+                if group_dvc_files:
+                    self.__logger.info(
+                        f"DVC streaming: group {g + 1}/{n_groups} — "
+                        f"{len(group_configs)} configs, {len(group_dvc_files)} targets"
+                    )
+                    group_fetch_start = time.perf_counter()
+                    try:
+                        handler.download_batch(group_dvc_files, credentials, self.__logger)
+                        self.__logger.info(
+                            f"DVC streaming: group {g + 1}/{n_groups} fetch finished in "
+                            f"{time.perf_counter() - group_fetch_start:.2f}s"
+                        )
+                    except Exception as exc:
+                        self.__logger.error(f"DVC streaming: group {g + 1} fetch failed: {exc}")
+                        for config in group_configs:
+                            self.cleanup_failed_preparation(config)
+                        fetch_ok = False
+
+                if fetch_ok:
+                    group_prepare_start = time.perf_counter()
+                    self.__apply_dvc_paths(group_loc_infos)
+                    self.__copy_dvc_dependencies(group_configs)
+                    self.__create_dvc_work_copies(group_configs)
+                    self.__logger.info(
+                        f"DVC streaming: group {g + 1}/{n_groups} local preparation finished in "
+                        f"{time.perf_counter() - group_prepare_start:.2f}s"
+                    )
+
+                # Enqueue group — even on failure, so workers produce error results.
+                ready_queue.put(group_indexed)
+
+            gc.collect()
+            self.__logger.info(f"DVC streaming producer finished in {time.perf_counter() - producer_start:.2f}s")
+        except Exception as exc:
+            self.__logger.exception(f"DVC streaming producer failed: {exc}")
+        finally:
+            ready_queue.put(None)  # sentinel — always signal completion
 
     def run_test_case(
         self,
@@ -430,40 +679,107 @@ class TestSetRunner(ABC):
             except Exception as e:
                 self.__logger.warning(f"Failed to remove reference directory: {e}")
 
-    def __prepare_dvc_test_cases(self) -> None:
-        """Prepare all DVC test cases with a single batched download."""
+    def __start_dvc_preparation(self) -> None:
+        """Start DVC preparation in a background thread.
+
+        Stores the thread in ``_dvc_thread``.  The dispatcher (parallel or
+        sequential) calls ``__wait_for_dvc_preparation`` before dispatching
+        any DVC test case.
+        """
         dvc_configs = [c for c in self.__settings.configs_to_run if c.path and c.path.version == "DVC"]
         if not dvc_configs:
             return
 
-        log_sub_header("Preparing DVC test cases (batch download)", self.__logger)
+        self._dvc_thread = threading.Thread(
+            target=self.__prepare_dvc_test_cases,
+            args=(dvc_configs,),
+            name="dvc-preparation",
+            daemon=True,
+        )
+        self._dvc_thread.start()
 
-        all_dvc_locations = self.__collect_dvc_locations(dvc_configs)
+    def __wait_for_dvc_preparation(self) -> None:
+        """Block until the background DVC thread has finished.
 
-        dvc_files = [
-            dvc_location.remote_path
-            for dvc_location in all_dvc_locations
-            if dvc_location.location.type not in self.skip_download
-        ]
+        Raises ``TestBenchError`` if the thread reported a failure.
+        """
+        if self._dvc_thread is not None:
+            self.__logger.info("Waiting for DVC data to become available ...")
+            self._dvc_thread.join()
+            self._dvc_thread = None
+        if self._dvc_error:
+            raise TestBenchError(f"DVC preparation failed: {self._dvc_error}")
 
-        # Include dependency .dvc files in the batch download
-        dependency_dvc_files = self.__collect_dependency_dvc_files(dvc_configs)
-        dvc_files.extend(dependency_dvc_files)
+    def __prepare_dvc_test_cases(self, dvc_configs: Optional[list[TestCaseConfig]] = None) -> None:
+        """Prepare all DVC test cases with a single batched download.
 
-        if not self.__batch_download_dvc(dvc_files, all_dvc_locations, dvc_configs):
-            return
+        When called from the background thread, *dvc_configs* is pre-filtered.
+        When called directly (e.g. from tests), it falls back to extracting
+        DVC configs from settings.
+        """
+        if dvc_configs is None:
+            dvc_configs = [c for c in self.__settings.configs_to_run if c.path and c.path.version == "DVC"]
+            if not dvc_configs:
+                return
+        preparation_start = time.perf_counter()
+        try:
+            log_sub_header("Preparing DVC test cases (batch download)", self.__logger)
 
-        self.__apply_dvc_paths(all_dvc_locations)
+            collect_start = time.perf_counter()
+            all_dvc_locations = self.__collect_dvc_locations(dvc_configs)
+            self.__logger.info(
+                f"DVC prepare: collected {len(all_dvc_locations)} locations for {len(dvc_configs)} configs in "
+                f"{time.perf_counter() - collect_start:.2f}s"
+            )
 
-        # Copy DVC dependencies now that the batch checkout has made the data available.
-        self.__copy_dvc_dependencies(dvc_configs)
+            dvc_files = [
+                dvc_location.remote_path
+                for dvc_location in all_dvc_locations
+                if dvc_location.location.type not in self.skip_download
+            ]
 
-        self.__create_dvc_work_copies(dvc_configs)
+            # Include dependency .dvc files in the batch download
+            dependency_dvc_files = self.__collect_dependency_dvc_files(dvc_configs)
+            dvc_files.extend(dependency_dvc_files)
 
-        log_separator(self.__logger, char="-")
+            batch_download_start = time.perf_counter()
+            if not self.__batch_download_dvc(dvc_files, all_dvc_locations, dvc_configs):
+                self._dvc_error = "Batch DVC download failed"
+                return
+            self.__logger.info(
+                f"DVC prepare: batch download phase finished in {time.perf_counter() - batch_download_start:.2f}s"
+            )
+
+            apply_paths_start = time.perf_counter()
+            self.__apply_dvc_paths(all_dvc_locations)
+            self.__logger.info(f"DVC prepare: applied local paths in {time.perf_counter() - apply_paths_start:.2f}s")
+
+            # Copy DVC dependencies now that the batch checkout has made the data available.
+            dependency_copy_start = time.perf_counter()
+            self.__copy_dvc_dependencies(dvc_configs)
+            self.__logger.info(
+                f"DVC prepare: dependency copy phase finished in {time.perf_counter() - dependency_copy_start:.2f}s"
+            )
+
+            work_copy_start = time.perf_counter()
+            self.__create_dvc_work_copies(dvc_configs)
+            self.__logger.info(f"DVC prepare: work-copy phase finished in {time.perf_counter() - work_copy_start:.2f}s")
+
+            log_separator(self.__logger, char="-")
+            self.__logger.info(
+                f"DVC prepare: total preparation finished in {time.perf_counter() - preparation_start:.2f}s"
+            )
+
+            # Free DVC repo objects before workers start touching disk.
+            gc.collect()
+        except Exception as exc:
+            self._dvc_error = repr(exc)
+            self.__logger.exception(f"DVC preparation thread failed: {exc}")
 
     def __create_dvc_work_copies(self, dvc_configs: list[TestCaseConfig]) -> None:
         """Create _work copies of all DVC input directories serially."""
+        copy_start = time.perf_counter()
+        copied_count = 0
         for config in dvc_configs:
             if not config.absolute_test_case_path:
                 continue
@@ -472,6 +788,10 @@ class TestSetRunner(ABC):
                 source_path = work_path.with_name(work_path.name[:-5])
                 if source_path.is_dir():
                     self.__copy_to_work_folder(source_path, self.__logger)
+                    copied_count += 1
+        self.__logger.info(
+            f"DVC work-copy: created {copied_count} work folders in {time.perf_counter() - copy_start:.2f}s"
+        )
 
     def __copy_dvc_dependencies(self, dvc_configs: list[TestCaseConfig]) -> None:
         """Copy DVC dependency data to the expected location next to each test case's input."""
@@ -480,8 +800,16 @@ class TestSetRunner(ABC):
             return
 
         log_sub_header("Copying DVC dependencies", self.__logger)
+        dependency_start = time.perf_counter()
         for config in configs_with_deps:
+            config_start = time.perf_counter()
             self.__download_config_dependencies(config, self.__logger)
+            self.__logger.info(
+                f"DVC dependency copy: {config.name} finished in {time.perf_counter() - config_start:.2f}s"
+            )
+        self.__logger.info(
+            f"DVC dependency copy: {len(configs_with_deps)} configs finished in {time.perf_counter() - dependency_start:.2f}s"
+        )
 
     def __collect_dvc_locations(self, dvc_configs: list[TestCaseConfig]) -> list[DvcLocationInfo]:
         """Validate each DVC config and collect its downloadable locations."""
@@ -559,10 +887,14 @@ class TestSetRunner(ABC):
         credentials = self.__find_dvc_credentials(location_infos)
         try:
             handler = DvcHandler()
+            batch_start = time.perf_counter()
             handler.download_batch(
                 dvc_files,
                 credentials,
                 self.__logger,
+            )
+            self.__logger.info(
+                f"DVC batch download: {len(dvc_files)} files finished in {time.perf_counter() - batch_start:.2f}s"
             )
             return True
         except Exception as exception:

@@ -495,7 +495,37 @@ class TestComparisonRunner:
             assert f.read() == "new"
         assert not fs.exists(f"{expected_work_path}/old.txt")
 
-    def test_run_prepares_dvc_cases_before_dispatch(self, mocker: MockerFixture) -> None:
+    def test_run_starts_dvc_preparation_and_dispatches_parallel(self, mocker: MockerFixture) -> None:
+        # Arrange
+        settings = TestBenchSettings()
+        settings.local_paths = LocalPaths()
+        settings.command_line_settings.parallel = True
+
+        config1 = TestComparisonRunner.create_test_case_config("Name_1", testcase_path=TestCasePath("path1", "DVC"))
+        config2 = TestComparisonRunner.create_test_case_config("Name_2", testcase_path=TestCasePath("path2", "v1"))
+        settings.configs_to_run = [config1, config2]
+
+        logger = MagicMock(spec=ConsoleLogger)
+        runner = ComparisonRunner(settings, logger)
+
+        mocker.patch.object(runner, "_TestSetRunner__update_programs", return_value=[])
+        mocker.patch.object(runner, "_TestSetRunner__download_dependencies")
+        mocker.patch.object(runner, "show_summary", return_value=None)
+        pipeline_mock = mocker.patch.object(
+            runner,
+            "run_dvc_parallel_pipeline",
+            return_value=[MagicMock()],
+        )
+        parallel_mock = mocker.patch.object(runner, "run_tests_in_parallel")
+
+        # Act
+        runner.run()
+
+        # Assert — DVC + parallel routes to the streaming pipeline
+        pipeline_mock.assert_called_once()
+        parallel_mock.assert_not_called()
+
+    def test_run_parallel_small_all_dvc_uses_non_streaming_path(self, mocker: MockerFixture) -> None:
         # Arrange
         settings = TestBenchSettings()
         settings.local_paths = LocalPaths()
@@ -508,29 +538,20 @@ class TestComparisonRunner:
         logger = MagicMock(spec=ConsoleLogger)
         runner = ComparisonRunner(settings, logger)
 
-        call_order: List[str] = []
-
         mocker.patch.object(runner, "_TestSetRunner__update_programs", return_value=[])
         mocker.patch.object(runner, "_TestSetRunner__download_dependencies")
         mocker.patch.object(runner, "show_summary", return_value=None)
-        prepare_batch_mock = mocker.patch.object(
-            runner,
-            "_TestSetRunner__prepare_dvc_test_cases",
-            side_effect=lambda: call_order.append("prepare_dvc_batch"),
-        )
-        parallel_mock = mocker.patch.object(
-            runner,
-            "run_tests_in_parallel",
-            side_effect=lambda: call_order.append("dispatch:parallel") or [MagicMock()],
-        )
+        start_dvc_mock = mocker.patch.object(runner, "_TestSetRunner__start_dvc_preparation")
+        parallel_mock = mocker.patch.object(runner, "run_tests_in_parallel", return_value=[MagicMock()])
+        pipeline_mock = mocker.patch.object(runner, "run_dvc_parallel_pipeline")
 
         # Act
         runner.run()
 
-        # Assert — batch DVC preparation happens before parallel dispatch
-        assert call_order == ["prepare_dvc_batch", "dispatch:parallel"]
-        prepare_batch_mock.assert_called_once()
+        # Assert — small all-DVC runs skip streaming to avoid overhead
+        start_dvc_mock.assert_called_once()
         parallel_mock.assert_called_once()
+        pipeline_mock.assert_not_called()
 
     def test_run_test_case_raises_error_when_paths_not_prepared(self) -> None:
         # Arrange

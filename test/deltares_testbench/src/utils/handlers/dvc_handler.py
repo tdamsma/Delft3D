@@ -4,6 +4,7 @@ Copyright (C)  Stichting Deltares, 2025
 """
 
 import os
+import time
 from contextlib import contextmanager
 from typing import Iterator, Optional
 
@@ -15,6 +16,7 @@ from src.utils.handlers.i_handler import IHandler
 from src.utils.logging.i_logger import ILogger
 
 _AWS_KEYS = ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+_DVC_FETCH_JOBS_ENV = "DVC_FETCH_JOBS"
 
 
 @contextmanager
@@ -87,11 +89,57 @@ class DvcHandler(IHandler):
         if not dvc_files:
             return
 
+        jobs = self.__resolve_fetch_jobs(jobs, logger)
+        batch_start = time.perf_counter()
         with _aws_credentials(credentials):
+            resolve_start = time.perf_counter()
             all_targets = self.__resolve_dvc_targets(dvc_files, logger)
+            logger.info(
+                f"DVC resolve: {len(dvc_files)} .dvc files -> {len(all_targets)} targets in "
+                f"{time.perf_counter() - resolve_start:.2f}s"
+            )
+
+            fetch_checkout_start = time.perf_counter()
             self.__fetch_and_checkout(all_targets, logger, jobs)
+            logger.info(
+                f"DVC fetch+checkout total: {len(all_targets)} targets in "
+                f"{time.perf_counter() - fetch_checkout_start:.2f}s"
+            )
+
+            verify_start = time.perf_counter()
             self.__verify_output_dirs(dvc_files, logger)
-            logger.info(f"Batch DVC download complete for {len(dvc_files)} .dvc files")
+            logger.info(
+                f"DVC verify: {len(dvc_files)} output directories checked in {time.perf_counter() - verify_start:.2f}s"
+            )
+            logger.info(
+                f"Batch DVC download complete for {len(dvc_files)} .dvc files in "
+                f"{time.perf_counter() - batch_start:.2f}s"
+            )
+
+    @staticmethod
+    def __resolve_fetch_jobs(jobs: Optional[int], logger: ILogger) -> Optional[int]:
+        """Resolve fetch parallelism from explicit argument or environment."""
+        if jobs is not None:
+            return jobs
+
+        configured_jobs = os.getenv(_DVC_FETCH_JOBS_ENV)
+        if not configured_jobs:
+            return None
+
+        try:
+            parsed_jobs = int(configured_jobs)
+        except ValueError:
+            logger.warning(
+                f"Ignoring invalid {_DVC_FETCH_JOBS_ENV} value '{configured_jobs}'; expected integer"
+            )
+            return None
+
+        if parsed_jobs <= 0:
+            logger.warning(f"Ignoring invalid {_DVC_FETCH_JOBS_ENV} value '{configured_jobs}'; expected > 0")
+            return None
+
+        logger.info(f"Using DVC fetch jobs from environment: {parsed_jobs}")
+        return parsed_jobs
 
     def __download_with_dvc_pull(self, dvc_file: str, credentials: Credentials, logger: ILogger) -> None:
         """Download using DVC by reading the .dvc file and fetching from remote.
@@ -128,12 +176,16 @@ class DvcHandler(IHandler):
         logger.debug(f"DVC targets: {targets}")
 
         logger.info(f"Fetching {len(targets)} DVC targets (jobs={jobs})")
+        fetch_start = time.perf_counter()
         fetch_result = self.__repo.fetch(targets=targets, jobs=jobs)
         logger.debug(f"Fetch result: {fetch_result}")
+        logger.info(f"DVC fetch finished in {time.perf_counter() - fetch_start:.2f}s")
 
         logger.info(f"Checking out {len(targets)} DVC targets")
+        checkout_start = time.perf_counter()
         checkout_result = self.__repo.checkout(targets=targets, force=True)
         logger.debug(f"Checkout result: {checkout_result}")
+        logger.info(f"DVC checkout finished in {time.perf_counter() - checkout_start:.2f}s")
 
     @staticmethod
     def __verify_output_dirs(dvc_files: list[str], logger: ILogger) -> None:
