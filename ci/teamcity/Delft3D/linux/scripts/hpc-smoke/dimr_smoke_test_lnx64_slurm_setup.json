@@ -19,6 +19,14 @@
         "e100_f00_c00": {
             "nodes": 1,
             "tasks_per_node": 1
+        },
+        "e02_f030_c301": {
+            "nodes": 1,
+            "tasks_per_node": 1
+        },
+        "e02_f030_c302": {
+            "nodes": 2,
+            "tasks_per_node": 1
         }
     }
 }
