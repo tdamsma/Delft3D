@@ -49,7 +49,7 @@ module m_advec
 
 contains
 
-   subroutine advec() ! advection, based on u0, q0 24
+   !> @brief Compute advection terms for momentum equations\n   !>\n   !> This subroutine computes the advection contributions to the momentum equations\n   !> in D-Flow Flexible Mesh. It supports multiple advection schemes including:\n   !> - Standard Perot-type momentum-conserving schemes\n   !> - Higher-order schemes with Piaczek correction\n   !> - Pure 1D schemes for channel/pipe flow (FM-style and SOBEK-style)\n   !> - Subgrid weir treatments\n   !>\n   !> The advection velocity (advel) represents the acceleration due to \n   !> convective momentum transport: advel = \u2202(uu)/\u2202x + \u2202(uv)/\u2202y\n   !>\n   !> @details The choice of scheme depends on the iadv parameter for each link,\n   !> which can vary spatially to allow for optimal numerics in different regions\n   !> (e.g., 2D schemes in open areas, 1D schemes in channels).\n   subroutine advec() ! advection, based on u0, q0 24
       use precision, only: dp
       use m_flowgeom, only: lnxi, iadv, iadv_subgrid_weir, ln, lnx, ndxi, csu, snu, kcu, acl, iadv_pure1d_fm, iadv_pure1d_sobek, &
                             iadv_original_lateral_overflow, dx, dxi, bai, ba, lnx1d
@@ -104,10 +104,7 @@ contains
       real(kind=dp) :: quuL1(0:kmxx), quuL2(0:kmxx), volL1(0:kmxx), volL2(0:kmxx), sqaL1(0:kmxx), sqaL2(0:kmxx)
       real(kind=dp) :: sigk1(0:kmxx), sigk2(0:kmxx), siguL(0:kmxx)
 
-      real(kind=dp) :: am
-      real(kind=dp) :: qv
-      real(kind=dp) :: u_ene
-      real(kind=dp) :: u_mom
+      ! Variables specific to SOBEK 1D advection scheme (IADV_PURE1D_SOBEK)\n      real(kind=dp) :: am     !< momentum-energy blending factor [0=energy, 1=momentum]\n      real(kind=dp) :: qv     !< normalized discharge rate [1/s] for advection scaling\n      real(kind=dp) :: u_ene  !< energy-conserving velocity [m/s] at node\n      real(kind=dp) :: u_mom  !< momentum-conserving velocity [m/s] at node
 
       japiaczek33 = 0
 
@@ -492,55 +489,120 @@ contains
                      advel = (qu1 + qu2) / volu ! dimension: ((m4/s2) / m3) =   (m/s2)
                   end if
 
+               ! ======================================================================
+               ! SOBEK-STYLE PURE 1D ADVECTION SCHEME (IADV_PURE1D_SOBEK)
+               ! ======================================================================
+               ! This scheme implements a sophisticated 1D advection algorithm that can
+               ! blend between momentum conservation and energy conservation principles,
+               ! originally developed for the SOBEK hydraulic modeling software.
+               !
+               ! Key features:
+               ! - Uses storage-corrected discharges (q1D) instead of link discharges (qa)
+               ! - Applies momentum and energy correction factors (alpha_mom_1D, alpha_ene_1D)
+               ! - Handles geometric contractions and expansions with different strategies
+               ! - Accounts for non-uniform velocity distributions in 1D channels
+               !
+               ! Theory:
+               ! The advection velocity is computed as a weighted combination of:
+               ! - Momentum-conserving velocity: u_mom = α_mom * Q / A
+               ! - Energy-conserving velocity:   u_ene = α_ene * Q / A
+               ! Where α_mom and α_ene are correction factors from setuc1d()
+               !
                else if (iadvL == IADV_PURE1D_SOBEK) then
                   ! Pure1D implementation SOBEK style
 
                   advel = 0.0_dp
-                  ! weight of momentum versus energy conservation
+                  
+                  ! ----------------------------------------------------------------
+                  ! Determine momentum-energy blending factor (am) based on jaPure1D:
+                  ! am = 1.0: pure momentum conservation
+                  ! am = 0.0: pure energy conservation  
+                  ! am = intermediate: blended approach
+                  ! ----------------------------------------------------------------
                   select case (jaPure1D)
                   case (3) ! momentum conserving
-                     am = 1.0_dp
+                     am = 1.0_dp  ! Pure momentum conservation (classical approach)
+                     
                   case (4) ! weighted
+                     ! Area-ratio weighting: smaller area dominates (more conservative)
                      am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
+                     
                   case (5) ! weighted in contractions, otherwise momentum conserving
+                     ! Detect flow contractions and apply area weighting only then
                      if ((u1(L) > 0.0_dp .and. au1D(1, L) > au1D(2, L)) .or. &
                        & (u1(L) < 0.0_dp .and. au1D(1, L) < au1D(2, L))) then
+                        ! Flow is contracting: use area weighting for stability
                         am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
                      else
+                        ! Flow is expanding or constant: use momentum conservation
                         am = 1.0_dp
                      end if
+                     
                   case (6) ! weighted in expansions, otherwise momentum conserving
+                     ! Detect flow expansions and apply area weighting only then
                      if ((u1(L) > 0.0_dp .and. au1D(1, L) < au1D(2, L)) .or. &
                        & (u1(L) < 0.0_dp .and. au1D(1, L) > au1D(2, L))) then
+                        ! Flow is expanding: use area weighting for stability
                         am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
                      else
+                        ! Flow is contracting or constant: use momentum conservation
                         am = 1.0_dp
                      end if
+                     
                   case (7) ! energy conserving
-                     am = 0.0_dp
+                     am = 0.0_dp  ! Pure energy conservation (Bernoulli-based approach)
                   end select
 
+                  ! ----------------------------------------------------------------
+                  ! Process inflow from node 1 (upstream end of link)
+                  ! ----------------------------------------------------------------
                   if (q1D(1, L) > 0) then
-                     ! flow entering link at node 1
+                     ! Positive storage-corrected discharge: flow ENTERING link from node 1
+                     
+                     ! Compute normalized discharge rate [1/s] for advection scaling
                      qv = q1D(1, L) / max(1.0e-5_dp, volu1D(L))
+                     
+                     ! Compute momentum-conserving velocity at node 1
+                     ! u_mom = (momentum correction factor) * (discharge / area)
                      u_mom = alpha_mom_1D(k1) * q1D(1, L) / au1D(1, L)
+                     
+                     ! Compute energy-conserving velocity at node 1  
+                     ! u_ene = (energy correction factor) * (discharge / area)
                      u_ene = alpha_ene_1D(k1) * q1D(1, L) / au1D(1, L)
+                     
+                     ! Apply blended advection correction (negative because inflow reduces momentum)
+                     ! Contribution = -[am * (u_mom - u_link) + (1-am) * (u_ene - u_link)] * qv
                      advel = advel - am * (u_mom - u1(L)) * qv &
                                  & - (1.0_dp - am) * (u_ene - u1(L)) * qv
                   else
-                     ! flow leaving link at node 1
-                     ! outflow u = local u, so no contribution
+                     ! Negative or zero discharge: flow LEAVING link at node 1
+                     ! For outflow, the velocity equals the local link velocity u1(L)
+                     ! so (u - u1(L)) = 0 and there's no advection contribution
                   end if
 
-                  if (q1D(2, L) < 0) then ! flow entering link at node 2
+                  ! ----------------------------------------------------------------
+                  ! Process inflow from node 2 (downstream end of link)
+                  ! ----------------------------------------------------------------
+                  if (q1D(2, L) < 0) then 
+                     ! Negative storage-corrected discharge: flow ENTERING link from node 2
+                     
+                     ! Compute normalized discharge rate [1/s] for advection scaling
                      qv = q1D(2, L) / max(1.0e-5_dp, volu1D(L))
+                     
+                     ! Compute momentum-conserving velocity at node 2
                      u_mom = alpha_mom_1D(k2) * q1D(2, L) / au1D(2, L)
+                     
+                     ! Compute energy-conserving velocity at node 2
                      u_ene = alpha_ene_1D(k2) * q1D(2, L) / au1D(2, L)
+                     
+                     ! Apply blended advection correction (positive because inflow adds momentum)
+                     ! Note: qv is negative, so signs work out correctly for momentum addition
                      advel = advel + am * (u_mom - u1(L)) * qv &
                                  & + (1.0_dp - am) * (u_ene - u1(L)) * qv
                   else
-                     ! flow leaving link at node 2
-                     ! outflow u = local u, so no contribution
+                     ! Positive or zero discharge: flow LEAVING link at node 2
+                     ! For outflow, the velocity equals the local link velocity u1(L)
+                     ! so (u - u1(L)) = 0 and there's no advection contribution
                   end if
 
                else if (iadvL == 333) then ! explicit first order mom conservative
