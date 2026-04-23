@@ -23,19 +23,19 @@ contains
       general_structure%gateclosedfractiononlink(1) = 0.0_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp
       general_structure%gateopeningwidth = general_structure%ws
-      q_fully_opened_no_door = compute(general_structure, computeGeneralStructure)
+      q_fully_opened_no_door = compute(general_structure, compute_General_Structure)
 
       ! General structure fully opened and door 100 percent closed
       general_structure%gateclosedfractiononlink(1) = 1.0_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp      
       general_structure%gateopeningwidth = 0.0_dp
-      q_fully_opened_door_100_percent = compute(general_structure, computeGeneralStructure)
+      q_fully_opened_door_100_percent = compute(general_structure, compute_general_structure)
       
       ! General structure fully opened and door 50 percent closed
       general_structure%gateclosedfractiononlink(1) = 0.5_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp      
       general_structure%gateopeningwidth = 50_dp
-      q_fully_opened_door_50_percent = compute(general_structure, computeGeneralStructure)
+      q_fully_opened_door_50_percent = compute(general_structure, compute_general_structure)
 
       call f90_expect_near(q_fully_opened_no_door, q_fully_opened_door_100_percent, tolerance, "The discharge for no door is different from the discharge for a door hanging over the structure.")
       call f90_expect_near(236.37608411757691_dp, q_fully_opened_door_50_percent, tolerance, "The discharge for no door is different from the discharge for a door partly hanging over the structure.")
@@ -62,26 +62,26 @@ contains
       general_structure%gateclosedfractiononlink(1) = 0.0_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp
       general_structure%gateopeningwidth = general_structure%ws
-      q_fully_opened_no_door = compute(general_structure, computeGeneralStructure_fullwidth)
+      q_fully_opened_no_door = compute(general_structure, compute_general_structure_fullwidth)
 
       ! General structure fully opened and door 100 percent closed
       general_structure%gateclosedfractiononlink(1) = 1.0_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp      
       general_structure%gateopeningwidth = 0.0_dp
-      q_fully_opened_door_100_percent = compute(general_structure, computeGeneralStructure_fullwidth)
+      q_fully_opened_door_100_percent = compute(general_structure, compute_general_structure_fullwidth)
 
       ! General structure fully opened and door 50 percent closed
       general_structure%gateclosedfractiononlink(1) = 0.5_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp      
       general_structure%gateopeningwidth = 50_dp
-      q_fully_opened_door_50_percent = compute(general_structure, computeGeneralStructure_fullwidth)
+      q_fully_opened_door_50_percent = compute(general_structure, compute_general_structure_fullwidth)
 
       ! General structure width 50 m no door
       general_structure%gateclosedfractiononlink(1) = 0.0_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp
       general_structure%ws = 50.0_dp
       general_structure%gateopeningwidth = general_structure%ws
-      q_w_50m_no_door = compute(general_structure, computeGeneralStructure_fullwidth)
+      q_w_50m_no_door = compute(general_structure, compute_general_structure_fullwidth)
 
       ! General structure width 100 percent door opening 50 m gate lower edge level == crest level
       general_structure%gateclosedfractiononlink(1) = 0.5_dp
@@ -89,7 +89,7 @@ contains
       general_structure%ws = 100.0_dp
       general_structure%gateopeningwidth = 50.0_dp
 
-      q_w100_door_opening_50m = compute(general_structure, computeGeneralStructure_fullwidth)
+      q_w100_door_opening_50m = compute(general_structure, compute_general_structure_fullwidth)
 
       call f90_expect_near(q_fully_opened_no_door, q_fully_opened_door_100_percent, tolerance, "The discharge for no door is different from the discharge for a door hanging over the structure.")
       call f90_expect_near(q_fully_opened_no_door, q_fully_opened_door_50_percent, tolerance, "The discharge for no door is different from the discharge for a door partly hanging over the structure.")
@@ -117,14 +117,14 @@ contains
       general_structure%gateLowerEdgeLevel = 50.0_dp
       general_structure%ws = 50.0_dp
       general_structure%gateopeningwidth = general_structure%ws
-      q_w_50m_no_door = compute(general_structure, computeGeneralStructure)
+      q_w_50m_no_door = compute(general_structure, compute_general_structure)
 
       ! General structure width 100 percent door opening 50 m gate lower edge level == crest level
       general_structure%gateclosedfractiononlink(1) = 0.5_dp
       general_structure%gateLowerEdgeLevel = general_structure%zs
       general_structure%ws = 100.0_dp
       general_structure%gateopeningwidth = 50.0_dp
-      q_w100_door_opening_50m = compute(general_structure, computeGeneralStructure)
+      q_w100_door_opening_50m = compute(general_structure, compute_general_structure)
 
       call f90_expect_near(q_w_50m_no_door, q_w100_door_opening_50m, tolerance, "The discharge for no door is different from the discharge for a door obstructing a part of the structure.")
       
@@ -152,7 +152,7 @@ contains
       general_structure%gateLowerEdgeLevel = 50.0_dp
       general_structure%ws = 50.0_dp
       general_structure%gateopeningwidth = general_structure%ws
-      q_w_50m_no_door = compute(general_structure, computeGeneralStructure_fullwidth)
+      q_w_50m_no_door = compute(general_structure, compute_general_structure_fullwidth)
 
       ! General structure width 100 percent door opening 50 m gate lower edge level == crest level
       general_structure%gateclosedfractiononlink(1) = 0.5_dp
@@ -160,7 +160,7 @@ contains
       general_structure%ws = 100.0_dp
       general_structure%gateopeningwidth = 50.0_dp
 
-      q_w100_door_opening_50m = compute(general_structure, computeGeneralStructure_fullwidth)
+      q_w100_door_opening_50m = compute(general_structure, compute_general_structure_fullwidth)
 
       ! These results should be identical.
       call f90_expect_near(q_w_50m_no_door, 110.604547983865_dp, tolerance, "The discharge for no door is different from the discharge for a door obstructing a part of the structure.")
