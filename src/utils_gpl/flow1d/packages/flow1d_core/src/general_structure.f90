@@ -198,6 +198,7 @@ contains
       real(kind=dp) :: s1ml
       real(kind=dp) :: s1mr
       real(kind=dp) :: qL
+      real(kind=dp) :: partial_discharge
       real(kind=dp), dimension(2) :: bobstru !< same as BOB0, but with respect to the structure orientation
 
       logical :: velheight
@@ -317,7 +318,6 @@ contains
          dg = gle - zs
 
          u1L = ru(1) - fu(1) * dsL
-         qL = Au(1) * u1L
 
          call flqhgs(fu(1), ru(1), u1L, dxL, dt, structwidth, au(1), qL, flowDir, &
                      hu, hd, uu, zs, width_correction_factor * wstr, w2, wsd, zb2, ds1, ds2, dg, &
@@ -333,17 +333,17 @@ contains
          ! In 2D the maximum flow rate is divided over all individual links, where the limiter is applied for
          ! each flow link individually, weighted by flow link width.
 
-         ! qL is in orientation of structure (as are the limitFlow values)
-         qL = direction * au(1) * (ru(1) - fu(1) * dsL)
-         if (qL > 0.0_dp .and. genstr%uselimitFlowPos) then
+         ! partial_discharge is in orientation of structure (as are the limitFlow values)
+         partial_discharge = direction * au(1) * (ru(1) - fu(1) * dsL)
+         if (partial_discharge > 0.0_dp .and. genstr%uselimitFlowPos) then
             maxFlowL = genstr%limitFlowPos * gatefraction * wstr / genstr%ws_actual
-            if (qL > maxFlowL) then
+            if (partial_discharge > maxFlowL) then
                fu(1) = 0.0_dp
                ru(1) = direction * maxFlowL / max(1.0e-6_dp, au(1))
             end if
-         else if (qL < 0.0_dp .and. genstr%uselimitFlowNeg) then
+         else if (partial_discharge < 0.0_dp .and. genstr%uselimitFlowNeg) then
             maxFlowL = genstr%limitFlowNeg * gatefraction * wstr / genstr%ws_actual
-            if (abs(qL) > maxFlowL) then
+            if (abs(partial_discharge) > maxFlowL) then
                fu(1) = 0.0_dp
                ru(1) = -direction * maxFlowL / max(1.0e-6_dp, au(1))
             end if
@@ -354,7 +354,6 @@ contains
          dg = huge(1.0_dp)
          zgate = gle + genstr%gatedoorheight
          u1L = ru(2) - fu(2) * dsL
-         qL = Au(2) * u1L
 
          call flqhgs(fu(2), ru(2), u1L, dxL, dt, structwidth, au(2), qL, flowDir, &
                      hu, hd, uu, zgate, width_correction_factor * wstr, w2, wsd, zb2, ds1, ds2, dg, &
@@ -372,7 +371,6 @@ contains
          ! calculate flow asif no door is present
          dg = huge(1.0_dp)
          u1L = ru(3) - fu(3) * dsL
-         qL = Au(3) * u1L
 
          call flqhgs(fu(3), ru(3), u1L, dxL, dt, structwidth, au(3), qL, flowDir, &
                      hu, hd, uu, zs, width_correction_factor * wstr, w2, wsd, zb2, ds1, ds2, dg, &
