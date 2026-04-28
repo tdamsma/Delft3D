@@ -1,5 +1,5 @@
-# Use the  Windows Server Core 2022 image form ICT.
-FROM containers.deltares.nl/base_windows_containers/server:ltsc2022
+# Use the  Windows Server Core 2025 image form ICT.
+FROM containers.deltares.nl/mcr-proxy/windows/server:ltsc2025
 
 # Restore the default Windows shell for correct batch processing.
 SHELL ["cmd", "/S", "/C"]
