@@ -80,7 +80,7 @@ object WindowsBuild : BuildType({
                 set CC=
                 set CXX=
 
-                cmake ./src/cmake -G %generator% -T fortran=%intel_fortran_compiler% -D CMAKE_BUILD_TYPE=%build_type% -D CONFIGURATION_TYPE:STRING=%product% -B build_%product% -D CMAKE_INSTALL_PREFIX=build_%product%/install -D ENABLE_CODE_COVERAGE=%enable_code_coverage_flag% -D CMAKE_C_COMPILER=cl -D CMAKE_CXX_COMPILER=cl
+                cmake ./src/cmake -G %generator% -T fortran=%intel_fortran_compiler% -D CMAKE_BUILD_TYPE=%build_type% -D CONFIGURATION_TYPE:STRING=%product% -B build_%product% -D CMAKE_INSTALL_PREFIX=build_%product%/install -D ENABLE_CODE_COVERAGE=%enable_code_coverage_flag%
                 if %%errorlevel%% neq 0 exit /b %%errorlevel%%
 
                 cmake --build ./build_%product% -j --target install --config %build_type%
