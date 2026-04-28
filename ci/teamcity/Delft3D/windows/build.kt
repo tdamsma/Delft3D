@@ -75,8 +75,8 @@ object WindowsBuild : BuildType({
         script {
             name = "Build"
             scriptContent = """
-                call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b %errorlevel%
-                call "C:\\Program Files (x86)\\Intel\\oneAPI\\setvars.bat" intel64 || exit /b %errorlevel%
+                call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
+                call "C:\\Program Files (x86)\\Intel\\oneAPI\\setvars.bat" intel64
 
                 cmake ./src/cmake -G %generator% -T fortran=%intel_fortran_compiler% -D CMAKE_BUILD_TYPE=%build_type% -D CONFIGURATION_TYPE:STRING=%product% -B build_%product% -D CMAKE_INSTALL_PREFIX=build_%product%/install -D ENABLE_CODE_COVERAGE=%enable_code_coverage_flag%
                 if %%errorlevel%% neq 0 exit /b %%errorlevel%%
