@@ -204,7 +204,7 @@ module m_struc_helper
       endif
       
       bu   = dxdt + (1+dxfrL) * fr
-      du   = (strucalfa  * qL / max(auL, 1.0d-4) + (1 - strucalfa) * u1L) * dxdt + rhsc
+      du   = u1L * dxdt + rhsc
       fuL  = cu / bu
       ruL  = du / bu
       u1L  = ruL - fuL * (s1k2 - s1k1)

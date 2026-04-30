@@ -23,80 +23,26 @@ contains
       general_structure%gateclosedfractiononlink(1) = 0.0_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp
       general_structure%gateopeningwidth = general_structure%ws
-      q_fully_opened_no_door = compute(general_structure, compute_General_Structure)
+      q_fully_opened_no_door = compute(general_structure)
 
       ! General structure fully opened and door 100 percent closed
       general_structure%gateclosedfractiononlink(1) = 1.0_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp      
       general_structure%gateopeningwidth = 0.0_dp
-      q_fully_opened_door_100_percent = compute(general_structure, compute_general_structure)
+      q_fully_opened_door_100_percent = compute(general_structure)
       
       ! General structure fully opened and door 50 percent closed
       general_structure%gateclosedfractiononlink(1) = 0.5_dp
       general_structure%gateLowerEdgeLevel = 50.0_dp      
       general_structure%gateopeningwidth = 50_dp
-      q_fully_opened_door_50_percent = compute(general_structure, compute_general_structure)
+      q_fully_opened_door_50_percent = compute(general_structure)
 
       call f90_expect_near(q_fully_opened_no_door, q_fully_opened_door_100_percent, tolerance, "The discharge for no door is different from the discharge for a door hanging over the structure.")
-      call f90_expect_near(236.37608411757691_dp, q_fully_opened_door_50_percent, tolerance, "The discharge for no door is different from the discharge for a door partly hanging over the structure.")
+      call f90_expect_near(q_fully_opened_door_100_percent, q_fully_opened_door_50_percent, tolerance, "The discharge for no door is different from the discharge for a door partly hanging over the structure.")
       
    end subroutine test_genstru_1d2d_door_not_in_water
    !$f90tw)
-   
-   !$f90tw TESTCODE(TEST, test_general_structure, test_genstru_2d3d_door_not_in_water, test_genstru_2d3d_door_not_in_water,
-   subroutine test_genstru_2d3d_door_not_in_water() bind(C)
-   
-      use precision, only: dp
 
-      real(kind=dp) :: q_fully_opened_no_door, q_fully_opened_door_100_percent, q_fully_opened_door_50_percent
-      real(kind=dp) :: q_w_50m_no_door, q_w100_door_opening_50m
-      real(kind=dp), parameter :: tolerance = 1e-6_dp
-
-      type(t_GeneralStructure), pointer :: general_structure
-
-      allocate(general_structure)
-      
-      general_structure = create_general_structure()
-      
-      ! General structure fully opened and door 100 percent opened
-      general_structure%gateclosedfractiononlink(1) = 0.0_dp
-      general_structure%gateLowerEdgeLevel = 50.0_dp
-      general_structure%gateopeningwidth = general_structure%ws
-      q_fully_opened_no_door = compute(general_structure, compute_general_structure_fullwidth)
-
-      ! General structure fully opened and door 100 percent closed
-      general_structure%gateclosedfractiononlink(1) = 1.0_dp
-      general_structure%gateLowerEdgeLevel = 50.0_dp      
-      general_structure%gateopeningwidth = 0.0_dp
-      q_fully_opened_door_100_percent = compute(general_structure, compute_general_structure_fullwidth)
-
-      ! General structure fully opened and door 50 percent closed
-      general_structure%gateclosedfractiononlink(1) = 0.5_dp
-      general_structure%gateLowerEdgeLevel = 50.0_dp      
-      general_structure%gateopeningwidth = 50_dp
-      q_fully_opened_door_50_percent = compute(general_structure, compute_general_structure_fullwidth)
-
-      ! General structure width 50 m no door
-      general_structure%gateclosedfractiononlink(1) = 0.0_dp
-      general_structure%gateLowerEdgeLevel = 50.0_dp
-      general_structure%ws = 50.0_dp
-      general_structure%gateopeningwidth = general_structure%ws
-      q_w_50m_no_door = compute(general_structure, compute_general_structure_fullwidth)
-
-      ! General structure width 100 percent door opening 50 m gate lower edge level == crest level
-      general_structure%gateclosedfractiononlink(1) = 0.5_dp
-      general_structure%gateLowerEdgeLevel = general_structure%zs
-      general_structure%ws = 100.0_dp
-      general_structure%gateopeningwidth = 50.0_dp
-
-      q_w100_door_opening_50m = compute(general_structure, compute_general_structure_fullwidth)
-
-      call f90_expect_near(q_fully_opened_no_door, q_fully_opened_door_100_percent, tolerance, "The discharge for no door is different from the discharge for a door hanging over the structure.")
-      call f90_expect_near(q_fully_opened_no_door, q_fully_opened_door_50_percent, tolerance, "The discharge for no door is different from the discharge for a door partly hanging over the structure.")
-      
-   end subroutine test_genstru_2d3d_door_not_in_water
-   !$f90tw)
-   
    !$f90tw TESTCODE(TEST, test_general_structure, test_genstru_1d2d_crestwidth_reduced, test_genstru_1d2d_crestwidth_reduced,
    subroutine test_genstru_1d2d_crestwidth_reduced() bind(C)
    
@@ -117,63 +63,24 @@ contains
       general_structure%gateLowerEdgeLevel = 50.0_dp
       general_structure%ws = 50.0_dp
       general_structure%gateopeningwidth = general_structure%ws
-      q_w_50m_no_door = compute(general_structure, compute_general_structure)
+      q_w_50m_no_door = compute(general_structure)
 
       ! General structure width 100 percent door opening 50 m gate lower edge level == crest level
       general_structure%gateclosedfractiononlink(1) = 0.5_dp
       general_structure%gateLowerEdgeLevel = general_structure%zs
       general_structure%ws = 100.0_dp
       general_structure%gateopeningwidth = 50.0_dp
-      q_w100_door_opening_50m = compute(general_structure, compute_general_structure)
+      q_w100_door_opening_50m = compute(general_structure)
 
-      call f90_expect_near(q_w_50m_no_door, 98.812835141439592_dp, tolerance, "The discharge for no door is different from the discharge for a door obstructing a part of the structure.")
-      call f90_expect_near(q_w100_door_opening_50m, 110.604547983865_dp, tolerance, "The discharge for no door is different from the discharge for a door obstructing a part of the structure.")
+      call f90_expect_near(q_w_50m_no_door, q_w100_door_opening_50m, q_w_50m_no_door*tolerance, "The discharge for no door is different from the discharge for a door obstructing a part of the structure.")
       
       
    end subroutine test_genstru_1d2d_crestwidth_reduced
    !$f90tw)
-   
-   !$f90tw TESTCODE(TEST, test_general_structure, test_genstru_2d3d_crestwidth_reduced, test_genstru_2d3d_crestwidth_reduced,
-   subroutine test_genstru_2d3d_crestwidth_reduced() bind(C)
-   
-      use precision, only: dp
-
-      real(kind=dp) :: q_fully_opened_no_door, q_fully_opened_door_100_percent, q_fully_opened_door_50_percent
-      real(kind=dp) :: q_w_50m_no_door, q_w100_door_opening_50m
-      real(kind=dp), parameter :: tolerance = 1e-6_dp
-
-      type(t_GeneralStructure), pointer :: general_structure
-
-      allocate(general_structure)
-      
-      general_structure = create_general_structure()
-      
-      ! General structure width 50 m no door
-      general_structure%gateclosedfractiononlink(1) = 0.0_dp
-      general_structure%gateLowerEdgeLevel = 50.0_dp
-      general_structure%ws = 50.0_dp
-      general_structure%gateopeningwidth = general_structure%ws
-      q_w_50m_no_door = compute(general_structure, compute_general_structure_fullwidth)
-
-      ! General structure width 100 percent door opening 50 m gate lower edge level == crest level
-      general_structure%gateclosedfractiononlink(1) = 0.5_dp
-      general_structure%gateLowerEdgeLevel = general_structure%zs
-      general_structure%ws = 100.0_dp
-      general_structure%gateopeningwidth = 50.0_dp
-
-      q_w100_door_opening_50m = compute(general_structure, compute_general_structure_fullwidth)
-
-      ! These results should be identical.
-      call f90_expect_near(q_w_50m_no_door, 110.604547983865_dp, tolerance, "The discharge for no door is different from the discharge for a door obstructing a part of the structure.")
-      call f90_expect_near(q_w100_door_opening_50m, 98.812835141439592_dp, tolerance, "The discharge for no door is different from the discharge for a door obstructing a part of the structure.")
-   end subroutine test_genstru_2d3d_crestwidth_reduced
-   !$f90tw)
-
-   function compute(general_structure, compute_general_structure) result(q)
-   use general_structure_interface, only : compute_gs
+ 
+   function compute(general_structure) result(q)
       use precision, only: dp
       type(t_GeneralStructure), pointer, intent(inout) :: general_structure
-      procedure(compute_gs), pointer, intent(in) :: compute_general_structure
       
       real(kind=dp) :: fu
       real(kind=dp) :: ru
@@ -204,7 +111,7 @@ contains
       dxL = 1.0_dp
       dt = 100.0_dp
       bob0 = [-1.0_dp,-1.0_dp]
-      SkipDimensionChecks = .true.
+      SkipDimensionChecks = .false.
       
 
       flow_area_up = (s1_up-bob0(1)*maxwidth)
