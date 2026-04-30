@@ -1,5 +1,11 @@
-# Use the  Windows Server Core 2025 image form ICT.
+# Use the  Windows Server Core 2022 image form ICT.
 FROM containers.deltares.nl/mcr-proxy/windows/server:ltsc2025
+
+# Set powershell as shell
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'Continue'; $verbosePreference='Continue';"]
+
+# Enable long pathnames
+RUN reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v "LongPathsEnabled" /t REG_DWORD /d 1 /f
 
 # Restore the default Windows shell for correct batch processing.
 SHELL ["cmd", "/S", "/C"]
@@ -23,9 +29,6 @@ RUN (start /w vs_Community.exe --passive --wait --noUpdateInstaller --norestart 
 
 # Set powershell as shell
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'Continue'; $verbosePreference='Continue';"]
-
-# Enable long pathnames
-RUN reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v "LongPathsEnabled" /t REG_DWORD /d 1 /f
 
 # Install the Intel toolkits
 ADD w_fortran-compiler_p_2024.2.1.81_offline.exe C:/
