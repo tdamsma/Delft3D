@@ -15,7 +15,7 @@ SHELL ["cmd", "/S", "/C"]
 ADD vs_Community.exe C:/
 
 # Install visual studio with workloads, excluding workloads and components with known issues.
-RUN (start /w vs_Community.exe --passive --wait --noUpdateInstaller --norestart \
+RUN (start /w vs_Community.exe --passive --wait --noUpdateInstaller --norestart --nocache \
     --installPath "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\Community" \
     --add Microsoft.VisualStudio.Workload.NativeDesktop;includeRecommended \
     --add Microsoft.VisualStudio.Component.Windows10SDK.18362 \
