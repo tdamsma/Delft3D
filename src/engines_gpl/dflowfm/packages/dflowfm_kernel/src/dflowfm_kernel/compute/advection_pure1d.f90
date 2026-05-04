@@ -26,17 +26,75 @@
 !  Deltares, and remain the property of Stichting Deltares. All rights reserved.
 !
 !-------------------------------------------------------------------------------
-module m_setuc1d
+
+module m_advection_pure1d
 
    implicit none
 
    private
 
+   public :: setiadvpure1d
+   public :: adv_pure1d_sobek
    public :: setuc1d
 
 contains
 
-   subroutine setuc1d()
+!> update iadvec flag if Pure1D is switched on
+   subroutine setiadvpure1D(jaPure1D)
+      use m_flowgeom, only: lnx1d, lnxi, lnx, ln, kcu, iadv, IADV_PURE1D_FM, IADV_PURE1D_SOBEK
+      use m_flowparameters, only: iadvec1D
+      use network_data, only: kc
+
+      integer, intent(in) :: jaPure1D !< flag specifying type of 1D discretization
+
+      integer :: iadv_Pure1D !< iadvec flag to be used for Pure1D links
+      integer :: L !< link index
+      integer :: n1 !< index of from-node
+      integer :: n2 !< index of to-node
+
+      if (jaPure1D == 0) then
+         ! no Pure1D return
+         return
+
+      elseif (jaPure1D < 3) then
+         ! stay close to the default FM behaviour
+         iadv_Pure1D = IADV_PURE1D_FM
+
+      else
+         ! switch to SOBEK type 1D advection
+         iadv_Pure1D = IADV_PURE1D_SOBEK
+
+      end if
+
+      kc = 0
+      do L = 1, lnx
+         n1 = ln(1, L)
+         n2 = ln(2, L)
+         if (abs(kcu(L)) == 1) then
+            kc(n1) = kc(n1) + 1
+            kc(n2) = kc(n2) + 1
+         end if
+      end do
+
+      do L = 1, lnx1D
+         n1 = ln(1, L)
+         n2 = ln(2, L)
+         if (iadv(L) == iadvec1D .or. &
+             & (iadv(L) == 6 .and. kc(n1) == 2 .and. kc(n2) == 2)) then
+            iadv(L) = iadv_Pure1D
+         end if
+      end do
+
+      do L = lnxi + 1, lnx
+         n2 = ln(2, L)
+         if (abs(kcu(L)) == 1 .and. kc(n2) == 2) then
+            iadv(L) = iadv_Pure1D
+         end if
+      end do
+
+   end subroutine setiadvpure1D
+
+      subroutine setuc1d()
       use m_netw
       use m_flow
       use m_flowgeom
@@ -241,4 +299,69 @@ contains
 
    end subroutine setuc1d
 
-end module m_setuc1d
+!> compute advection velocity for Pure1D SOBEK style
+   subroutine adv_pure1d_sobek(L, k1, k2, advel)
+      use precision, only: dp
+      use m_flow, only: japure1d, au1d, u1, q1d, volu1d, alpha_mom_1d, alpha_ene_1d
+
+      integer, intent(in) :: L   !< link index
+      integer, intent(in) :: k1  !< from-node index
+      integer, intent(in) :: k2  !< to-node index
+      real(kind=dp), intent(out) :: advel !< advection velocity (m/s2)
+
+      real(kind=dp) :: am
+      real(kind=dp) :: qv
+      real(kind=dp) :: u_ene
+      real(kind=dp) :: u_mom
+
+      advel = 0.0_dp
+      ! weight of momentum versus energy conservation
+      select case (jaPure1D)
+      case (3) ! momentum conserving
+         am = 1.0_dp
+      case (4) ! weighted
+         am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
+      case (5) ! weighted in contractions, otherwise momentum conserving
+         if ((u1(L) > 0.0_dp .and. au1D(1, L) > au1D(2, L)) .or. &
+           & (u1(L) < 0.0_dp .and. au1D(1, L) < au1D(2, L))) then
+            am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
+         else
+            am = 1.0_dp
+         end if
+      case (6) ! weighted in expansions, otherwise momentum conserving
+         if ((u1(L) > 0.0_dp .and. au1D(1, L) < au1D(2, L)) .or. &
+           & (u1(L) < 0.0_dp .and. au1D(1, L) > au1D(2, L))) then
+            am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
+         else
+            am = 1.0_dp
+         end if
+      case (7) ! energy conserving
+         am = 0.0_dp
+      end select
+
+      if (q1D(1, L) > 0) then
+         ! flow entering link at node 1
+         qv = q1D(1, L) / max(1.0e-5_dp, volu1D(L))
+         u_mom = alpha_mom_1D(k1) * q1D(1, L) / au1D(1, L)
+         u_ene = alpha_ene_1D(k1) * q1D(1, L) / au1D(1, L)
+         advel = advel - am * (u_mom - u1(L)) * qv &
+                     & - (1.0_dp - am) * (u_ene - u1(L)) * qv
+      else
+         ! flow leaving link at node 1
+         ! outflow u = local u, so no contribution
+      end if
+
+      if (q1D(2, L) < 0) then ! flow entering link at node 2
+         qv = q1D(2, L) / max(1.0e-5_dp, volu1D(L))
+         u_mom = alpha_mom_1D(k2) * q1D(2, L) / au1D(2, L)
+         u_ene = alpha_ene_1D(k2) * q1D(2, L) / au1D(2, L)
+         advel = advel + am * (u_mom - u1(L)) * qv &
+                     & + (1.0_dp - am) * (u_ene - u1(L)) * qv
+      else
+         ! flow leaving link at node 2
+         ! outflow u = local u, so no contribution
+      end if
+
+   end subroutine adv_pure1d_sobek
+
+end module m_advection_pure1d

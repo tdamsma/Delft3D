@@ -62,7 +62,7 @@ module m_flow_flowinit
    use m_setsigmabnds, only: setsigmabnds
    use m_setship, only: setship
    use m_sets01zbnd, only: sets01zbnd
-   use m_setiadvpure1d, only: setiadvpure1d
+   use m_advection_pure1d, only: setiadvpure1d
    use m_furusobekstructures
    use m_filter
    use m_adjust_bobs_for_dams_and_structs, only: adjust_bobs_for_dams_and_structs

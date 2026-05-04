@@ -33,6 +33,7 @@
 module m_advec
    use m_setucxy1d, only: setucxy1d
    use m_sethigherorderadvectionvelocities, only: sethigherorderadvectionvelocities
+   use m_advection_pure1d, only: adv_pure1d_sobek
    use m_qucperipiaczekteta, only: qucperipiaczekteta
    use m_qucperipiaczek, only: qucperipiaczek
    use m_qucper3dsigmapiaczekteta, only: qucper3dsigmapiaczekteta
@@ -56,7 +57,7 @@ contains
       use m_flow, only: kmxx, japiaczek33, ifixedweirscheme, u0, ucx, ucy, jabarrieradvection, ngatesg, l1gatesg, l2gatesg, kgate, &
                         ngategen, gate2cgen, l1cgensg, l2cgensg, kcgen, uqcx, uqcy, sqa, kmx, qa, ucxu, ucyu, lbot, ltop, javau, &
                         jarhoxu, qw, zws, kbot, ktop, rho, num_source_sink, source_sink_area, source_sink_water_discharge, source_sink_indices, epshs, rhomean, source_sink_discharge_cosine, source_sink_discharge_sine, hu, u1, vol1_f, &
-                        vol1, japure1d, au1d, q1d, volu1d, alpha_mom_1d, alpha_ene_1d, volau, voldhu, sq, advi, iadveccorr1d2d, au, &
+                        vol1, japure1d, volau, voldhu, sq, advi, iadveccorr1d2d, au, &
                         hs, huvli, q1, adve, layertype, LAYTP_SIGMA, LAYTP_Z, jahazlayer, kmxn
       use m_sferic, only: jasfer3d
       use m_dslim, only: dslim
@@ -493,55 +494,7 @@ contains
                   end if
 
                else if (iadvL == IADV_PURE1D_SOBEK) then
-                  ! Pure1D implementation SOBEK style
-
-                  advel = 0.0_dp
-                  ! weight of momentum versus energy conservation
-                  select case (jaPure1D)
-                  case (3) ! momentum conserving
-                     am = 1.0_dp
-                  case (4) ! weighted
-                     am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
-                  case (5) ! weighted in contractions, otherwise momentum conserving
-                     if ((u1(L) > 0.0_dp .and. au1D(1, L) > au1D(2, L)) .or. &
-                       & (u1(L) < 0.0_dp .and. au1D(1, L) < au1D(2, L))) then
-                        am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
-                     else
-                        am = 1.0_dp
-                     end if
-                  case (6) ! weighted in expansions, otherwise momentum conserving
-                     if ((u1(L) > 0.0_dp .and. au1D(1, L) < au1D(2, L)) .or. &
-                       & (u1(L) < 0.0_dp .and. au1D(1, L) > au1D(2, L))) then
-                        am = min(au1d(1, L), au1d(2, L)) / max(1.0e-4_dp, au1d(1, L), au1d(2, L))
-                     else
-                        am = 1.0_dp
-                     end if
-                  case (7) ! energy conserving
-                     am = 0.0_dp
-                  end select
-
-                  if (q1D(1, L) > 0) then
-                     ! flow entering link at node 1
-                     qv = q1D(1, L) / max(1.0e-5_dp, volu1D(L))
-                     u_mom = alpha_mom_1D(k1) * q1D(1, L) / au1D(1, L)
-                     u_ene = alpha_ene_1D(k1) * q1D(1, L) / au1D(1, L)
-                     advel = advel - am * (u_mom - u1(L)) * qv &
-                                 & - (1.0_dp - am) * (u_ene - u1(L)) * qv
-                  else
-                     ! flow leaving link at node 1
-                     ! outflow u = local u, so no contribution
-                  end if
-
-                  if (q1D(2, L) < 0) then ! flow entering link at node 2
-                     qv = q1D(2, L) / max(1.0e-5_dp, volu1D(L))
-                     u_mom = alpha_mom_1D(k2) * q1D(2, L) / au1D(2, L)
-                     u_ene = alpha_ene_1D(k2) * q1D(2, L) / au1D(2, L)
-                     advel = advel + am * (u_mom - u1(L)) * qv &
-                                 & + (1.0_dp - am) * (u_ene - u1(L)) * qv
-                  else
-                     ! flow leaving link at node 2
-                     ! outflow u = local u, so no contribution
-                  end if
+                  call adv_pure1d_sobek(L, k1, k2, advel)
 
                else if (iadvL == 333) then ! explicit first order mom conservative
                   ! based upon cell center excess advection velocity
