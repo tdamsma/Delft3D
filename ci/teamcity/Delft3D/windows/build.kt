@@ -80,7 +80,10 @@ object WindowsBuild : BuildType({
                 cmake ./src/cmake -G %generator% -T fortran=%intel_fortran_compiler% -D CMAKE_BUILD_TYPE=%build_type% -D CONFIGURATION_TYPE:STRING=%product% -B build_%product% -D CMAKE_INSTALL_PREFIX=build_%product%/install -D ENABLE_CODE_COVERAGE=%enable_code_coverage_flag%
                 if %%errorlevel%% neq 0 exit /b %%errorlevel%%
 
-                cmake --build ./build_%product% -j --target install --config %build_type% --verbose
+                cmake --build ./build_%product% -j --config %build_type%
+                if %%errorlevel%% neq 0 exit /b %%errorlevel%%
+
+                cmake --build ./build_%product% --target install --config %build_type%
                 if %%errorlevel%% neq 0 exit /b %%errorlevel%%
 
                 ctest --test-dir ./build_%product% --build-config %build_type% --output-junit ../unit-test-report-windows.xml --output-on-failure
