@@ -90,7 +90,9 @@ object WindowsBuild2D3DSP : BuildType({
 
                 cd build_flow2d3d
 
-                cmake --build . -j --target install --config %build_type%
+                cmake --build . -j --config %build_type%
+
+                cmake --build . --target install --config %build_type%
             """.trimIndent()
             dockerImage = "containers.deltares.nl/teamcity_agent/vs2022-intel2025-optimized:latest"
             dockerImagePlatform = ScriptBuildStep.ImagePlatform.Windows
