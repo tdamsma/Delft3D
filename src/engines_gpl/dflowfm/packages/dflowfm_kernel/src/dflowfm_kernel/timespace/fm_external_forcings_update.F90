@@ -216,7 +216,7 @@ contains
       end if
 
       if (numlatsg > 0) then
-         success = success .and. ec_gettimespacevalue(ecInstancePtr, item_lateraldischarge, irefdate, tzone, tunit, time_in_seconds) ! 'lateral(_)discharge'
+         call get_timespace_value_by_item_and_consider_success_value(item_lateraldischarge, time_in_seconds) ! 'lateral(_)discharge'
       end if
 
       !Pump with levels, outside OpenMP region
@@ -229,7 +229,7 @@ contains
          ! This avoids copying while satisfying the 1D array interface requirement
          source_sink_all_discharges_1d(1:size(source_sink_all_discharges)) => source_sink_all_discharges
          
-         success = success .and. ec_gettimespacevalue(ecInstancePtr, item_discharge_salinity_temperature_sorsin, irefdate, tzone, tunit, time_in_seconds, source_sink_all_discharges_1d)
+         call get_timespace_value_by_item_array_consider_success_value(item_discharge_salinity_temperature_sorsin, source_sink_all_discharges_1d, time_in_seconds)
 
          !success = success .and. ec_gettimespacevalue(ecInstancePtr, item_sourcesink_discharge, irefdate, tzone, tunit, time_in_seconds)
          call get_timespace_value_by_item_and_consider_success_value(item_sourcesink_discharge, time_in_seconds)
@@ -305,7 +305,7 @@ contains
 
       ! Update nudging temperature (and salinity)
       if (item_nudge_temperature /= ec_undef_int .and. janudge > 0) then
-         success = success .and. ec_gettimespacevalue(ecInstancePtr, item_nudge_temperature, irefdate, tzone, tunit, time_in_seconds)
+         call get_timespace_value_by_item_and_consider_success_value(item_nudge_temperature, time_in_seconds)
       end if
 
       iresult = DFM_NOERR
@@ -668,17 +668,25 @@ contains
 
 !> set wave parameters for jawave==3 (online wave coupling) and jawave==6 (SWAN data for D-WAQ)
    subroutine set_all_wave_parameters()
+      logical :: ec_result
+
       ! This part must be skipped during initialization
       if (jawave == WAVE_SWAN_ONLINE) then
          ! Finally the delayed external forcings can be initialized
-         success = flow_initwaveforcings_runtime()
+         ec_result = flow_initwaveforcings_runtime()
+         if (.not. ec_result) call note_first_ec_failure('flow_initwaveforcings_runtime')
+         success = success .and. ec_result
       end if
 
       if (allocated(hwavcom)) then
-         success = success .and. ecGetValues(ecInstancePtr, item_hrms, ecTime)
+         ec_result = ecGetValues(ecInstancePtr, item_hrms, ecTime)
+         if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_hrms')
+         success = success .and. ec_result
       end if
       if (allocated(twavcom)) then
-         success = success .and. ecGetValues(ecInstancePtr, item_tp, ecTime)
+         ec_result = ecGetValues(ecInstancePtr, item_tp, ecTime)
+         if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_tp')
+         success = success .and. ec_result
       end if
       if (allocated(phiwav)) then
          call get_values_and_consider_fww(item_dir)
@@ -715,13 +723,24 @@ contains
 
 !> set wave parameters for jawave == 7 (offline wave coupling) and waveforcing == 1 (wave forces via radiation stress)
    subroutine set_parameters_for_radiation_stress_driven_forces()
+      logical :: ec_result
 
       twav(:) = 0.0_dp
-      success = success .and. ecGetValues(ecInstancePtr, item_dir, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_hrms, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_tp, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_fx, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_fy, ecTime)
+      ec_result = ecGetValues(ecInstancePtr, item_dir, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_dir (radiation stress)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_hrms, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_hrms (radiation stress)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_tp, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_tp (radiation stress)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_fx, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_fx (radiation stress)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_fy, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_fy (radiation stress)')
+      success = success .and. ec_result
       mxwav(:) = 0.0_dp
       mywav(:) = 0.0_dp
       uorbwav(:) = 0.0_dp
@@ -729,13 +748,24 @@ contains
    end subroutine set_parameters_for_radiation_stress_driven_forces
    !> set wave parameters for jawave == 7 (offline wave coupling) and waveforcing == 2 (wave forces via total dissipation)
    subroutine set_parameters_for_dissipation_driven_forces()
+      logical :: ec_result
 
       twav(:) = 0.0_dp
-      success = success .and. ecGetValues(ecInstancePtr, item_dir, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_hrms, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_tp, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_dir, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_distot, ecTime)
+      ec_result = ecGetValues(ecInstancePtr, item_dir, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_dir (dissipation total)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_hrms, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_hrms (dissipation total)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_tp, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_tp (dissipation total)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_dir, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_dir 2nd (dissipation total)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_distot, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_distot (dissipation total)')
+      success = success .and. ec_result
       sxwav(:) = 0.0_dp
       sywav(:) = 0.0_dp
       mxwav(:) = 0.0_dp
@@ -746,15 +776,30 @@ contains
 
    !> set wave parameters for jawave == 7 (offline wave coupling) and waveforcing == 3 (wave forces via 3D dissipation distribution)
    subroutine set_parameters_for_3d_dissipation_driven_forces()
+      logical :: ec_result
 
       twav(:) = 0.0_dp
-      success = success .and. ecGetValues(ecInstancePtr, item_tp, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_dir, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_hrms, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_fx, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_fy, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_dissurf, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_diswcap, ecTime)
+      ec_result = ecGetValues(ecInstancePtr, item_tp, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_tp (dissipation 3D)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_dir, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_dir (dissipation 3D)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_hrms, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_hrms (dissipation 3D)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_fx, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_fx (dissipation 3D)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_fy, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_fy (dissipation 3D)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_dissurf, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_dissurf (dissipation 3D)')
+      success = success .and. ec_result
+      ec_result = ecGetValues(ecInstancePtr, item_diswcap, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_diswcap (dissipation 3D)')
+      success = success .and. ec_result
       sbxwav(:) = 0.0_dp
       sbywav(:) = 0.0_dp
       mxwav(:) = 0.0_dp
@@ -765,11 +810,16 @@ contains
 
    !> set wave parameters for jawave == 7 (offline wave coupling) and waveforcing == 0 (no wave forces)
    subroutine set_parameters_for_no_wave_forces()
+      logical :: ec_result
 
       twav(:) = 0.0_dp
-      success = success .and. ecGetValues(ecInstancePtr, item_tp, ecTime)
+      ec_result = ecGetValues(ecInstancePtr, item_tp, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_tp (no wave forces)')
+      success = success .and. ec_result
       !success = success .and. ecGetValues(ecInstancePtr, item_dir, ecTime)
-      success = success .and. ecGetValues(ecInstancePtr, item_hrms, ecTime)
+      ec_result = ecGetValues(ecInstancePtr, item_hrms, ecTime)
+      if (.not. ec_result) call note_first_ec_failure('ecGetValues for item_hrms (no wave forces)')
+      success = success .and. ec_result
       phiwav(:) = 0.0_dp ! no directions for you
       sxwav(:) = 0.0_dp
       sywav(:) = 0.0_dp
@@ -824,10 +874,10 @@ contains
       ! Retrieve rainfall for ext-file quantity 'rainfall'.
       if (jarain > 0) then
          if (item_rainfall /= ec_undef_int) then
-            success = success .and. ec_gettimespacevalue(ecInstancePtr, 'rainfall', time_in_seconds)
+            call get_timespace_value_by_name_and_consider_success_value('rainfall', time_in_seconds)
          end if
          if (item_rainfall_rate /= ec_undef_int) then
-            success = success .and. ec_gettimespacevalue(ecInstancePtr, 'rainfall_rate', time_in_seconds)
+            call get_timespace_value_by_name_and_consider_success_value('rainfall_rate', time_in_seconds)
          end if
       end if
 
@@ -884,7 +934,7 @@ contains
          subsupl_tp = subsupl
       end if
       if (item_subsiduplift /= ec_undef_int) then
-         success = success .and. ec_gettimespacevalue(ecInstancePtr, 'bedrock_surface_elevation', time_in_seconds)
+         call get_timespace_value_by_name_and_consider_success_value('bedrock_surface_elevation', time_in_seconds)
       end if
       if (sdu_first) then
          ! preserve the first 'bedrock_surface_elevation' field as the initial field
