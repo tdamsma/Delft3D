@@ -82,6 +82,13 @@ submodule(fm_external_forcings) fm_external_forcings_update
    ! variables for processing the pump with levels, SOBEK style
    logical :: success_copy
 
+   ! Diagnostic variables: track which EC call first returned .false. in the current timestep.
+   ! success_first_failure_origin is included in the error message so the actual culprit
+   ! is known even when a misleading downstream check fires (e.g. the wave-NC check can
+   ! trigger because air-density or ice-cover failed earlier in the same timestep).
+   character(len=256) :: success_first_failure_origin = '' !< Human-readable origin of first EC failure
+   logical :: success_failure_reported = .false.           !< Prevents duplicate recordings
+
 contains
 
    !> set field oriented boundary conditions
@@ -115,6 +122,8 @@ contains
       call timstrt('External forcings', handle_ext)
 
       success = .true.
+      success_failure_reported    = .false.
+      success_first_failure_origin = ''
 
       if (allocated(air_pressure)) then
          ! Set the initial value to PavBnd (if provided by user) or BACKGROUND_AIR_PRESSURE with each update.
@@ -363,13 +372,40 @@ contains
 
    end subroutine update_temperature_forcings
 
+!> Record origin and print a compiler backtrace on the first EC failure of a timestep.
+!  Subsequent failures within the same timestep are silently ignored so the log stays readable.
+!  Supports GFortran (backtrace()) and Intel ifx/ifort (tracebackqq from ifcore).
+!  Compile with -g / -debug to get meaningful line numbers in the stack.
+   subroutine note_first_ec_failure(origin)
+#if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+      use ifcore, only: tracebackqq
+#endif
+      character(*), intent(in) :: origin !< Human-readable description of the failing call
+
+      if (success_failure_reported) return
+
+      success_failure_reported    = .true.
+      success_first_failure_origin = origin
+#if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+      ! user_exit_code=-1 means: print the traceback but do NOT abort the program.
+      call tracebackqq(string=trim(origin), user_exit_code=-1)
+#elif defined(__GFORTRAN__)
+      call backtrace()
+#endif
+
+   end subroutine note_first_ec_failure
+
 !> get_timespace_value_by_name_and_consider_success_value
    subroutine get_timespace_value_by_name_and_consider_success_value(name, time_in_seconds)
       use precision, only: dp
       character(*), intent(in) :: name
       real(kind=dp), intent(in) :: time_in_seconds !< Time in seconds
 
-      success = success .and. ec_gettimespacevalue(ecInstancePtr, name, time_in_seconds)
+      logical :: ec_result
+
+      ec_result = ec_gettimespacevalue(ecInstancePtr, name, time_in_seconds)
+      if (.not. ec_result) call note_first_ec_failure('ec_gettimespacevalue for quantity='//trim(name))
+      success = success .and. ec_result
 
    end subroutine get_timespace_value_by_name_and_consider_success_value
 
@@ -380,7 +416,14 @@ contains
       integer, intent(in) :: item
       real(kind=dp), intent(in) :: time_in_seconds !< Time in seconds
 
-      success = success .and. ec_gettimespacevalue(ecInstancePtr, item, irefdate, tzone, tunit, time_in_seconds)
+      logical :: ec_result
+
+      ec_result = ec_gettimespacevalue(ecInstancePtr, item, irefdate, tzone, tunit, time_in_seconds)
+      if (.not. ec_result) then
+         write (tmpstr, '(a,i0)') 'ec_gettimespacevalue for item=', item
+         call note_first_ec_failure(tmpstr)
+      end if
+      success = success .and. ec_result
 
    end subroutine get_timespace_value_by_item_and_consider_success_value
 
@@ -392,7 +435,14 @@ contains
       real(kind=dp), intent(inout) :: array(:) !< Array that stores the values
       real(kind=dp), intent(in) :: time_in_seconds !< Time in seconds
 
-      success = success .and. ec_gettimespacevalue(ecInstancePtr, item, irefdate, tzone, tunit, time_in_seconds, array)
+      logical :: ec_result
+
+      ec_result = ec_gettimespacevalue(ecInstancePtr, item, irefdate, tzone, tunit, time_in_seconds, array)
+      if (.not. ec_result) then
+         write (tmpstr, '(a,i0)') 'ec_gettimespacevalue for item=', item
+         call note_first_ec_failure(tmpstr)
+      end if
+      success = success .and. ec_result
 
    end subroutine get_timespace_value_by_item_array_consider_success_value
 
@@ -404,7 +454,14 @@ contains
       real(kind=dp), intent(inout) :: array(:) !< Array that stores the values
       real(kind=dp), intent(in) :: time_in_seconds !< Time in seconds
 
-      success = ec_gettimespacevalue(ecInstancePtr, item, irefdate, tzone, tunit, time_in_seconds, array)
+      logical :: ec_result
+
+      ec_result = ec_gettimespacevalue(ecInstancePtr, item, irefdate, tzone, tunit, time_in_seconds, array)
+      if (.not. ec_result) then
+         write (tmpstr, '(a,i0)') 'ec_gettimespacevalue for item=', item
+         call note_first_ec_failure(tmpstr)
+      end if
+      success = ec_result
 
    end subroutine get_timespace_value_by_item_and_array
 
@@ -415,7 +472,14 @@ contains
       integer, intent(in) :: item !< Item for getting values
       real(kind=dp), intent(in) :: time_in_seconds !< Time in seconds
 
-      success = ec_gettimespacevalue(ecInstancePtr, item, irefdate, tzone, tunit, time_in_seconds)
+      logical :: ec_result
+
+      ec_result = ec_gettimespacevalue(ecInstancePtr, item, irefdate, tzone, tunit, time_in_seconds)
+      if (.not. ec_result) then
+         write (tmpstr, '(a,i0)') 'ec_gettimespacevalue for item=', item
+         call note_first_ec_failure(tmpstr)
+      end if
+      success = ec_result
 
    end subroutine get_timespace_value_by_item
 
@@ -475,8 +539,16 @@ contains
          ! Now do the check on success for non-com file situations, and error when variable is missing
          !
          if (.not. success) then
-            write (msgbuf, '(a,i0,a)') 'set_external_forcings:: Offline wave coupling with waveforcing=', waveforcing, '. &
-               & Error reading data from nc file.'
+            if (len_trim(success_first_failure_origin) > 0) then
+               ! The failure originated in a non-wave forcing that ran before set_wave_parameters.
+               ! The wave NC file itself may be perfectly fine.
+               write (msgbuf, '(a,i0,a,a)') 'set_external_forcings:: Offline wave coupling with waveforcing=', waveforcing, &
+                  '. Error in external forcings (NOT necessarily the wave NC file). First failure origin: ', &
+                  trim(success_first_failure_origin)
+            else
+               write (msgbuf, '(a,i0,a)') 'set_external_forcings:: Offline wave coupling with waveforcing=', waveforcing, '. &
+                  & Error reading data from nc file.'
+            end if
             call warn_flush() ! ECMessage stack is not very informative
             message = dump_ec_message_stack(LEVEL_ERROR, callback_msg)
          end if
@@ -579,8 +651,15 @@ contains
 
       integer, intent(in) :: item
 
+      logical :: ec_result
+
       success_copy = success
-      success = success .and. ecGetValues(ecInstancePtr, item, ecTime)
+      ec_result    = ecGetValues(ecInstancePtr, item, ecTime)
+      if (.not. ec_result) then
+         write (tmpstr, '(a,i0)') 'ecGetValues for wave item=', item
+         call note_first_ec_failure(tmpstr)
+      end if
+      success = success .and. ec_result
       if (flow_without_waves) then
          success = success_copy ! used to be jawave=6, but this is only real use case
       end if
