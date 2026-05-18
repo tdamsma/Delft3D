@@ -377,21 +377,15 @@ contains
 !  Supports GFortran (backtrace()) and Intel ifx/ifort (tracebackqq from ifcore).
 !  Compile with -g / -debug to get meaningful line numbers in the stack.
    subroutine note_first_ec_failure(origin)
-#if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
       use ifcore, only: tracebackqq
-#endif
       character(*), intent(in) :: origin !< Human-readable description of the failing call
 
       if (success_failure_reported) return
 
       success_failure_reported    = .true.
       success_first_failure_origin = origin
-#if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
       ! user_exit_code=-1 means: print the traceback but do NOT abort the program.
       call tracebackqq(string=trim(origin), user_exit_code=-1)
-#elif defined(__GFORTRAN__)
-      call backtrace()
-#endif
 
    end subroutine note_first_ec_failure
 
