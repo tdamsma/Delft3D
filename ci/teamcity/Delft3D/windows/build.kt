@@ -32,7 +32,7 @@ object WindowsBuild : BuildType({
 
     params {
         param("intel_fortran_compiler", "ifx")
-        param("container.tag", "vs2022-intel2024-ltsc2025")
+        param("container.tag", "vs2022-intel2024")
         param("generator", """"Visual Studio 17 2022"""")
         param("enable_code_coverage_flag", "OFF")
         select("build_type", "Release", display = ParameterDisplay.PROMPT, options = listOf("Release", "Debug"))
@@ -47,7 +47,7 @@ object WindowsBuild : BuildType({
 
     steps {
         mergeTargetBranch {
-            dockerImage = "containers.deltares.nl/teamcity_agent/vs2022-intel2025-optimized:latest"
+            dockerImage = "containers.deltares.nl/delft3d-dev/delft3d-buildtools-windows:%container.tag%"
             dockerImagePlatform = ScriptBuildStep.ImagePlatform.Windows
             dockerPull = true
         }
@@ -57,7 +57,7 @@ object WindowsBuild : BuildType({
                 filename ="""ci\\teamcity\\Delft3D\\windows\\scripts\\determineProduct.py"""
                 scriptArguments = "%product% %teamcity.build.branch% %teamcity.build.branch.is_default% %build.vcs.number% %teamcity.pullRequest.source.branch%"
             }
-            dockerImage = "containers.deltares.nl/teamcity_agent/vs2022-intel2025-optimized:latest"
+            dockerImage = "containers.deltares.nl/delft3d-dev/delft3d-buildtools-windows:%container.tag%"
             dockerImagePlatform = PythonBuildStep.ImagePlatform.Windows
             dockerPull = true
         }
@@ -68,7 +68,7 @@ object WindowsBuild : BuildType({
                 echo #define BUILD_NR "%build.vcs.number%" > checkout_info.h
                 echo #define BRANCH "%teamcity.build.branch%" >> checkout_info.h
             """.trimIndent()
-            dockerImage = "containers.deltares.nl/teamcity_agent/vs2022-intel2025-optimized:latest"
+            dockerImage = "containers.deltares.nl/delft3d-dev/delft3d-buildtools-windows:%container.tag%"
             dockerImagePlatform = ScriptBuildStep.ImagePlatform.Windows
             dockerPull = true
         }
@@ -89,7 +89,7 @@ object WindowsBuild : BuildType({
                 ctest --test-dir ./build_%product% --build-config %build_type% --output-junit ../unit-test-report-windows.xml --output-on-failure
                 if %%errorlevel%% neq 0 exit /b %%errorlevel%%
             """.trimIndent()
-            dockerImage = "containers.deltares.nl/teamcity_agent/vs2022-intel2025-optimized:latest"
+            dockerImage = "containers.deltares.nl/delft3d-dev/delft3d-buildtools-windows:%container.tag%"
             dockerImagePlatform = ScriptBuildStep.ImagePlatform.Windows
             dockerPull = true
             dockerRunParameters = "--memory %teamcity.agent.hardware.memorySizeMb%m --cpus %teamcity.agent.hardware.cpuCount%"
