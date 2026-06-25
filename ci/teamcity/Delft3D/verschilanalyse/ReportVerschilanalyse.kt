@@ -105,6 +105,7 @@ object ReportVerschilanalyse: BuildType({
         }
         python {
             name = "Publish artifacts to S3"
+            enabled = false
             pythonVersion = customPython {
                 executable = "python3.11"
             }
