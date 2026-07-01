@@ -501,7 +501,7 @@ contains
       use m_xbeach_avgoutput
       use unstruc_netcdf, only: UNC_CONV_CFOLD, UNC_CONV_UGRID, unc_set_ncformat, unc_set_nccompress, unc_writeopts, UG_WRITE_LATLON, UG_WRITE_NOOPTS, unc_nounlimited, unc_noforcedflush, unc_uuidgen, unc_metadatafile
       use dfm_error
-      use unstruc_messages, only: unstruc_errorhandler, loglevel_StdOut
+      use unstruc_messages, only: unstruc_errorhandler, loglevel_StdOut, threshold_abort
       use system_utils, only: split_filename
       use m_commandline_option, only: iarg_usecaching
       use m_subsidence, only: sdu_update_s1
@@ -526,6 +526,7 @@ contains
       use m_check_positive_value, only: check_positive_value
       use m_add_baroclinic_pressure, only: rhointerfaces
       use m_flow_validatestate_data
+      use dflowfm_io ! TODO only statement
       character(*), intent(in) :: filename !< Name of file to be read (the MDU file must be in current working directory).
       integer, intent(out) :: istat !< Return status (0=success)
 
@@ -550,12 +551,56 @@ contains
       ! Local readout variables since they are only used to set a global (max_iterations_vertical_forester)
       integer :: max_iterations_vertical_forester_sal !< Maximum number of iterations for vertical forester in salinity
       integer :: max_iterations_vertical_forester_tem !< Maximum number of iterations for vertical forester in temperature
+      
+      ! Dflowfm_io related variables
+      type(MduModel) :: mdu
+      integer :: result_code
+      type(MduIssue), allocatable :: mdu_issues(:)
+      integer :: temp_threshold
 
       ! Salinity and temperature vertical Forester filter is turned off by default (value 0)
       max_iterations_vertical_forester_sal = 0
       max_iterations_vertical_forester_tem = 0
 
       istat = 0 ! Success
+      
+      ! Load MDU file using dflowfm_io library
+      call mdu%create(result_code)
+      call mdu%load_from_file(trim(filename), result_code)
+      if (result_code /= 0) then
+         istat = -1
+         call set_mh_callback(unstruc_errorhandler)
+         call mess(LEVEL_ERROR, 'Error opening file (via dflowfm_io)', trim(filename), '.')
+         return
+      end if
+      
+      ! Write MDU warnings and issues to diagnostics file
+      temp_threshold = threshold_abort
+      threshold_abort = LEVEL_FATAL
+      call set_mh_callback(unstruc_errorhandler)
+      call mdu%get_issues(mdu_issues, result_code)
+      if (result_code /= 0) then
+         istat = -1
+         call set_mh_callback(unstruc_errorhandler)
+         call mess(LEVEL_ERROR, 'Error checking issues in file (via dflowfm_io)', trim(filename), '.')
+         return
+      end if
+      do i = 1, size(mdu_issues)
+         if (mdu_issues(i)%severity == MDU_SEVERITY_ERROR) then
+            istat = -1
+            call mess(LEVEL_ERROR, 'MDU issue: '//trim(mdu_issues(i)%message))
+         else if (mdu_issues(i)%severity == MDU_SEVERITY_WARNING) then
+            call mess(LEVEL_WARN, 'MDU issue: '//trim(mdu_issues(i)%message))
+         else if (mdu_issues(i)%severity == MDU_SEVERITY_INFO) then
+            !call mess(LEVEL_INFO, 'MDU issue: '//trim(mdu_issues(i)%message))
+         end if
+      end do
+      threshold_abort = temp_threshold
+      
+      if (istat /= 0) then
+         call mess(LEVEL_FATAL, 'Error(s) found in MDU file: '//trim(filename)//'. Aborting.')
+         return
+      end if
 
       ! Put .mdu file into a property tree
       call tree_create(trim(filename), md_ptr)
