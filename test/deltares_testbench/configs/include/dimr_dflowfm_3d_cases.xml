@@ -556,7 +556,7 @@
     </testCase>
 
     <testCase name="e02_f018_c020_uxuyadvectionvelocitybnd3d_bc" ref="dflowfm_default">
-      <path version="2026-03-13T16:21:12.834000">e02_dflowfm/f018_boundar_conditions_3d/c020_uxuyadvectionvelocitybnd3d_bc</path>
+      <path version="2026-07-07T12:17:17.242000">e02_dflowfm/f018_boundar_conditions_3d/c020_uxuyadvectionvelocitybnd3d_bc</path>
       <maxRunTime>15000.0000000</maxRunTime>
       <checks>
         <file name="dflowfmoutput/uxuy_3d_map.nc" type="netCDF">
