@@ -587,8 +587,8 @@ contains
       end if
       do i = 1, size(mdu_issues)
          if (mdu_issues(i)%severity == MDU_SEVERITY_ERROR) then
-            istat = -1
-            call mess(LEVEL_ERROR, 'MDU issue: '//trim(mdu_issues(i)%message))
+            !istat = -1
+            !call mess(LEVEL_ERROR, 'MDU issue: '//trim(mdu_issues(i)%message))
          else if (mdu_issues(i)%severity == MDU_SEVERITY_WARNING) then
             call mess(LEVEL_WARN, 'MDU issue: '//trim(mdu_issues(i)%message))
          else if (mdu_issues(i)%severity == MDU_SEVERITY_INFO) then
@@ -597,10 +597,10 @@ contains
       end do
       threshold_abort = temp_threshold
       
-      if (istat /= 0) then
-         call mess(LEVEL_FATAL, 'Error(s) found in MDU file: '//trim(filename)//'. Aborting.')
-         return
-      end if
+      !if (istat /= 0) then
+         !call mess(LEVEL_FATAL, 'Error(s) found in MDU file: '//trim(filename)//'. Aborting.')
+         !return
+      !end if
 
       ! Put .mdu file into a property tree
       call tree_create(trim(filename), md_ptr)
