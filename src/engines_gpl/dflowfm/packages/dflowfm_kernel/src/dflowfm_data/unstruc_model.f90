@@ -557,6 +557,7 @@ contains
       integer :: result_code
       type(MduIssue), allocatable :: mdu_issues(:)
       integer :: temp_threshold
+      character(len=:), allocatable :: last_error_message
 
       ! Salinity and temperature vertical Forester filter is turned off by default (value 0)
       max_iterations_vertical_forester_sal = 0
@@ -570,7 +571,9 @@ contains
       if (result_code /= 0) then
          istat = -1
          call set_mh_callback(unstruc_errorhandler)
-         call mess(LEVEL_ERROR, 'Error opening file (via dflowfm_io)', trim(filename), '.')
+         !call mess(LEVEL_ERROR, 'Error opening file (via dflowfm_io)', trim(filename), '.')
+         call mdu%get_last_error(last_error_message)
+         call mess(LEVEL_ERROR, 'load_from_file: '//trim(last_error_message))
          return
       end if
       
