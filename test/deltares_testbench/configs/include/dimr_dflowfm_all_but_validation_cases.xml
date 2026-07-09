@@ -4295,7 +4295,7 @@
       </checks>
     </testCase>
     <testCase name="e02_f012_c103_ws_3d_fourier" ref="dflowfm_default">
-      <path version="2026-07-08T09:00:36.614000">e02_dflowfm/f012_inout/c103_ws_3d_fourier</path>
+      <path version="2026-07-09T18:36:27.168000">e02_dflowfm/f012_inout/c103_ws_3d_fourier</path>
       <maxRunTime>10.0</maxRunTime>
       <checks>
         <file name="DFM_OUTPUT_westerscheldt01_0subst/westerscheldt01_0subst_fou.nc" type="netCDF">
@@ -5781,7 +5781,7 @@
       </checks>
     </testCase>
     <testCase name="e02_f022_c61_curvebend_spiral_dhl" ref="dflowfm_default">
-      <path version="2026-03-13T16:40:47.037000">e02_dflowfm/f022_morphology_2D/c61_curvebend_spiral_dhl</path>
+      <path version="2026-07-09T18:27:14.009000">e02_dflowfm/f022_morphology_2D/c61_curvebend_spiral_dhl</path>
       <maxRunTime>15000.0000000</maxRunTime>
       <checks>
         <file name="dflowfmoutput/T2_04_map.nc" type="netCDF">
