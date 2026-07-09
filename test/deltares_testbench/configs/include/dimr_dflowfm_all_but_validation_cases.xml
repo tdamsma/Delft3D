@@ -5796,7 +5796,7 @@
       </checks>
     </testCase>
     <testCase name="e02_f022_c63_curvebend_spiral_dhl_no_bed_upd" ref="dflowfm_default">
-      <path version="2026-03-13T16:40:47.726000">e02_dflowfm/f022_morphology_2D/c63_curvebend_spiral_dhl_no_bed_upd</path>
+      <path version="2026-07-09T15:46:50.403000">e02_dflowfm/f022_morphology_2D/c63_curvebend_spiral_dhl_no_bed_upd</path>
       <maxRunTime>15000.0000000</maxRunTime>
       <checks>
         <file name="dflowfmoutput/T2_04_map.nc" type="netCDF">
@@ -5810,7 +5810,7 @@
       </checks>
     </testCase>
     <testCase name="e02_f022_c64_curvebend_spiral_dhl_no_bed_upd_inclined" ref="dflowfm_default">
-      <path version="2026-03-13T16:40:48.274000">e02_dflowfm/f022_morphology_2D/c64_curvebend_spiral_dhl_no_bed_upd_inclined</path>
+      <path version="2026-07-09T15:46:53.805000">e02_dflowfm/f022_morphology_2D/c64_curvebend_spiral_dhl_no_bed_upd_inclined</path>
       <maxRunTime>15000.0000000</maxRunTime>
       <checks>
         <file name="dflowfmoutput/T2_04_map.nc" type="netCDF">
