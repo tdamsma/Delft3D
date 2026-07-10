@@ -322,7 +322,7 @@
      </checks>
     </testCase>
     <testCase name="e02_f019_c041_tidal_flume_sigma_3d" ref="dflowfm_default">
-     <path version="2026-07-09T18:36:46.469000">e02_dflowfm/f019_transport/c041_tidal_flume_sigma_3d</path>
+     <path version="2026-07-10T06:48:18.514000">e02_dflowfm/f019_transport/c041_tidal_flume_sigma_3d</path>
      <maxRunTime>15000.0000000</maxRunTime>
      <checks>
       <file name="dflowfmoutput/tfs_his.nc" type="netCDF">
@@ -337,7 +337,7 @@
      </checks>
     </testCase>
     <testCase name="e02_f019_c042_tidal_flume_zmodel_3d" ref="dflowfm_default">
-     <path version="2026-07-09T18:36:48.108000">e02_dflowfm/f019_transport/c042_tidal_flume_zmodel_3d</path>
+     <path version="2026-07-10T06:48:20.157000">e02_dflowfm/f019_transport/c042_tidal_flume_zmodel_3d</path>
      <maxRunTime>15000.0000000</maxRunTime>
      <checks>
       <file name="dflowfmoutput/tfz_his.nc" type="netCDF">
@@ -353,7 +353,7 @@
     </testCase>
 
     <testCase name="e02_f019_c043_tidal_flume_zsigma_3d" ref="dflowfm_default">
-     <path version="2026-07-09T18:36:50.660000">e02_dflowfm/f019_transport/c043_tidal_flume_zsigma_3d</path>
+     <path version="2026-07-10T06:48:22.914000">e02_dflowfm/f019_transport/c043_tidal_flume_zsigma_3d</path>
      <maxRunTime>15000.0000000</maxRunTime>
      <checks>
       <file name="dflowfmoutput/tfzs_his.nc" type="netCDF">
@@ -632,7 +632,7 @@
     </testCase>
 
     <testCase name="e02_f020_c031_heatmodel5_secchidepth2" ref="dflowfm_default">
-      <path version="2026-07-09T18:36:52.297000">e02_dflowfm/f020_heat_flux/c031_heatmodel5_secchidepth2</path>
+      <path version="2026-07-10T06:49:40.058000">e02_dflowfm/f020_heat_flux/c031_heatmodel5_secchidepth2</path>
       <maxRunTime>15000.0000000</maxRunTime>
       <checks>
         <file name="dflowfmoutput/sech4_his.nc" type="netCDF">

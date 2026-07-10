@@ -4720,7 +4720,7 @@
       </checks>
     </testCase>
     <testCase name="e02_f017_c030_sourcesink_5cols_new_format_locationFile_zSource_zSink" ref="dflowfm_default">
-        <path version="2026-07-06T14:49:00.863000">e02_dflowfm/f017_sources_sinks/c030_sourcesink_5cols_new_format_locationFile_zSource_zSink</path>
+        <path version="2026-07-10T06:41:02.049000">e02_dflowfm/f017_sources_sinks/c030_sourcesink_5cols_new_format_locationFile_zSource_zSink</path>
         <maxRunTime>3600.0</maxRunTime>
         <checks>
             <file name="dflowfmoutput/model_his.nc" type="netcdf">
@@ -6998,7 +6998,7 @@
       </checks>
     </testCase>  
     <testCase name="e02_f092_c10_exer_13_r01_vlissingen_course_model" ref="dflowfm_config">
-      <path version="2026-07-08T09:01:14.504000">e02_dflowfm/f092_tutorial_course_models/c10_exer_13_r01_vlissingen_course_model</path>
+      <path version="2026-07-10T06:58:14.969000">e02_dflowfm/f092_tutorial_course_models/c10_exer_13_r01_vlissingen_course_model</path>
       <maxRunTime>90.0</maxRunTime>
       <checks>
         <file name="dflowfmoutput/r01_map.nc" type="netCDF">
@@ -7010,7 +7010,7 @@
       </checks>
     </testCase> 
     <testCase name="e02_f092_c11_exer_13_r02_vlissingen_course_model" ref="dflowfm_config">
-      <path version="2026-07-08T09:01:17.344000">e02_dflowfm/f092_tutorial_course_models/c11_exer_13_r02_vlissingen_course_model</path>
+      <path version="2026-07-10T06:58:21.138000">e02_dflowfm/f092_tutorial_course_models/c11_exer_13_r02_vlissingen_course_model</path>
       <maxRunTime>90.0</maxRunTime>
       <checks>
         <file name="dflowfmoutput/r02_map.nc" type="netCDF">
