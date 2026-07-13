@@ -24,7 +24,7 @@ module test_unstruc_inifields
       logical :: success
       type(t_spatial_field_input) :: input
 
-      call create_file(INI_FILENAME, [ &
+      call create_file(INI_FILENAME, [character(len=48) :: &
                        '[General]', &
                        'fileVersion         = 2.02', &
                        'fileType            = iniField', &
@@ -66,7 +66,7 @@ module test_unstruc_inifields
       logical :: success
       type(t_spatial_field_input) :: input
 
-      call create_file(INI_FILENAME, [ &
+      call create_file(INI_FILENAME, [character(len=48) :: &
                        '[General]', &
                        'fileVersion         = 2.02', &
                        'fileType            = iniField', &
@@ -112,7 +112,7 @@ module test_unstruc_inifields
       logical :: success
       type(t_spatial_field_input) :: input
 
-      call create_file(INI_FILENAME, [ &
+      call create_file(INI_FILENAME, [character(len=48) :: &
                        '[General]', &
                        'fileVersion         = 2.02', &
                        'fileType            = iniField', &

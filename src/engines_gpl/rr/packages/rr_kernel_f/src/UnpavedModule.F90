@@ -2769,7 +2769,7 @@ contains
                    if (IterNodelp .eq. 1) TimeSinceEndPreviousIrrigation(iovh) = 0.0
                 endif
              endif
-             if (FirstIrrigationInYear(iovh) .eq. .true. .and. IrrigationOngoing(iovh) .eq. .true. .and. TimeSinceStartFirstIrrigation(iovh) .gt. 86400 * IrrigationInitDuration(iovh)) then
+             if ((FirstIrrigationInYear(iovh) .eqv. .true.) .and. (IrrigationOngoing(iovh) .eqv. .true.) .and. (TimeSinceStartFirstIrrigation(iovh) .gt. 86400 * IrrigationInitDuration(iovh))) then
                 IrrigationOngoing(iovh) = .false.
                 FirstIrrigationInYear(iovh) = .false.
                 IrrigationSupply(iovh) = 0.0
@@ -2800,7 +2800,7 @@ contains
                    if (IterNodelp .eq. 1) TimeSinceEndPreviousIrrigation(iovh) = 0.0
                 endif
              endif
-             if (FirstIrrigationInYear(iovh) .eq. .true. .and. IrrigationOngoing(iovh) .eq. .true. .and. TimeSinceStartFirstIrrigation(iovh) .gt. 86400 * IrrigationInitDuration(iovh)) then
+             if ((FirstIrrigationInYear(iovh) .eqv. .true.) .and. (IrrigationOngoing(iovh) .eqv. .true.) .and. (TimeSinceStartFirstIrrigation(iovh) .gt. 86400 * IrrigationInitDuration(iovh))) then
                 IrrigationOngoing(iovh) = .false.
                 FirstIrrigationInYear(iovh) = .false.
                 IrrigationSupply(iovh) = 0.0

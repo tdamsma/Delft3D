@@ -46,7 +46,7 @@ subroutine test_storage_nodes_nodeID_table
     use unstruc_model
     use m_partitioninfo, only: jampi
     use network_data, only: numk
-    use ifport
+    use chdir_mod, only: CHANGEDIRQQ
     use m_resetfullflowmodel, only: resetfullflowmodel
     !
     ! Locals

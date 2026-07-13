@@ -178,7 +178,7 @@ subroutine write_wave_map_netcdf(sg, sof, sif, n_swan_grids, wavedata, casl, &
    count_xymiss = 0
    do m = 1, sg%mmax
       do n = 1, sg%nmax
-         if (.not. abs(comparereal(sg%x(m, n), sg%xymiss)) .and. .not. abs(comparereal(sg%y(m, n), sg%xymiss))) then
+         if (abs(comparereal(sg%x(m, n), sg%xymiss)) == 0 .and. abs(comparereal(sg%y(m, n), sg%xymiss)) == 0) then
             tmp_x(m, n) = NF90_FILL_FLOAT
             tmp_y(m, n) = NF90_FILL_FLOAT
             count_xymiss = count_xymiss + 1
