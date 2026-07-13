@@ -42,7 +42,7 @@
     #include <windows.h>
 #elif defined(salford32)
     #include <windows.h>
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include <dlfcn.h>
 #endif
 
@@ -61,7 +61,7 @@
     #define BMI_GET_VAR BMI_GET_VAR
     #define BMI_GET_VAR_POINTER BMI_GET_VAR_POINTER
     #define STDCALL
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include "config.h"
     #define BMI_INITIALIZE FC_FUNC(bmi_initialize, BMI_INITIALIZE)
     #define BMI_UPDATE FC_FUNC(bmi_update, BMI_UPDATE)
@@ -92,7 +92,7 @@
 #if defined(WIN32)
 typedef HMODULE DllHandle;
 typedef WINBASEAPI FARPROC WINAPI DllProcedureAddress;
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
 typedef void* DllHandle;
 typedef void* DllProcedureAddress;
 #endif
@@ -109,7 +109,7 @@ DllProcedureAddress GetDllProcedure(int64_t* sharedDLLHandle, char* fun_name)
     DllProcedureAddress procedure;
 #if defined(WIN32)
     procedure = GetProcAddress(sharedDLL->dllHandle, fun_name);
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     procedure = (DllProcedureAddress)dlsym(sharedDLL->dllHandle, fun_name);
 #endif
     return procedure;

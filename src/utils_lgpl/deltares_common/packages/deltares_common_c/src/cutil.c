@@ -46,7 +46,7 @@
     #define FILE_WRITE _write
     #define FILE_SEEK _fseeki64
     #define FILE_TELL _ftelli64
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #define FILE_READ read
     #define FILE_WRITE write
     #define FILE_SEEK fseeko
@@ -396,7 +396,7 @@ static void report_error(char*);
 
 /* FTN_CAPITAL is assumed to be the default value */
 
-#if linux
+#if defined(linux) || defined(__APPLE__)
     #include "config.h"
     #define STDCALL /* nothing */
     #define CUTIL_GETEXEDIR FC_FUNC(cutil_getexedir, CUTIL_GETEXEDIR)

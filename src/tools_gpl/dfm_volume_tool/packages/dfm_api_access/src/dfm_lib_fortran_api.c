@@ -42,7 +42,7 @@
     #include <windows.h>
 #elif defined(salford32)
     #include <windows.h>
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include <dlfcn.h>
 #endif
 
@@ -50,7 +50,7 @@
     #define DFM_GENERATE_VOLUME_TABLES DFM_GENERATE_VOLUME_TABLES
     #define WRITE_1D_FLOWGEOM_UGRID WRITE_1D_FLOWGEOM_UGRID
     #define STDCALL
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include "config.h"
     #define DFM_GENERATE_VOLUME_TABLES FC_FUNC(dfm_generate_volume_tables, DFM_GENERATE_VOLUME_TABLES)
     #define WRITE_1D_FLOWGEOM_UGRID FC_FUNC(write_1d_flowgeom_ugrid, WRITE_1D_FLOWGEOM_UGRID)
@@ -70,7 +70,7 @@
 #if defined(WIN32)
 typedef HMODULE DllHandle;
 typedef WINBASEAPI FARPROC WINAPI DllProcedureAddress;
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
 typedef void* DllHandle;
 typedef void* DllProcedureAddress;
 #endif
