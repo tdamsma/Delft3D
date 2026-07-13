@@ -275,7 +275,7 @@ subroutine rdmor(lundia    ,error     ,filmor_in ,lsec      ,lsedtot   , &
             error = .true.
             return
             case (0)
-            morpar%moroutput%unit_transport_conversion_factor(l) = 1.0_dp
+            morpar%moroutput%unit_transport_conversion_factor(l) = 1.0_fp
             case (1)
             morpar%moroutput%unit_transport_conversion_factor(l) = sedpar%cdryb(l)
             case (2)
