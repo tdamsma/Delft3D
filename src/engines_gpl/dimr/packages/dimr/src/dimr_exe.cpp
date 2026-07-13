@@ -549,8 +549,11 @@ void DimrExe::openLibrary(void)
 #endif
 
 #ifndef _WIN32
-    this->library = new char[14];
-    sprintf(this->library, "libdimr.so\0");
+    // NB: the fixed size of 14 assumed a hardcoded "libdimr.so" (10 chars) plus
+    // a few bytes of slack; size it from the actual name/extension instead so
+    // a longer plugin extension on another platform can't overflow it.
+    this->library = new char[strlen("libdimr") + strlen(D3D_PLUGIN_EXT) + 1];
+    sprintf(this->library, "libdimr%s", D3D_PLUGIN_EXT);
 #else
     this->library = new char[16];
     sprintf(this->library, "dimr.dll\0");

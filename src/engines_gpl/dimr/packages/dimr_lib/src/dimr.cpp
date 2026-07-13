@@ -2193,7 +2193,10 @@ void Dimr::connectLibs(void)
         }
 
 #ifndef _WIN32
-        char* lib = new char[strlen(componentsList.components[i].library) + 3 + 3 + 1];
+        // NB: the buffer was previously sized assuming D3D_PLUGIN_EXT is always
+        // exactly 3 bytes (".so"); size it from the actual macro instead so a
+        // longer plugin extension on another platform can't overflow it.
+        char* lib = new char[strlen(componentsList.components[i].library) + 3 + strlen(D3D_PLUGIN_EXT) + 1];
         sprintf(lib, "lib%s%s", componentsList.components[i].library, D3D_PLUGIN_EXT);
         if (strchr(componentsList.components[i].library, '/') != NULL ||
             strchr(componentsList.components[i].library, '\\') != NULL ||
