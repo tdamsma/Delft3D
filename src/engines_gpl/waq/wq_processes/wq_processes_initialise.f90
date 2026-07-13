@@ -264,7 +264,7 @@ contains
 
         ! Header for lsp
         call getidentification(identification_text)
-        write(lunlsp, '(XA/)') trim(identification_text)
+        write(lunlsp, '(1X,A/)') trim(identification_text)
         call fill_in_date_time(rundat)
         write (lunlsp, '(A,A/)') ' Execution start: ', rundat
 
