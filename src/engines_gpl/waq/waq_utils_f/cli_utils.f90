@@ -120,20 +120,27 @@ contains
 
         ! local
         character(:), allocatable :: name_to_search
+        character(:), dimension(:), allocatable :: arguments
         integer(kind=int_wp) :: arg_index
 
         if (present(parsing_error)) then
             parsing_error = .false.
         end if
 
+        ! Note: do not read the private module-level 'command_arguments_list' directly here.
+        ! It is only populated when store_command_arguments() has been explicitly called
+        ! (e.g. by the standalone DELWAQ executables). Callers that never do so (e.g. D-Flow FM's
+        ! WAQ-processes initialisation) would otherwise index/size an unallocated allocatable.
+        ! get_arguments() safely falls back to the live command-line arguments in that case.
+        arguments = get_arguments()
         arg_index = get_command_arg_index_by_name(name)
 
-        if (arg_index == -1 .or. arg_index >= size(command_arguments_list)) then
+        if (arg_index == -1 .or. arg_index >= size(arguments)) then
             success = .false.
             return
         end if
 
-        arg_value = trim(command_arguments_list(arg_index + 1))
+        arg_value = trim(arguments(arg_index + 1))
 
         if (arg_value(1:1) == '-') then
             success = .false.
