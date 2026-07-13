@@ -75,6 +75,13 @@ if ( ${configuration_type} STREQUAL "DFLOWFM" OR
     endif()
     if(UNIX)
         set_target_properties (${library_name} PROPERTIES PREFIX "")
+        # ec_module_api.f90 is this target's only own source, but CMake
+        # picks the C++ linker driver anyway because it also links C++
+        # static libs (deltares_common_c, ...) transitively. clang++ does
+        # not know to pull in gfortran's libgomp for the OpenMP (GOMP_*)
+        # symbols emitted by the Fortran dependencies; force the Fortran
+        # driver, which does.
+        set_target_properties (${library_name} PROPERTIES LINKER_LANGUAGE Fortran)
     endif()
 
     install(TARGETS ${library_name} RUNTIME DESTINATION bin
