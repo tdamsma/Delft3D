@@ -69,6 +69,13 @@ contains
         new_connection%category = get_category_by_name(trim(string_parts(2)))
         new_connection%has_location_filter = (size(string_parts) == 4)
 
+        ! Connections without a location filter (e.g. CONST) have no location
+        ! index; initialize explicitly instead of relying on the undefined
+        ! initial value of the local "new_connection" variable (observed as
+        ! reproducible garbage under gfortran on macOS, byte-for-byte
+        ! coincidentally 0 under ifx on Linux).
+        new_connection%location_index = 0
+
         if (new_connection%has_location_filter) then
             new_connection%location_text = trim(string_parts(3))
             if (parse_location_index(trim(string_parts(3)), location_index)) then
