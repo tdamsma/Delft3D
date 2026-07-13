@@ -48,14 +48,15 @@ endif(WIN32)
 
 # Set dependencies on linux
 if(UNIX)
-    # the `pkg_check_modules` function is created with this call
-    find_package(PkgConfig REQUIRED)
-
     if(NOT APPLE)
-        # these calls create special `PkgConfig::<MODULE>` variables
+        # the `pkg_check_modules` function is created with this call
         # Conan's macOS netcdf package installs no .pc file, and nothing here
         # actually consumes the PkgConfig::NETCDF result: linking is done via
-        # Conan's netCDF::netcdff target below. Skip on APPLE.
+        # Conan's netCDF::netcdff target below. Skip find_package(PkgConfig)
+        # entirely on APPLE so a missing pkg-config there can't fail the
+        # configure step for a module it is not needed by.
+        find_package(PkgConfig REQUIRED)
+        # this call creates special `PkgConfig::<MODULE>` variables
         pkg_check_modules(NETCDF REQUIRED IMPORTED_TARGET netcdf)
     endif()
 
