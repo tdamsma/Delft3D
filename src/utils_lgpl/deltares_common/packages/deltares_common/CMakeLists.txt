@@ -53,6 +53,23 @@ add_dependencies(${library_name} generate_m_alloc_generated)
 
 target_link_libraries(${library_name} PRIVATE deltares_common_c)
 
+if(APPLE)
+    # gnu.cmake bakes -fopenmp into CMAKE_Fortran_FLAGS unconditionally, so
+    # this library's "!$OMP CRITICAL" (m_alloc_handwritten.f90) pulls in
+    # GNU's libgomp (GOMP_critical_start/end). Apple Clang's C/C++ link step
+    # never adds -fopenmp (it has no compatible OpenMP runtime of its own,
+    # see gnu.cmake), so any C/C++ target (e.g. gridgeom_dll) that links this
+    # library transitively fails with undefined GOMP_* symbols unless we
+    # propagate the Fortran OpenMP runtime along with it. find_package() here
+    # (rather than relying on some other CMakeLists having called it first,
+    # since add_subdirectory() order across the tree isn't guaranteed) is
+    # cheap and idempotent.
+    find_package(OpenMP COMPONENTS Fortran)
+    if(TARGET OpenMP::OpenMP_Fortran)
+        target_link_libraries(${library_name} PUBLIC OpenMP::OpenMP_Fortran)
+    endif()
+endif()
+
 if(UNIX)
    add_definitions(-DHAVE_CONFIG_H=1)
 endif(UNIX)

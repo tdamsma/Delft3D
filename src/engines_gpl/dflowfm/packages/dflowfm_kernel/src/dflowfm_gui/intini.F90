@@ -38,9 +38,9 @@ module m_intini
    use m_minmaxworld
 
    use precision, only: dp
-   #if HAVE_DISPLAY==1
+#if HAVE_DISPLAY==1
       use interacter_utils, only: patch_user32_dll_sendmessage_for_interacter
-   #endif
+#endif
 
    implicit none
 

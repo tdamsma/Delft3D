@@ -300,7 +300,7 @@ call SOFLOW( &
 !units  
         &   juer                                       , &
 !derived type with all info
-        &   f1dimppar                                 , &
+        &   f1dimppar                                   &
 !close
         &)
     
@@ -323,4 +323,4 @@ write(42,*) waoft(:,3)
 endif
 
 end subroutine SOFLOW_wrap
-    
+

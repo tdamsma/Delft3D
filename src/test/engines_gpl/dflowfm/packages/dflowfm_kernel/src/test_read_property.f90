@@ -41,7 +41,7 @@ contains
 !> tests reading of blocks for generalstructure in 2D3D format
    subroutine test_generalstructure_2d3d
       use dfm_error
-      use ifport, only: CHANGEDIRQQ
+      use chdir_mod, only: CHANGEDIRQQ
       use properties
       use mathconsts, only: eps_hp
       use m_strucs

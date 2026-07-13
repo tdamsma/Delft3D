@@ -39,7 +39,7 @@ subroutine test_roughness_branches
    use m_roughness
    use m_read_roughness
    use m_hash_search
-   use ifport
+   use chdir_mod, only: CHANGEDIRQQ
    
    type(t_network)         :: network
    type(t_CSType), pointer :: cross

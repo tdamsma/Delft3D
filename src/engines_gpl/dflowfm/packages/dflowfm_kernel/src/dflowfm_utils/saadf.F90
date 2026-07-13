@@ -10857,7 +10857,16 @@ contains
 ! local
 !
       integer i, j, itmp
+      ! irand is a portability intrinsic (g77/gfortran legacy extension).
+      ! Under GNU it must be declared "intrinsic" - "external" forces
+      ! external linkage and there is no such symbol in this codebase.
+      ! Under Intel, IRAND is a genuine external symbol provided by the
+      ! Intel Fortran runtime, so it must be declared "external" there.
+#ifdef __INTEL_COMPILER
       integer, external :: irand
+#else
+      integer, intrinsic :: irand
+#endif
 !----------------------------------------------------------------------
       no_warning_unused_dummy_argument(iseed)
 

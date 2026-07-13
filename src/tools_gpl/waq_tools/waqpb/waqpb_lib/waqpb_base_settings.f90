@@ -127,7 +127,7 @@ contains
       character(len=256), dimension(:), allocatable :: accepted_flag_args
 
       ! This subroutine can be overridden in derived classes to provide specific flag arguments
-      accepted_flag_args = ['-h', '--help', '--usage']
+      accepted_flag_args = [character(len=256) :: '-h', '--help', '--usage']
    end function get_accepted_flag_args_base
 
    !> Get the accepted key-value arguments for the base settings

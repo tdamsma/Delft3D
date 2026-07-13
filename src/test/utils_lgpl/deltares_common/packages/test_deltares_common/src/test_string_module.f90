@@ -210,7 +210,7 @@ subroutine test_convert_to_logical
     !
     ! True values
     !
-    strings = ['TRUE', 'TRUE with comments', 'T', '1', '1.0', '2.0', '-1e5', 'Yes', 'Y', 'ja', 'j']
+    strings = [character(len=20) :: 'TRUE', 'TRUE with comments', 'T', '1', '1.0', '2.0', '-1e5', 'Yes', 'Y', 'ja', 'j']
     do i = 1, size(strings)
        call convert_to_logical( strings(i), value, ierr )
        call assert_true( value, "The value should be true when parsing: "//trim(strings(i)) )
@@ -219,7 +219,7 @@ subroutine test_convert_to_logical
     !
     ! False values
     !
-    strings = ['FALSE', 'FALSE with comments', 'F', '0', '0.0', '0e0', 'No', 'nee', 'n' ]
+    strings = [character(len=20) :: 'FALSE', 'FALSE with comments', 'F', '0', '0.0', '0e0', 'No', 'nee', 'n' ]
     do i = 1, size(strings)
        call convert_to_logical( strings(i), value, ierr )
        call assert_false( value, "The value should be false when parsing: "//trim(strings(i)) )
@@ -228,7 +228,7 @@ subroutine test_convert_to_logical
     !
     ! Invalid value
     !
-    strings = [' ', 'INVALID', '1.0_dp', 'TRUEwith_comments_attached' ]
+    strings = [character(len=20) :: ' ', 'INVALID', '1.0_dp', 'TRUEwith_comments_attached' ]
     do i = 1, size(strings)
        call convert_to_logical( strings(i), value, ierr )
        if (i == 1) then
@@ -251,7 +251,7 @@ subroutine test_convert_to_real
     !
     ! Valid real values
     !
-    strings = ['1.0', '-2.5', '3.14159', '0.0', '1e3', '-4.2E-2', '  7.5  ', '2.5 with comments', '42', '.42', '0.025', '2.3d2' ]
+    strings = [character(len=20) :: '1.0', '-2.5', '3.14159', '0.0', '1e3', '-4.2E-2', '  7.5  ', '2.5 with comments', '42', '.42', '0.025', '2.3d2' ]
     values_sp = [ 1.0_sp, -2.5_sp, 3.14159_sp, 0.0_sp, 1e3_sp, -4.2e-2_sp, 7.5_sp, 2.5_sp, 42.0_sp, 0.42_sp, 0.025_sp, 2.3e2_sp ]
     values_dp = [ 1.0_dp, -2.5_dp, 3.14159_dp, 0.0_dp, 1e3_dp, -4.2e-2_dp, 7.5_dp, 2.5_dp, 42.0_dp, 0.42_dp, 0.025_dp, 2.3e2_dp ]
     do i = 1, size(strings)
@@ -273,7 +273,7 @@ subroutine test_convert_to_real
     !
     ! Invalid real values
     !
-    strings = [' ', 'INVALID', '1.0_dp', '3.14pi' ]
+    strings = [character(len=20) :: ' ', 'INVALID', '1.0_dp', '3.14pi' ]
     do i = 1, size(strings)
        call convert_to_real( strings(i), value_dp, ierr )
        if (i == 1) then

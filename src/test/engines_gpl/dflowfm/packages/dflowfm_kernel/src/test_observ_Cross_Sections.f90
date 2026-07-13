@@ -45,7 +45,7 @@ subroutine test_read_snapped_observ_crs
     use unstruc_model
     use m_partitioninfo, only: jampi
     use network_data, only: numk
-    use ifport
+    use chdir_mod, only: CHANGEDIRQQ
     use m_flow_modelinit, only: flow_modelinit
     use m_resetfullflowmodel, only: resetfullflowmodel
     !

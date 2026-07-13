@@ -70,3 +70,10 @@ examples/dflowfm/**/precice-run/**
 
 # conan
 conan/**/test_package/**
+
+# Local scratch (not committed)
+/tmp/
+/baseline_artifacts/
+/baseline_logs/
+/baseline_runs/
+/baseline_tools/

@@ -56,7 +56,8 @@ endif(WIN32)
 
 if(UNIX)
     target_link_libraries(${executable_name} PRIVATE
-         netCDF::netcdff)
+         netCDF::netcdff
+         MPI::MPI_Fortran)
 
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../include"
                         ${version_include_dir}
@@ -90,6 +91,23 @@ if (UNIX)
     target_compile_options(${executable_name} PRIVATE
                                                   "SHELL:${avx2_flag}")
 endif(UNIX)
+
+# SWAN's fixed-form sources carry inline version-history annotations past
+# column 72, tolerated (warning-only) by Intel's 132-column default but a hard
+# syntax error for gfortran once those columns become significant. Restrict
+# this target back to the genuine F77 72-column limit under gfortran only.
+target_compile_options(${executable_name} PRIVATE
+    "$<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<Fortran_COMPILER_ID:GNU>>:-ffixed-line-length-72>")
+
+# This target never opts into OpenMP via ${openmp_flag} on Intel/Windows (only
+# swan_omp does), so "!$OMP" sentinels are inert there. gnu.cmake's
+# CMAKE_Fortran_FLAGS unconditionally adds -fopenmp for GNU though, which
+# activates an MPI-only STPNOW()/RETURN sitting inside a "!$OMP DO" loop --
+# gfortran correctly rejects that as branching out of a parallel region.
+# Turn OpenMP back off here to match the Intel/Windows behavior this MPI-only
+# target was written for.
+target_compile_options(${executable_name} PRIVATE
+    "$<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<Fortran_COMPILER_ID:GNU>>:-fno-openmp>")
 
 # Define preprocessor definitions
 if (WIN32)

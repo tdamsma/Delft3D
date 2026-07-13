@@ -27,7 +27,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${source_files})
 set_target_properties (${library_name} PROPERTIES FOLDER utils_gpl/flow1d_implicit)
 
 set_source_files_properties(${src_path}/dumpTime.F90
-                            ${src_path}/FLMINMAX.f
-                            ${src_path}/FLWRHI.f
-                            ${src_path}/SOFLOW.f
+                            ${src_path}/FLMINMAX.f90
+                            ${src_path}/FLWRHI.f90
+                            ${src_path}/SOFLOW.f90
                             PROPERTIES COMPILE_OPTIONS "${file_preprocessor_flag}")

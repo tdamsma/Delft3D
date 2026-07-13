@@ -2801,6 +2801,7 @@ contains
     subroutine get_leeway_params_from_csv(lun2, subst_name, leeway_multiplier, leeway_modifier, leeway_angle)
 
         use system_utils, only: get_executable_directory
+        use precision, only: sp, dp
 
         integer, intent(in)          :: lun2
         character(len=*), intent(in) :: subst_name

@@ -306,7 +306,7 @@ contains
    subroutine create_structure_file(filename)
       character(len=*), intent(in) :: filename
 
-      call create_file(filename, [ &
+      call create_file(filename, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -826,7 +826,7 @@ contains
       character(len=*), parameter :: MDU_FILE = "test_lc_valve.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc2_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -890,7 +890,7 @@ contains
       character(len=*), parameter :: MDU_FILE = "test_lc_friction.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc2_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -956,7 +956,7 @@ contains
       character(len=256) :: MDU_FILE = "test_lc2pt_fric_converted.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc_convert_2pt_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -1025,7 +1025,7 @@ contains
       character(len=256) :: MDU_FILE = "test_lc2pt_default_friction_converted.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc_convert_2pt_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -1092,7 +1092,7 @@ contains
       character(len=*), parameter :: MDU_FILE = "test_lc_frtype.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc2_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -1159,7 +1159,7 @@ contains
       character(len=*), parameter :: MDU_FILE = "test_lc_cross.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc2_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -1217,7 +1217,7 @@ contains
    subroutine create_structure_file_3pt(filename)
       character(len=*), intent(in) :: filename
 
-      call create_file(filename, [ &
+      call create_file(filename, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -1362,7 +1362,7 @@ contains
       character(len=*), parameter :: MDU_FILE = "test_lc3pt_fric.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc2_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -1429,7 +1429,7 @@ contains
       character(len=256) :: MDU_FILE = "test_lc3pt_fric.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc_convert_3pt_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -1483,7 +1483,7 @@ contains
    subroutine create_structure_file_4pt(filename)
       character(len=*), intent(in) :: filename
 
-      call create_file(filename, [ &
+      call create_file(filename, [character(len=46) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &
@@ -1627,7 +1627,7 @@ contains
       character(len=*), parameter :: MDU_FILE = "test_lc4pt_fric.mdu"
       character(len=*), parameter :: NET_FILE = "test_lc2_net.nc"
 
-      call create_file(STR_FILE, [ &
+      call create_file(STR_FILE, [character(len=48) :: &
                        "[General]                                     ", &
                        "    fileVersion     = 3.00                    ", &
                        "    fileType        = structures              ", &

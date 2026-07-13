@@ -206,7 +206,10 @@ contains
    !$f90tw)
 
    !> Initializes the Horton infiltration test suite with default values
-   subroutine initialize_horton_test_suite(config, ierr, n, include_rain, time_step, inf_cap, waterdepth, rainfall, inf_cap_state) bind(C)
+   !! (plain Fortran helper, only called from this module's own bind(C)
+   !! test entry points -- it does not need bind(C) itself, and its
+   !! t_HortonInfiltrationConfig argument is not C-interoperable anyway)
+   subroutine initialize_horton_test_suite(config, ierr, n, include_rain, time_step, inf_cap, waterdepth, rainfall, inf_cap_state)
       ! Declare variables
       type(t_HortonInfiltrationConfig), intent(out) :: config
       integer, intent(out) :: ierr

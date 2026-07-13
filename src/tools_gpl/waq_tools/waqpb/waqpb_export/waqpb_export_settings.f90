@@ -125,7 +125,7 @@ contains
       integer :: n_combined
 
       base_keyval_args = this%get_accepted_keyval_args_base()
-      keyval_args = ['--version', '--serial']
+      keyval_args = [character(len=256) :: '--version', '--serial']
 
       n_combined = size(base_keyval_args) + size(keyval_args)
 

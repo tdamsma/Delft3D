@@ -58,7 +58,10 @@ submodule(fm_external_forcings) fm_external_forcings_update
    use dfm_error, only: dfm_noerr, dfm_extforcerror
    use m_calibration, only: calibration_backup_frcu
    use unstruc_channel_flow, only: network
-   use time_class, only: c_time, ecgetvalues
+   ! Note: ecgetvalues is not exported by time_class (it comes from ec_module,
+   ! already imported above via "use m_meteo, only: ..., ecgetvalues, ...");
+   ! the redundant name here doesn't exist in time_class and errors under gfortran.
+   use time_class, only: c_time
    use m_longculverts_data, only: nlongculverts
    use m_nearfield, only: nearfield_mode, NEARFIELD_UPDATED, addNearfieldData
    use m_airdensity, only: get_airdensity

@@ -30,6 +30,9 @@
 !> submodule that contains the implementation of flow_init_structurecontrol.
 submodule(m_flow_init_structurecontrol) flow_init_structurecontrol_implementation
    use precision_basics, only: dp
+   ! c_loc/c_f_pointer/c_ptr are used below without an explicit iso_c_binding
+   ! import; ifort resolves them as compiler builtins, gfortran does not.
+   use, intrinsic :: iso_c_binding, only: c_loc, c_f_pointer, c_ptr
    implicit none
 
 contains

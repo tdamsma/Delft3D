@@ -62,7 +62,7 @@ module unstruc_caching
                                                           'FIXED WEIRS         ', &
                                                           'CROSS_SECTIONS      ', &
                                                           'DRY_POINTS_AND_AREAS', &
-                                                          'THIN_DAMS']
+                                                          'THIN_DAMS           ']
    integer, parameter, private :: key_obs = 1
    integer, parameter, private :: key_fixed_weirs = 2
    integer, parameter, private :: key_cross_sections = 3

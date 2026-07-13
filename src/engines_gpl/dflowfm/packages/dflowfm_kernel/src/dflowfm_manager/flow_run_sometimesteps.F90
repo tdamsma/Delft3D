@@ -48,10 +48,22 @@ contains
       use m_flow_single_timestep, only: flow_single_timestep
       use m_flowtimes, only: time1, tstop_user, time_user
       use dfm_error, only: dfm_genericerror, dfm_noerr
+      ! Note: update_flow_parameter is only imported on GNU (see guard below).
+      ! gfortran needs the generic interface name of the type-bound "update"
+      ! target visible in this scope to resolve
+      ! average_waterlevels_per_lateral%update(); ifx resolves it without this
+      ! import (and m_laterals does not export the name for ifx).
+#ifdef __INTEL_COMPILER
       use m_laterals, only: reset_outgoing_lat_concentration, finish_outgoing_lat_concentration, apply_transport_is_used, &
                             qqlat, qplat, get_lateral_volume_per_layer, &
-                            lateral_volume_per_layer, distribute_lateral_discharge, average_waterlevels_per_lateral 
-      use m_partitioninfo, only: reduce_lateral_output, distribute_lateral_input, jampi 
+                            lateral_volume_per_layer, distribute_lateral_discharge, average_waterlevels_per_lateral
+#else
+      use m_laterals, only: reset_outgoing_lat_concentration, finish_outgoing_lat_concentration, apply_transport_is_used, &
+                            qqlat, qplat, get_lateral_volume_per_layer, &
+                            lateral_volume_per_layer, distribute_lateral_discharge, average_waterlevels_per_lateral, &
+                            update_flow_parameter
+#endif
+      use m_partitioninfo, only: reduce_lateral_output, distribute_lateral_input, jampi
 
       real(kind=dp), intent(in) :: dtrange
       integer, intent(out) :: iresult !< Error status, DFM_NOERR==0 if successful.

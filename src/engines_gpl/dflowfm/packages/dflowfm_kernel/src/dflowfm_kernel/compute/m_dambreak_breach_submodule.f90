@@ -28,8 +28,9 @@
 !-------------------------------------------------------------------------------
 
 submodule(m_dambreak_breach) m_dambreak_breach_submodule
-   use precision, only: dp
-
+   ! Note: 'dp' is already available here via host association from the
+   ! parent module m_dambreak_breach (which itself does "use precision, only:
+   ! dp"); re-importing it explicitly conflicts under gfortran.
    implicit none
 
    integer, parameter :: UPSTREAM = 1
@@ -226,8 +227,6 @@ contains
 
    !> Calculate breach growth using vdKnaap model
    subroutine calculate_breach_growth_using_vdKnaap_model(dambreak, time, time_step)
-      import t_dambreak
-
       class(t_dambreak), intent(inout) :: dambreak !< dambreak data for a single dambreak
       real(kind=dp), intent(in) :: time !< current time
       real(kind=dp), intent(in) :: time_step !< time step
@@ -271,7 +270,6 @@ contains
    subroutine calculate_breach_growth_using_Verheij_vdKnaap_model(dambreak, time, time_step)
       use ieee_arithmetic, only: ieee_is_nan
       use m_physcoef, only: gravity => ag
-      import t_dambreak
 
       class(t_dambreak), intent(inout) :: dambreak !< dambreak data for a single dambreak
       real(kind=dp), intent(in) :: time !< current time
@@ -337,7 +335,6 @@ contains
       use m_meteo, only: ec_gettimespacevalue_by_itemID, ecInstancePtr
       use m_flowtimes, only: irefdate, tunit, tzone
       use messagehandling, only: msgbuf, LEVEL_ERROR, SetMessage
-      import t_dambreak
 
       class(t_dambreak), intent(inout) :: dambreak !< dambreak data for a single dambreak
       real(kind=dp), intent(in) :: time !< current time

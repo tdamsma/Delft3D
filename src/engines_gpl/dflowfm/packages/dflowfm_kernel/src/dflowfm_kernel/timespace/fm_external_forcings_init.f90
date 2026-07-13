@@ -28,7 +28,10 @@
 !-------------------------------------------------------------------------------
 !
 submodule(fm_external_forcings) fm_external_forcings_init
-   use precision_basics, only: dp
+   ! Note: 'dp' is already available here via host association from the
+   ! parent module fm_external_forcings (which itself does "use
+   ! precision_basics, only: hp, dp"); re-importing it explicitly conflicts
+   ! under gfortran.
    use m_missing, only: dmiss => dmiss_neg
 
    implicit none(type, external)
@@ -421,7 +424,7 @@ contains
       logical, intent(out) :: is_success !< Flag indicating if the reading was successful
 
       logical :: has_node_id, has_branch_id, has_chainage, has_num_coordinates, has_location_file, has_x_coordinates, has_y_coordinates
-      integer :: number_of_discharge_specifications, ierr
+      integer :: number_of_discharge_specifications, ierr, i
       integer, parameter :: maximum_number_of_discharge_specifications = 4
 
       loc_spec_type = imiss
@@ -441,7 +444,7 @@ contains
       has_location_file = has_key(block_ptr, 'Lateral', 'locationFile')
 
       ! Test if multiple discharge methods were set
-      number_of_discharge_specifications = sum([(1, integer :: i=1, maximum_number_of_discharge_specifications)], [has_node_id, has_branch_id .or. has_chainage, has_num_coordinates .or. has_x_coordinates .or. has_y_coordinates, has_location_file])
+      number_of_discharge_specifications = sum([(1, i=1, maximum_number_of_discharge_specifications)], [has_node_id, has_branch_id .or. has_chainage, has_num_coordinates .or. has_x_coordinates .or. has_y_coordinates, has_location_file])
 
       if (number_of_discharge_specifications < 1) then
          call mess(LEVEL_ERROR, 'Lateral '''//trim(loc_id)//''': No discharge specifications found. Use nodeId, branchId + chainage, numCoordinates + xCoordinates + yCoordinates, or locationFile.')
@@ -1131,7 +1134,7 @@ contains
          success = .false.
       end select
 
-      if (success == .false.) then
+      if (.not. success) then
          success = .true.
          select case (str_tolower(qid_base))
          case ('initialwaterdepth', 'waterdepth')

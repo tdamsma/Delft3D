@@ -526,7 +526,7 @@ contains
       use m_check_positive_value, only: check_positive_value
       use m_add_baroclinic_pressure, only: rhointerfaces
       use m_flow_validatestate_data
-      use m_array_or_scalar, only: realloc
+      use m_alloc, only: realloc
 
       character(*), intent(in) :: filename !< Name of file to be read (the MDU file must be in current working directory).
       integer, intent(out) :: istat !< Return status (0=success)
@@ -3388,7 +3388,7 @@ contains
          end if
       end if
 
-      if (jaspacevarcharn .and. (wind_drag_type /= CD_TYPE_CHARNOCK1955 .and. wind_drag_type /= CD_TYPE_CHARNOCK_PLUS_VISCOUS)) then
+      if (jaspacevarcharn == 1 .and. (wind_drag_type /= CD_TYPE_CHARNOCK1955 .and. wind_drag_type /= CD_TYPE_CHARNOCK_PLUS_VISCOUS)) then
          write (msgbuf, '(a,i0,a)') &
             'Inconsistent configuration: a time- and space-varying Charnock coefficient was ' // &
             'specified in the .ext file, but [wind] ICdtyp is set to ', &

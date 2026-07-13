@@ -87,7 +87,7 @@ subroutine GAreadheader (lunhis  ,filnamhis ,nstepsim ,dtsim   ,&
 !
 !     Open his file
 !
-   open(lunhis , file = filnamhis , form = 'binary')
+   open(lunhis, file=filnamhis, form='unformatted', access='stream')
 !
    read   (lunhis)  (dattim,i=1,4)
    read   (lunhis)  nvar,nloc

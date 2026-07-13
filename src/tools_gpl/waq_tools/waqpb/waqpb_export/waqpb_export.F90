@@ -61,7 +61,14 @@ program waqpb_export
 
    call settings%init()
 
+#ifdef __INTEL_COMPILER
    inquire (directory=settings%process_definition_folder_path, exist=status)
+#else
+   ! DIRECTORY= is an Intel-only INQUIRE extension gfortran does not support.
+   ! FILE= existence checking is a portable (if slightly weaker: it does not
+   ! distinguish a directory from a regular file) equivalent on POSIX systems.
+   inquire (file=settings%process_definition_folder_path, exist=status)
+#endif
    if (.not. status) then
       write (*, '(A,A,A)') 'Error: "', trim(settings%process_definition_folder_path), '" is not a valid path for the process definition folder.'
       stop 1

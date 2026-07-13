@@ -42,6 +42,18 @@ module m_laterals
    public reset_outgoing_lat_concentration
    public finish_outgoing_lat_concentration
    public distribute_lateral_discharge
+   ! Public so callers of average_waterlevels_per_lateral%update()/%initialize()
+   ! can import the generics explicitly; gfortran (unlike ifort) needs the
+   ! type-bound target's generic-interface name visible in the caller's scope
+   ! to resolve it when the caller does "use m_laterals, only: ...".
+   ! GNU-only: under ifx these publics (combined with a downstream "only:"
+   ! import of the module variable average_waterlevels_per_lateral) trigger a
+   ! deterministic internal compiler error; ifx resolves the type-bound calls
+   ! without any of this, so keep the original (no publics) shape there.
+#ifndef __INTEL_COMPILER
+   public update_flow_parameter
+   public initialize_flow_parameter
+#endif
 
    integer, target, public :: numlatsg !< [-] nr of lateral discharge providers  {"rank": 0}
    integer, public :: num_layers !< first dimension of qplat and qqlat array, 1 for 2D, kmx for 3D.
