@@ -71,7 +71,7 @@ typedef unsigned __int64 BUInt8; /* long           :  8 bytes */
     #elif defined GNU_PC
 typedef long long BInt8;           /* long           :  8 bytes */
 typedef unsigned long long BUInt8; /* long           :  8 bytes */
-    #elif defined(__linux__)
+    #elif defined(__linux__) || defined(__APPLE__)
 typedef long long BInt8;           /* long           :  8 bytes */
 typedef unsigned long long BUInt8; /* long           :  8 bytes */
     #elif defined USE_SUN

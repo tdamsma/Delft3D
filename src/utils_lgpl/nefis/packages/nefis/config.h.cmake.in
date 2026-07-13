@@ -3,4 +3,7 @@
 
 #include "FortranCInterface.h"
 
+#if defined(__APPLE__) && !defined(FC_GLOBAL)
+    #define FC_GLOBAL(name, NAME) name ## _
+#endif
 #define FC_FUNC FC_GLOBAL
