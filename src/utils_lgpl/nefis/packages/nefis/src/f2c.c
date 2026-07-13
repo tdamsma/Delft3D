@@ -191,16 +191,70 @@
 
 #define A2D(m, n) ((n) + DEFINE_STEPS * (m))
 
+/*
+ * Fortran passes the hidden length of every CHARACTER actual argument as an
+ * extra trailing argument. The *width* of that hidden length is chosen by
+ * the Fortran compiler that calls into this file, not by whichever C/C++
+ * compiler happens to compile it: Intel Fortran (ifort/ifx, used on Linux)
+ * passes a 4-byte int, matching BInt4 below, while GNU Fortran (gfortran --
+ * used natively on macOS/arm64 since ifx has no arm64 backend) and LLVM
+ * Flang both pass an 8-byte size_t. Functions with enough leading
+ * pointer/scalar arguments that the hidden lengths spill from registers
+ * onto the stack (e.g. DEFINE_ELEMENT, called from DEFELM) read every
+ * subsequent length shifted by one 4-byte word if declared as BInt4 under
+ * gfortran, silently corrupting arguments such as the element type string
+ * (observed as NEFIS error 5006 "This element type is not supported ''" --
+ * nefis_tests test_04/05/08/09/12/15 on macOS).
+ *
+ * This used to be inferred from `__GNUC__` (i.e. from the *C* compiler),
+ * which is wrong in principle -- it happened to work on macOS only because
+ * Apple Clang also defines __GNUC__ for source compatibility, and it
+ * breaks for e.g. GCC-as-C-compiler + Intel Fortran, or Clang-as-C-compiler
+ * + a non-GNU Fortran compiler. nefis/CMakeLists.txt now derives the
+ * answer from CMAKE_Fortran_COMPILER_ID -- the compiler that actually
+ * defines this calling convention -- and passes it in as one of the two
+ * macros below. If neither is defined (this file compiled outside that
+ * CMake target, or with a Fortran compiler CMake doesn't recognize and no
+ * definition was supplied manually), fail the build rather than guess: a
+ * wrong guess here does not fail loudly, it silently corrupts NEFIS
+ * CHARACTER arguments.
+ */
+#if defined(D3D_FC_HIDDEN_STRLEN_IS_SIZE_T)
+typedef size_t BFtnLen;
+#elif defined(D3D_FC_HIDDEN_STRLEN_IS_INT32)
+typedef BInt4 BFtnLen;
+#else
+#error \
+    "f2c.c: the Fortran hidden-CHARACTER-length ABI is undetermined. Build " \
+    "this file through nefis/CMakeLists.txt, which defines " \
+    "D3D_FC_HIDDEN_STRLEN_IS_SIZE_T or D3D_FC_HIDDEN_STRLEN_IS_INT32 from " \
+    "CMAKE_Fortran_COMPILER_ID, or define the matching one yourself for " \
+    "your Fortran compiler (size_t hidden length: GNU/gfortran, Flang; " \
+    "BInt4/int32 hidden length: Intel ifort/ifx)."
+#endif
+
 extern BInt4 nefis_errno;
 
 /*==========================================================================*/
 /* Start of C-functions                                                     */
 /*==========================================================================*/
+static int f2c_strlen(char* string, int length);
+
+/*
+ * NOTE: Fortran character actual arguments are NOT NUL-terminated; only the
+ * hidden length argument ("given_length"/"len" below) tells the callee how
+ * many bytes are valid. Calling strlen() directly on such a buffer is
+ * undefined behaviour: it may happen to work when the compiler/platform
+ * places a stray zero byte just past the string (observed with ifx on
+ * Linux) and read garbage otherwise (observed with gfortran on macOS,
+ * corrupting element/attribute names such as DEFELM's element type). Always
+ * bound the scan with f2c_strlen() instead.
+ */
 static BVoid F_Copy_text(BText name1, BText name2, BInt4 given_length, BInt4 max_length)
 {
     BInt4 i;
     BInt4 max_copy;
-    max_copy = min(given_length, (BInt4)strlen(name2));
+    max_copy = f2c_strlen(name2, given_length);
     max_copy = min(max_copy, max_length);
     strncpy(name1, name2, max_copy);
     for (i = max_copy; i < max_length; i++)
@@ -215,7 +269,7 @@ static char* strFcpy(char* str_1, int len)
 {
     int m;
     char* str_2;
-    m = min(len, (BInt4)strlen(str_1));
+    m = f2c_strlen(str_1, len);
     str_2 = (char*)malloc(sizeof(char) * (m + 1));
     strncpy(str_2, str_1, m);
     str_2[m] = '\0';
@@ -374,11 +428,11 @@ DLLEXPORT BInt4 FTN_CALL CLOSE_NEFIS(BInt4* set)
  * Define cel on definition file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL DEFINE_CEL(BInt4* fd, BText cl_name, BInt4 cl_name_length, BInt4* cl_num_dim, BText el_names,
-                                    BInt4 el_names_length)
+DLLEXPORT BInt4 FTN_CALL DEFINE_CEL(BInt4* fd, BText cl_name, BFtnLen cl_name_length, BInt4* cl_num_dim, BText el_names,
+                                    BFtnLen el_names_length)
 #else
-DLLEXPORT BInt4 FTN_CALL DEFINE_CEL(BInt4* fd, BText cl_name, BInt4* cl_num_dim, BText el_names, BInt4 cl_name_length,
-                                    BInt4 el_names_length)
+DLLEXPORT BInt4 FTN_CALL DEFINE_CEL(BInt4* fd, BText cl_name, BInt4* cl_num_dim, BText el_names, BFtnLen cl_name_length,
+                                    BFtnLen el_names_length)
 #endif
 {
     BChar cel_name[MAX_NAME + 1];
@@ -421,11 +475,11 @@ DLLEXPORT BInt4 FTN_CALL DEFINE_CEL(BInt4* fd, BText cl_name, BInt4* cl_num_dim,
  * Create space for data on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL DEFINE_DATA(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText gr_defined,
-                                     BInt4 gr_defined_length)
+DLLEXPORT BInt4 FTN_CALL DEFINE_DATA(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText gr_defined,
+                                     BFtnLen gr_defined_length)
 #else
-DLLEXPORT BInt4 FTN_CALL DEFINE_DATA(BInt4* fd, BText gr_name, BText gr_defined, BInt4 gr_name_length,
-                                     BInt4 gr_defined_length)
+DLLEXPORT BInt4 FTN_CALL DEFINE_DATA(BInt4* fd, BText gr_name, BText gr_defined, BFtnLen gr_name_length,
+                                     BFtnLen gr_defined_length)
 #endif
 {
     BChar grp_name[MAX_NAME + 1];
@@ -457,15 +511,15 @@ DLLEXPORT BInt4 FTN_CALL DEFINE_DATA(BInt4* fd, BText gr_name, BText gr_defined,
  *         !=0                 Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL DEFINE_ELEMENT(BInt4* fd, BText el_name, BInt4 el_name_length, BText el_type,
-                                        BInt4 el_type_length, BInt4* el_single_byte, BText el_quantity,
-                                        BInt4 el_quantity_length, BText el_unity, BInt4 el_unity_length, BText el_desc,
-                                        BInt4 el_desc_length, BInt4* el_num_dim, BInt4* el_dimens)
+DLLEXPORT BInt4 FTN_CALL DEFINE_ELEMENT(BInt4* fd, BText el_name, BFtnLen el_name_length, BText el_type,
+                                        BFtnLen el_type_length, BInt4* el_single_byte, BText el_quantity,
+                                        BFtnLen el_quantity_length, BText el_unity, BFtnLen el_unity_length, BText el_desc,
+                                        BFtnLen el_desc_length, BInt4* el_num_dim, BInt4* el_dimens)
 #else
 DLLEXPORT BInt4 FTN_CALL DEFINE_ELEMENT(BInt4* fd, BText el_name, BText el_type, BInt4* el_single_byte,
                                         BText el_quantity, BText el_unity, BText el_desc, BInt4* el_num_dim,
-                                        BInt4* el_dimens, BInt4 el_name_length, BInt4 el_type_length,
-                                        BInt4 el_quantity_length, BInt4 el_unity_length, BInt4 el_desc_length)
+                                        BInt4* el_dimens, BFtnLen el_name_length, BFtnLen el_type_length,
+                                        BFtnLen el_quantity_length, BFtnLen el_unity_length, BFtnLen el_desc_length)
 #endif
 {
     BInt4 elm_num_dim;
@@ -511,11 +565,11 @@ DLLEXPORT BInt4 FTN_CALL DEFINE_ELEMENT(BInt4* fd, BText el_name, BText el_type,
  * Define group on definition file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL DEFINE_GROUP(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText cl_name,
-                                      BInt4 cl_name_length, BInt4* gr_num_dim, BInt4* gr_dimens, BInt4* gr_order)
+DLLEXPORT BInt4 FTN_CALL DEFINE_GROUP(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText cl_name,
+                                      BFtnLen cl_name_length, BInt4* gr_num_dim, BInt4* gr_dimens, BInt4* gr_order)
 #else
 DLLEXPORT BInt4 FTN_CALL DEFINE_GROUP(BInt4* fd, BText gr_name, BText cl_name, BInt4* gr_num_dim, BInt4* gr_dimens,
-                                      BInt4* gr_order, BInt4 gr_name_length, BInt4 cl_name_length)
+                                      BInt4* gr_order, BFtnLen gr_name_length, BFtnLen cl_name_length)
 #endif
 {
     BChar cel_name[MAX_NAME + 1];
@@ -556,13 +610,13 @@ DLLEXPORT BInt4 FTN_CALL DEFINE_GROUP(BInt4* fd, BText gr_name, BText cl_name, B
  * Open and create data and defintion file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL CREATE_NEFIS(BInt4* fd, BText dt_file, BInt4 dt_file_length, BText df_file,
-                                      BInt4 df_file_length, BText cding, BInt4 cding_length, BText acces_type,
-                                      BInt4 acces_length)
+DLLEXPORT BInt4 FTN_CALL CREATE_NEFIS(BInt4* fd, BText dt_file, BFtnLen dt_file_length, BText df_file,
+                                      BFtnLen df_file_length, BText cding, BFtnLen cding_length, BText acces_type,
+                                      BFtnLen acces_length)
 #else
 DLLEXPORT BInt4 FTN_CALL CREATE_NEFIS(BInt4* fd, BText dt_file, BText df_file, BText cding, BText acces_type,
-                                      BInt4 dt_file_length, BInt4 df_file_length, BInt4 cding_length,
-                                      BInt4 acces_length)
+                                      BFtnLen dt_file_length, BFtnLen df_file_length, BFtnLen cding_length,
+                                      BFtnLen acces_length)
 #endif
 {
     BText dat_file;
@@ -662,7 +716,7 @@ DLLEXPORT BInt4 FTN_CALL FLUSH_DEF_FILE(BInt4* set)
 /*
  * Get header from data file
  */
-DLLEXPORT BInt4 FTN_CALL GET_DAT_HEADER(BInt4* set, BText header, BInt4 header_length)
+DLLEXPORT BInt4 FTN_CALL GET_DAT_HEADER(BInt4* set, BText header, BFtnLen header_length)
 {
     BUInt8 n_read = 0;
 
@@ -694,7 +748,7 @@ DLLEXPORT BInt4 FTN_CALL GET_DAT_HEADER(BInt4* set, BText header, BInt4 header_l
  * Get header from definition file
  */
 
-DLLEXPORT BInt4 FTN_CALL GET_DEF_HEADER(BInt4* set, BText header, BInt4 header_length)
+DLLEXPORT BInt4 FTN_CALL GET_DEF_HEADER(BInt4* set, BText header, BFtnLen header_length)
 {
     BUInt8 n_read = 0;
 
@@ -737,13 +791,13 @@ DLLEXPORT BInt4 FTN_CALL GET_DEF_HEADER(BInt4* set, BText header, BInt4 header_l
  *         !=0                 Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL GET_ELEMENT(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText el_name,
-                                     BInt4 el_name_length, BInt4* user_index, BInt4* user_order, BInt4* buffer_length,
+DLLEXPORT BInt4 FTN_CALL GET_ELEMENT(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText el_name,
+                                     BFtnLen el_name_length, BInt4* user_index, BInt4* user_order, BInt4* buffer_length,
                                      BData buffer)
 
 #else
 DLLEXPORT BInt4 FTN_CALL GET_ELEMENT(BInt4* fd, BText gr_name, BText el_name, BInt4* user_index, BInt4* user_order,
-                                     BInt4* buffer_length, BData buffer, BInt4 gr_name_length, BInt4 el_name_length)
+                                     BInt4* buffer_length, BData buffer, BFtnLen gr_name_length, BFtnLen el_name_length)
 #endif
 {
     BChar elm_name[MAX_NAME + 1];
@@ -783,13 +837,13 @@ DLLEXPORT BInt4 FTN_CALL GET_ELEMENT(BInt4* fd, BText gr_name, BText el_name, BI
  *         !=0                 Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL GET_ELEMENT_STRING(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText el_name,
-                                            BInt4 el_name_length, BInt4* user_index, BInt4* user_order,
-                                            BInt4* buffer_length, BData buffer, BInt4 bffr_length)
+DLLEXPORT BInt4 FTN_CALL GET_ELEMENT_STRING(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText el_name,
+                                            BFtnLen el_name_length, BInt4* user_index, BInt4* user_order,
+                                            BInt4* buffer_length, BData buffer, BFtnLen bffr_length)
 #else
 DLLEXPORT BInt4 FTN_CALL GET_ELEMENT_STRING(BInt4* fd, BText gr_name, BText el_name, BInt4* user_index,
-                                            BInt4* user_order, BInt4* buffer_length, BData buffer, BInt4 gr_name_length,
-                                            BInt4 el_name_length, BInt4 bffr_length)
+                                            BInt4* user_order, BInt4* buffer_length, BData buffer, BFtnLen gr_name_length,
+                                            BFtnLen el_name_length, BFtnLen bffr_length)
 #endif
 {
     nefis_errno = 0;
@@ -810,11 +864,11 @@ DLLEXPORT BInt4 FTN_CALL GET_ELEMENT_STRING(BInt4* fd, BText gr_name, BText el_n
  * Get integer attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL GET_INT_ATTRIBUTE(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                           BInt4 at_name_length, BInt4* at_value)
+DLLEXPORT BInt4 FTN_CALL GET_INT_ATTRIBUTE(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                           BFtnLen at_name_length, BInt4* at_value)
 #else
 DLLEXPORT BInt4 FTN_CALL GET_INT_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_name, BInt4* at_value,
-                                           BInt4 gr_name_length, BInt4 at_name_length)
+                                           BFtnLen gr_name_length, BFtnLen at_name_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -838,11 +892,11 @@ DLLEXPORT BInt4 FTN_CALL GET_INT_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_na
  * Get integer attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL GET_REAL_ATTRIBUTE(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                            BInt4 at_name_length, BRea4* at_value)
+DLLEXPORT BInt4 FTN_CALL GET_REAL_ATTRIBUTE(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                            BFtnLen at_name_length, BRea4* at_value)
 #else
 DLLEXPORT BInt4 FTN_CALL GET_REAL_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_name, BRea4* at_value,
-                                            BInt4 gr_name_length, BInt4 at_name_length)
+                                            BFtnLen gr_name_length, BFtnLen at_name_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -866,11 +920,11 @@ DLLEXPORT BInt4 FTN_CALL GET_REAL_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_n
  * Get integer attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL GET_STRING_ATTRIBUTE(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                              BInt4 at_name_length, BText at_value, BInt4 at_value_length)
+DLLEXPORT BInt4 FTN_CALL GET_STRING_ATTRIBUTE(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                              BFtnLen at_name_length, BText at_value, BFtnLen at_value_length)
 #else
 DLLEXPORT BInt4 FTN_CALL GET_STRING_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_name, BText at_value,
-                                              BInt4 gr_name_length, BInt4 at_name_length, BInt4 at_value_length)
+                                              BFtnLen gr_name_length, BFtnLen at_name_length, BFtnLen at_value_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -903,11 +957,11 @@ DLLEXPORT BInt4 FTN_CALL GET_STRING_ATTRIBUTE(BInt4* fd, BText gr_name, BText at
  */
 
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_CEL(BInt4* fd, BText cl_name, BInt4 cl_name_length, BInt4* cl_num_dim, BText el_names,
-                                     BInt4 el_names_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_CEL(BInt4* fd, BText cl_name, BFtnLen cl_name_length, BInt4* cl_num_dim, BText el_names,
+                                     BFtnLen el_names_length)
 #else
-DLLEXPORT BInt4 FTN_CALL INQUIRE_CEL(BInt4* fd, BText cl_name, BInt4* cl_num_dim, BText el_names, BInt4 cl_name_length,
-                                     BInt4 el_names_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_CEL(BInt4* fd, BText cl_name, BInt4* cl_num_dim, BText el_names, BFtnLen cl_name_length,
+                                     BFtnLen el_names_length)
 #endif
 {
     BChar cel_name[MAX_NAME + 1];
@@ -959,11 +1013,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_CEL(BInt4* fd, BText cl_name, BInt4* cl_num_dim
  */
 
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_DATA_GROUP(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText gr_defined,
-                                            BInt4 gr_defined_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_DATA_GROUP(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText gr_defined,
+                                            BFtnLen gr_defined_length)
 #else
-DLLEXPORT BInt4 FTN_CALL INQUIRE_DATA_GROUP(BInt4* fd, BText gr_name, BText gr_defined, BInt4 gr_name_length,
-                                            BInt4 gr_defined_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_DATA_GROUP(BInt4* fd, BText gr_name, BText gr_defined, BFtnLen gr_name_length,
+                                            BFtnLen gr_defined_length)
 #endif
 {
     BUInt8 grp_pointer = NIL;
@@ -1000,16 +1054,16 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_DATA_GROUP(BInt4* fd, BText gr_name, BText gr_d
 #if defined(MIXED_STR_LEN_ARG)
 DLLEXPORT BInt4 FTN_CALL INQUIRE_ELEMENT(BInt4* fd,                 /* I */
                                          BText el_name,             /* I */
-                                         BUInt4 el_name_length,     /* I */
+                                         BFtnLen el_name_length,     /* I */
                                          BText el_type,             /* O */
-                                         BUInt4 el_type_length,     /* I */
+                                         BFtnLen el_type_length,     /* I */
                                          BInt4* el_single_bytes,    /* O */
                                          BText el_quantity,         /* O */
-                                         BUInt4 el_quantity_length, /* I */
+                                         BFtnLen el_quantity_length, /* I */
                                          BText el_unity,            /* O */
-                                         BUInt4 el_unity_length,    /* I */
+                                         BFtnLen el_unity_length,    /* I */
                                          BText el_desc,             /* O */
-                                         BUInt4 el_desc_length,     /* I */
+                                         BFtnLen el_desc_length,     /* I */
                                          BInt4* el_num_dim,         /* O */
                                          BInt4* el_dimens)          /* O */
 #else
@@ -1022,11 +1076,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_ELEMENT(BInt4* fd,                 /* I */
                                          BText el_desc,             /* O */
                                          BInt4* el_num_dim,         /* O */
                                          BInt4* el_dimens,          /* O */
-                                         BUInt4 el_name_length,     /* I */
-                                         BUInt4 el_type_length,     /* I */
-                                         BUInt4 el_quantity_length, /* I */
-                                         BUInt4 el_unity_length,    /* I */
-                                         BUInt4 el_desc_length)     /* I */
+                                         BFtnLen el_name_length,     /* I */
+                                         BFtnLen el_type_length,     /* I */
+                                         BFtnLen el_quantity_length, /* I */
+                                         BFtnLen el_unity_length,    /* I */
+                                         BFtnLen el_desc_length)     /* I */
 #endif
 {
     BChar elm_name[MAX_NAME + 1];
@@ -1132,11 +1186,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_ELEMENT(BInt4* fd,                 /* I */
  *                  !=0  Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_DAT_GROUP(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText gr_defined,
-                                                 BInt4 gr_defined_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_DAT_GROUP(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText gr_defined,
+                                                 BFtnLen gr_defined_length)
 #else
-DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_DAT_GROUP(BInt4* fd, BText gr_name, BText gr_defined, BInt4 gr_name_length,
-                                                 BInt4 gr_defined_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_DAT_GROUP(BInt4* fd, BText gr_name, BText gr_defined, BFtnLen gr_name_length,
+                                                 BFtnLen gr_defined_length)
 #endif
 {
     BChar grp_name[MAX_NAME + 1];
@@ -1194,15 +1248,15 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_DAT_GROUP(BInt4* fd, BText gr_name, BText
 #if defined(MIXED_STR_LEN_ARG)
 DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_ELEMENT(BInt4* fd,                /* I */
                                                BText el_name,            /* O */
-                                               BInt4 el_name_length,     /* I */
+                                               BFtnLen el_name_length,     /* I */
                                                BText el_type,            /* O */
-                                               BInt4 el_type_length,     /* I */
+                                               BFtnLen el_type_length,     /* I */
                                                BText el_quantity,        /* O */
-                                               BInt4 el_quantity_length, /* I */
+                                               BFtnLen el_quantity_length, /* I */
                                                BText el_unity,           /* O */
-                                               BInt4 el_unity_length,    /* I */
+                                               BFtnLen el_unity_length,    /* I */
                                                BText el_desc,            /* O */
-                                               BInt4 el_desc_length,     /* I */
+                                               BFtnLen el_desc_length,     /* I */
                                                BInt4* el_single_bytes,   /* O */
                                                BInt4* el_num_bytes,      /* O */
                                                BInt4* el_num_dim,        /* O */
@@ -1218,11 +1272,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_ELEMENT(BInt4* fd,                /* I */
                                                BInt4* el_num_bytes,      /* O */
                                                BInt4* el_num_dim,        /* O */
                                                BInt4* el_dimens,         /* O */
-                                               BInt4 el_name_length,     /* I */
-                                               BInt4 el_type_length,     /* I */
-                                               BInt4 el_quantity_length, /* I */
-                                               BInt4 el_unity_length,    /* I */
-                                               BInt4 el_desc_length)     /* I */
+                                               BFtnLen el_name_length,     /* I */
+                                               BFtnLen el_type_length,     /* I */
+                                               BFtnLen el_quantity_length, /* I */
+                                               BFtnLen el_unity_length,    /* I */
+                                               BFtnLen el_desc_length)     /* I */
 #endif
 {
     BChar elm_name[MAX_NAME + 1];
@@ -1327,15 +1381,15 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_ELEMENT(BInt4* fd,                /* I */
 #if defined(MIXED_STR_LEN_ARG)
 DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_ELEMENT(BInt4* fd,                /* I */
                                               BText el_name,            /* O */
-                                              BInt4 el_name_length,     /* I */
+                                              BFtnLen el_name_length,     /* I */
                                               BText el_type,            /* O */
-                                              BInt4 el_type_length,     /* I */
+                                              BFtnLen el_type_length,     /* I */
                                               BText el_quantity,        /* O */
-                                              BInt4 el_quantity_length, /* I */
+                                              BFtnLen el_quantity_length, /* I */
                                               BText el_unity,           /* O */
-                                              BInt4 el_unity_length,    /* I */
+                                              BFtnLen el_unity_length,    /* I */
                                               BText el_desc,            /* O */
-                                              BInt4 el_desc_length,     /* I */
+                                              BFtnLen el_desc_length,     /* I */
                                               BInt4* el_single_bytes,   /* O */
                                               BInt4* el_num_bytes,      /* O */
                                               BInt4* el_num_dim,        /* O */
@@ -1351,11 +1405,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_ELEMENT(BInt4* fd,                /* I */
                                               BInt4* el_num_bytes,      /* O */
                                               BInt4* el_num_dim,        /* O */
                                               BInt4* el_dimens,         /* O */
-                                              BInt4 el_name_length,     /* I */
-                                              BInt4 el_type_length,     /* I */
-                                              BInt4 el_quantity_length, /* I */
-                                              BInt4 el_unity_length,    /* I */
-                                              BInt4 el_desc_length)     /* I */
+                                              BFtnLen el_name_length,     /* I */
+                                              BFtnLen el_type_length,     /* I */
+                                              BFtnLen el_quantity_length, /* I */
+                                              BFtnLen el_unity_length,    /* I */
+                                              BFtnLen el_desc_length)     /* I */
 #endif
 {
     BChar elm_name[MAX_NAME + 1];
@@ -1459,19 +1513,19 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_ELEMENT(BInt4* fd,                /* I */
 #if defined(MIXED_STR_LEN_ARG)
 DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_CELL(BInt4* fd,                      /* I */
                                             BText cl_name,                  /* O */
-                                            BInt4 cl_name_length,           /* I */
+                                            BFtnLen cl_name_length,           /* I */
                                             BInt4* cl_num_dim,              /* O */
                                             BInt4* cl_num_bytes,            /* O */
                                             BChar el_names[][MAX_NAME + 1], /* O */
-                                            BInt4 el_names_length)          /* I */
+                                            BFtnLen el_names_length)          /* I */
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_CELL(BInt4* fd,                      /* I */
                                             BText cl_name,                  /* O */
                                             BInt4* cl_num_dim,              /* O */
                                             BInt4* cl_num_bytes,            /* O */
                                             BChar el_names[][MAX_NAME + 1], /* O */
-                                            BInt4 cl_name_length,           /* I */
-                                            BInt4 el_names_length)          /* I */
+                                            BFtnLen cl_name_length,           /* I */
+                                            BFtnLen el_names_length)          /* I */
 #endif
 {
     BUInt8 cel_num_bytes = 0;
@@ -1545,19 +1599,19 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_CELL(BInt4* fd,                      /* I
 #if defined(MIXED_STR_LEN_ARG)
 DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_CELL(BInt4* fd,                      /* I */
                                            BText cl_name,                  /* O */
-                                           BInt4 cl_name_length,           /* I */
+                                           BFtnLen cl_name_length,           /* I */
                                            BInt4* cl_num_dim,              /* O */
                                            BInt4* cl_num_bytes,            /* O */
                                            BChar el_names[][MAX_NAME + 1], /* O */
-                                           BInt4 el_names_length)          /* I */
+                                           BFtnLen el_names_length)          /* I */
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_CELL(BInt4* fd,                      /* I */
                                            BText cl_name,                  /* O */
                                            BInt4* cl_num_dim,              /* O */
                                            BInt4* cl_num_bytes,            /* O */
                                            BChar el_names[][MAX_NAME + 1], /* O */
-                                           BInt4 cl_name_length,           /* I */
-                                           BInt4 el_names_length)          /* I */
+                                           BFtnLen cl_name_length,           /* I */
+                                           BFtnLen el_names_length)          /* I */
 #endif
 {
     BUInt8 cel_num_bytes = 0;
@@ -1631,9 +1685,9 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_CELL(BInt4* fd,                      /* I 
 #if defined(MIXED_STR_LEN_ARG)
 DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_DEF_GROUP(BInt4* fd,            /* I */
                                                  BText gr_name,        /* O */
-                                                 BInt4 gr_name_length, /* I */
+                                                 BFtnLen gr_name_length, /* I */
                                                  BText cl_name,        /* O */
-                                                 BInt4 cl_name_length, /* I */
+                                                 BFtnLen cl_name_length, /* I */
                                                  BInt4* gr_num_dim,    /* O */
                                                  BInt4* gr_dimens,     /* O */
                                                  BInt4* gr_order)      /* O */
@@ -1644,8 +1698,8 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_DEF_GROUP(BInt4* fd,            /* I */
                                                  BInt4* gr_num_dim,    /* O */
                                                  BInt4* gr_dimens,     /* O */
                                                  BInt4* gr_order,      /* O */
-                                                 BInt4 gr_name_length, /* I */
-                                                 BInt4 cl_name_length) /* I */
+                                                 BFtnLen gr_name_length, /* I */
+                                                 BFtnLen cl_name_length) /* I */
 #endif
 {
     BChar cel_name[MAX_NAME + 1];
@@ -1719,9 +1773,9 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_DEF_GROUP(BInt4* fd,            /* I */
 #if defined(MIXED_STR_LEN_ARG)
 DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_DEF_GROUP(BInt4* fd,            /* I */
                                                 BText gr_name,        /* O */
-                                                BInt4 gr_name_length, /* I */
+                                                BFtnLen gr_name_length, /* I */
                                                 BText cl_name,        /* O */
-                                                BInt4 cl_name_length, /* I */
+                                                BFtnLen cl_name_length, /* I */
                                                 BInt4* gr_num_dim,    /* O */
                                                 BInt4* gr_dimens,     /* O */
                                                 BInt4* gr_order)      /* O */
@@ -1732,8 +1786,8 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_DEF_GROUP(BInt4* fd,            /* I */
                                                 BInt4* gr_num_dim,    /* O */
                                                 BInt4* gr_dimens,     /* O */
                                                 BInt4* gr_order,      /* O */
-                                                BInt4 gr_name_length, /* I */
-                                                BInt4 cl_name_length) /* I */
+                                                BFtnLen gr_name_length, /* I */
+                                                BFtnLen cl_name_length) /* I */
 #endif
 {
     BChar cel_name[MAX_NAME + 1];
@@ -1806,11 +1860,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_DEF_GROUP(BInt4* fd,            /* I */
  *           !=0  Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_INTEGER(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                               BInt4 at_name_length, BInt4* at_value)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_INTEGER(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                               BFtnLen at_name_length, BInt4* at_value)
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_INTEGER(BInt4* fd, BText gr_name, BText at_name, BInt4* at_value,
-                                               BInt4 gr_name_length, BInt4 at_name_length)
+                                               BFtnLen gr_name_length, BFtnLen at_name_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -1862,11 +1916,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_INTEGER(BInt4* fd, BText gr_name, BText a
  *           !=0  Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_REAL(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                            BInt4 at_name_length, BRea4* at_value)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_REAL(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                            BFtnLen at_name_length, BRea4* at_value)
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_REAL(BInt4* fd, BText gr_name, BText at_name, BRea4* at_value,
-                                            BInt4 gr_name_length, BInt4 at_name_length)
+                                            BFtnLen gr_name_length, BFtnLen at_name_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -1917,11 +1971,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_REAL(BInt4* fd, BText gr_name, BText at_n
  *           !=0  Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_STRING(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                              BInt4 at_name_length, BText at_value, BInt4 at_value_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_STRING(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                              BFtnLen at_name_length, BText at_value, BFtnLen at_value_length)
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_STRING(BInt4* fd, BText gr_name, BText at_name, BText at_value,
-                                              BInt4 gr_name_length, BInt4 at_name_length, BInt4 at_value_length)
+                                              BFtnLen gr_name_length, BFtnLen at_name_length, BFtnLen at_value_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -1970,11 +2024,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_FIRST_STRING(BInt4* fd, BText gr_name, BText at
  */
 
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_GROUP(BInt4* fd, BText gr_defined, BInt4 gr_defined_length, BText cl_name,
-                                       BInt4 cl_name_length, BInt4* gr_num_dim, BInt4* gr_dimens, BInt4* gr_order)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_GROUP(BInt4* fd, BText gr_defined, BFtnLen gr_defined_length, BText cl_name,
+                                       BFtnLen cl_name_length, BInt4* gr_num_dim, BInt4* gr_dimens, BInt4* gr_order)
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_GROUP(BInt4* fd, BText gr_defined, BText cl_name, BInt4* gr_num_dim, BInt4* gr_dimens,
-                                       BInt4* gr_order, BInt4 gr_defined_length, BInt4 cl_name_length)
+                                       BInt4* gr_order, BFtnLen gr_defined_length, BFtnLen cl_name_length)
 #endif
 {
     BChar cel_name[MAX_NAME + 1];
@@ -2032,9 +2086,9 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_GROUP(BInt4* fd, BText gr_defined, BText cl_nam
  */
 
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_MAX_INDEX(BInt4* fd, BText gr_name, BInt4 gr_name_length, BInt4* max_index)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_MAX_INDEX(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BInt4* max_index)
 #else
-DLLEXPORT BInt4 FTN_CALL INQUIRE_MAX_INDEX(BInt4* fd, BText gr_name, BInt4* max_index, BInt4 gr_name_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_MAX_INDEX(BInt4* fd, BText gr_name, BInt4* max_index, BFtnLen gr_name_length)
 #endif
 {
     BChar grp_name[MAX_NAME + 1];
@@ -2058,11 +2112,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_MAX_INDEX(BInt4* fd, BText gr_name, BInt4* max_
  *           !=0  Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_DAT_GROUP(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText gr_defined,
-                                                BInt4 gr_defined_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_DAT_GROUP(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText gr_defined,
+                                                BFtnLen gr_defined_length)
 #else
-DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_DAT_GROUP(BInt4* fd, BText gr_name, BText gr_defined, BInt4 gr_name_length,
-                                                BInt4 gr_defined_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_DAT_GROUP(BInt4* fd, BText gr_name, BText gr_defined, BFtnLen gr_name_length,
+                                                BFtnLen gr_defined_length)
 #endif
 {
     BChar grp_name[MAX_NAME + 1];
@@ -2109,11 +2163,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_DAT_GROUP(BInt4* fd, BText gr_name, BText 
  * Get next integer attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_INTEGER(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                              BInt4 at_name_length, BInt4* at_value)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_INTEGER(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                              BFtnLen at_name_length, BInt4* at_value)
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_INTEGER(BInt4* fd, BText gr_name, BText at_name, BInt4* at_value,
-                                              BInt4 gr_name_length, BInt4 at_name_length)
+                                              BFtnLen gr_name_length, BFtnLen at_name_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -2156,11 +2210,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_INTEGER(BInt4* fd, BText gr_name, BText at
  * Get next real attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_REAL(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                           BInt4 at_name_length, BRea4* at_value)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_REAL(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                           BFtnLen at_name_length, BRea4* at_value)
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_REAL(BInt4* fd, BText gr_name, BText at_name, BRea4* at_value,
-                                           BInt4 gr_name_length, BInt4 at_name_length)
+                                           BFtnLen gr_name_length, BFtnLen at_name_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -2203,11 +2257,11 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_REAL(BInt4* fd, BText gr_name, BText at_na
  * Get next string attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_STRING(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                             BInt4 at_name_length, BText at_value, BInt4 at_value_length)
+DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_STRING(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                             BFtnLen at_name_length, BText at_value, BFtnLen at_value_length)
 #else
 DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_STRING(BInt4* fd, BText gr_name, BText at_name, BText at_value,
-                                             BInt4 gr_name_length, BInt4 at_name_length, BInt4 at_value_length)
+                                             BFtnLen gr_name_length, BFtnLen at_name_length, BFtnLen at_value_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -2254,7 +2308,7 @@ DLLEXPORT BInt4 FTN_CALL INQUIRE_NEXT_STRING(BInt4* fd, BText gr_name, BText at_
 /*
  * NEFIS error messages
  */
-DLLEXPORT BInt4 FTN_CALL NEFIS_ERROR(BInt4* print_stderr, BText err_string, BInt4 err_string_length)
+DLLEXPORT BInt4 FTN_CALL NEFIS_ERROR(BInt4* print_stderr, BText err_string, BFtnLen err_string_length)
 {
     BInt4 error;
     BChar error_string[LENGTH_ERROR_MESSAGE + 1];
@@ -2281,9 +2335,9 @@ DLLEXPORT BInt4 FTN_CALL NEFIS_ERROR(BInt4* print_stderr, BText err_string, BInt
  */
 
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL OPEN_DAT_FILE(BInt4* fd, BText dt_file, BInt4 dt_file_length, BText cding, BInt4 cding_length)
+DLLEXPORT BInt4 FTN_CALL OPEN_DAT_FILE(BInt4* fd, BText dt_file, BFtnLen dt_file_length, BText cding, BFtnLen cding_length)
 #else
-DLLEXPORT BInt4 FTN_CALL OPEN_DAT_FILE(BInt4* fd, BText dt_file, BText cding, BInt4 dt_file_length, BInt4 cding_length)
+DLLEXPORT BInt4 FTN_CALL OPEN_DAT_FILE(BInt4* fd, BText dt_file, BText cding, BFtnLen dt_file_length, BFtnLen cding_length)
 #endif
 {
     BChar access_type = 'U';
@@ -2315,9 +2369,9 @@ DLLEXPORT BInt4 FTN_CALL OPEN_DAT_FILE(BInt4* fd, BText dt_file, BText cding, BI
  * Open definiton file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL OPEN_DEF_FILE(BInt4* fd, BText df_file, BInt4 df_file_length, BText cding, BInt4 cding_length)
+DLLEXPORT BInt4 FTN_CALL OPEN_DEF_FILE(BInt4* fd, BText df_file, BFtnLen df_file_length, BText cding, BFtnLen cding_length)
 #else
-DLLEXPORT BInt4 FTN_CALL OPEN_DEF_FILE(BInt4* fd, BText df_file, BText cding, BInt4 df_file_length, BInt4 cding_length)
+DLLEXPORT BInt4 FTN_CALL OPEN_DEF_FILE(BInt4* fd, BText df_file, BText cding, BFtnLen df_file_length, BFtnLen cding_length)
 #endif
 {
     BChar access_type = 'U';
@@ -2357,13 +2411,13 @@ DLLEXPORT BInt4 FTN_CALL OPEN_DEF_FILE(BInt4* fd, BText df_file, BText cding, BI
  *         !=0                 Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL PUT_ELEMENT_STRING(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText el_name,
-                                            BInt4 el_name_length, BInt4* user_index, BInt4* user_order, BData getal,
-                                            BInt4 getal_length)
+DLLEXPORT BInt4 FTN_CALL PUT_ELEMENT_STRING(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText el_name,
+                                            BFtnLen el_name_length, BInt4* user_index, BInt4* user_order, BData getal,
+                                            BFtnLen getal_length)
 #else
 DLLEXPORT BInt4 FTN_CALL PUT_ELEMENT_STRING(BInt4* fd, BText gr_name, BText el_name, BInt4* user_index,
-                                            BInt4* user_order, BData getal, BInt4 gr_name_length, BInt4 el_name_length,
-                                            BInt4 getal_length)
+                                            BInt4* user_order, BData getal, BFtnLen gr_name_length, BFtnLen el_name_length,
+                                            BFtnLen getal_length)
 #endif
 {
     BChar elm_name[MAX_NAME + 1];
@@ -2406,14 +2460,14 @@ DLLEXPORT BInt4 FTN_CALL PUT_ELEMENT_STRING(BInt4* fd, BText gr_name, BText el_n
  *         !=0                 Error occured
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL PUT_ELEMENT(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText el_name,
-                                     BInt4 el_name_length, BInt4* user_index, BInt4* user_order, BData getal)
+DLLEXPORT BInt4 FTN_CALL PUT_ELEMENT(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText el_name,
+                                     BFtnLen el_name_length, BInt4* user_index, BInt4* user_order, BData getal)
 #else
 DLLEXPORT BInt4 FTN_CALL PUT_ELEMENT(BInt4* fd, BText gr_name, BText el_name, BInt4* user_index, BInt4* user_order,
-                                     BData getal, BInt4 gr_name_length, BInt4 el_name_length)
+                                     BData getal, BFtnLen gr_name_length, BFtnLen el_name_length)
 #endif
 {
-    BInt4 getal_length;
+    BFtnLen getal_length;
 
     nefis_errno = 0;
     getal_length = (BInt4)sizeof(getal);
@@ -2434,11 +2488,11 @@ DLLEXPORT BInt4 FTN_CALL PUT_ELEMENT(BInt4* fd, BText gr_name, BText el_name, BI
  * Put integer attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL PUT_INT_ATTRIBUTE(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                           BInt4 at_name_length, BInt4* at_value)
+DLLEXPORT BInt4 FTN_CALL PUT_INT_ATTRIBUTE(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                           BFtnLen at_name_length, BInt4* at_value)
 #else
 DLLEXPORT BInt4 FTN_CALL PUT_INT_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_name, BInt4* at_value,
-                                           BInt4 gr_name_length, BInt4 at_name_length)
+                                           BFtnLen gr_name_length, BFtnLen at_name_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -2478,11 +2532,11 @@ DLLEXPORT BInt4 FTN_CALL PUT_INT_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_na
  * Put integer attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL PUT_REAL_ATTRIBUTE(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                            BInt4 at_name_length, BRea4* at_value)
+DLLEXPORT BInt4 FTN_CALL PUT_REAL_ATTRIBUTE(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                            BFtnLen at_name_length, BRea4* at_value)
 #else
 DLLEXPORT BInt4 FTN_CALL PUT_REAL_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_name, BRea4* at_value,
-                                            BInt4 gr_name_length, BInt4 at_name_length)
+                                            BFtnLen gr_name_length, BFtnLen at_name_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -2521,11 +2575,11 @@ DLLEXPORT BInt4 FTN_CALL PUT_REAL_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_n
  * Put integer attribute on data file
  */
 #if defined(MIXED_STR_LEN_ARG)
-DLLEXPORT BInt4 FTN_CALL PUT_STRING_ATTRIBUTE(BInt4* fd, BText gr_name, BInt4 gr_name_length, BText at_name,
-                                              BInt4 at_name_length, BText at_value, BInt4 at_value_length)
+DLLEXPORT BInt4 FTN_CALL PUT_STRING_ATTRIBUTE(BInt4* fd, BText gr_name, BFtnLen gr_name_length, BText at_name,
+                                              BFtnLen at_name_length, BText at_value, BFtnLen at_value_length)
 #else
 DLLEXPORT BInt4 FTN_CALL PUT_STRING_ATTRIBUTE(BInt4* fd, BText gr_name, BText at_name, BText at_value,
-                                              BInt4 gr_name_length, BInt4 at_name_length, BInt4 at_value_length)
+                                              BFtnLen gr_name_length, BFtnLen at_name_length, BFtnLen at_value_length)
 #endif
 {
     BChar att_name[MAX_NAME + 1];
@@ -2572,10 +2626,10 @@ DLLEXPORT BInt4 FTN_CALL PUT_STRING_ATTRIBUTE(BInt4* fd, BText gr_name, BText at
  *         !=0                 Error occured
  */
 
-DLLEXPORT BInt4 FTN_CALL GET_NEFIS_VERSION(BText nef_version, BInt4 version_length)
+DLLEXPORT BInt4 FTN_CALL GET_NEFIS_VERSION(BText nef_version, BFtnLen version_length)
 {
     BText nefis_version;
-    BInt4 min_length;
+    BFtnLen min_length;
     BInt4 i;
 
     nefis_errno = 0;
