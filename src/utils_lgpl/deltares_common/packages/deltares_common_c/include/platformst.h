@@ -38,7 +38,7 @@
 //------------------------------------------------------------------------------
 //  Linux
 
-#if defined(__linux__) || defined(IRIX)
+#if defined(__linux__) || defined(__APPLE__) || defined(IRIX)
     #include <arpa/inet.h>
     #include <netdb.h>
     #include <netinet/in.h>

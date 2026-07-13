@@ -56,7 +56,7 @@
  *  Function names for FORTRAN-C interface.
  */
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     #include "config.h"
     #define STDCALL /* nothing */
     #define CREATESTREAM FC_FUNC(createstream, CREATESTREAM)

@@ -152,6 +152,19 @@ function(F90TWTEST NAME)
     target_link_libraries(${NAME} PRIVATE ${FLIBNAME} f90tw_gtest)
     target_compile_definitions(${NAME} PUBLIC ${FTW_DEFINITIONS})
     add_dependencies(${NAME} ${FLIBNAME})
+
+    if(APPLE)
+        # The executable's sources are C++ only, so CMake picks the C++
+        # driver to link it. ${FLIBNAME} is compiled with gfortran's
+        # -fopenmp (Homebrew GNU OpenMP/libgomp) though, and Apple Clang's
+        # driver does not know to pull in libgomp for the resulting
+        # GOMP_* symbols (see dflowfm_kernel/CMakeLists.txt for the same
+        # pattern applied to the main kernel library).
+        find_package(OpenMP COMPONENTS Fortran)
+        if(OpenMP_Fortran_FOUND)
+            target_link_libraries(${NAME} PRIVATE ${OpenMP_Fortran_LIBRARIES})
+        endif()
+    endif()
     
     set_target_properties(${NAME} PROPERTIES FOLDER ${FTW_VISUAL_STUDIO_PATH}/cpp)
 
@@ -193,6 +206,15 @@ if(WIN32)
 else()
     set(FPP_OPTIONS -E)
     set(FPP_SWITCH -)
+    if(APPLE)
+        # Apple Clang (unlike the clang used as a Linux "cpp" stand-in) has no
+        # Fortran front end, so it refuses to infer a language mode from the
+        # ".fpp" extension ("invalid value 'f95' in '-x f95'") and silently
+        # emits an empty file. Force plain-C-style token preprocessing
+        # instead; this is only textual macro expansion, so it is safe for
+        # the Fortran-with-directives sources fed through this macro.
+        list(APPEND FPP_OPTIONS -x c)
+    endif()
 endif()
 
 # expose the preprocessor and the options through the FPP_OPTIONS variables

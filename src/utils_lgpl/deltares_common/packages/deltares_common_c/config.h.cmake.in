@@ -3,4 +3,8 @@
 
 #include "FortranCInterface.h"
 
+#if defined(__APPLE__) && !defined(FC_GLOBAL)
+    /* CMake cannot currently detect Homebrew gfortran's symbols in Mach-O. */
+    #define FC_GLOBAL(name, NAME) name ## _
+#endif
 #define FC_FUNC FC_GLOBAL

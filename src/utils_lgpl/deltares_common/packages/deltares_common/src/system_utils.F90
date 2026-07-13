@@ -44,6 +44,21 @@ module system_utils
    character(1), parameter, public :: FILESEP = '/'
 
    character(1), parameter, public :: FILESEP_OTHER_ARCH = '\'
+#elif (defined(__APPLE__))
+   ! macOS is Unix-like: all "ARCH == 'linux'" checks throughout the tree
+   ! (path separator, mkdir -p, is_abs, ...) are correct as-is for macOS, so
+   ! ARCH is reported as 'linux' here rather than introducing a third value
+   ! that every one of those call sites would need to learn about. The one
+   ! genuine difference is the shared library suffix: CMake SHARED targets
+   ! on macOS (e.g. the culvert/trachytopes plugins loaded at runtime) link
+   ! to '.dylib', not '.so'.
+   character(5), parameter, public :: ARCH = 'linux'
+   character(3), parameter, public :: SCRIPT_EXTENSION = '.sh'
+   character(3), parameter, public :: SHARED_LIB_PREFIX = 'lib'
+   character(6), parameter, public :: SHARED_LIB_EXTENSION = '.dylib'
+   character(1), parameter, public :: FILESEP = '/'
+
+   character(1), parameter, public :: FILESEP_OTHER_ARCH = '\'
 #else
    character(7), parameter, public :: ARCH = 'windows'
    character(4), parameter, public :: SCRIPT_EXTENSION = '.bat'
