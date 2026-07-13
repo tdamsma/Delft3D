@@ -174,6 +174,7 @@ target_link_libraries(${library_name} PRIVATE
 if (UNIX)
     target_link_libraries(${library_name} PRIVATE
                           interacter_stub
+                          MPI::MPI_Fortran
                           uuid
     )
 endif(UNIX)

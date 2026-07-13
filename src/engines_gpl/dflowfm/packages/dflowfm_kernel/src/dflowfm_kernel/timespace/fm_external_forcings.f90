@@ -43,6 +43,15 @@ module fm_external_forcings
    private
 
    public set_external_forcings_boundaries, adduniformtimerelation_objects, flow_initexternalforcings, findexternalboundarypoints, allocatewindarrays, init_spatial_fields, init_new
+   ! Note: these procedures are only called from sibling submodules (separate
+   ! translation units), never from within this file. gfortran (unlike ifort)
+   ! compiles PRIVATE module procedures with internal (file-local) linkage,
+   ! so a submodule in another .f90 file cannot link against them unless they
+   ! are PUBLIC, even though Fortran host association would otherwise permit
+   ! a submodule to see a private ancestor entity.
+   public addtimespacerelation_boundaries, ini_alloc_laterals, init_registered_items, &
+      print_error_message, quantity_pli_combination_is_registered, register_quantity_pli_combination, &
+      select_wave_variables_subgroup
 
    integer, parameter :: max_registered_item_id = 512
    integer :: max_ext_bnd_items = 64 ! Starting size, will grow dynamically when needed.
@@ -2662,7 +2671,7 @@ contains
       use mathconsts, only: pi
       use m_filez, only: doclose
       use m_physcoef, only: dicoww
-      use m_array_or_scalar, only: realloc
+      use m_alloc, only: realloc
       use m_cellmask_from_polygon_set, only: init_cell_geom_as_polylines, point_find_netcell, cleanup_cell_geom_polylines
       use unstruc_inifields, only: finalize_1dfield_global_values
       use network_data, only: LINK_1D
