@@ -526,6 +526,18 @@ contains
       integer :: kt !< index of top layer
       real(fp) :: ag_fp !< gravitational acceleration (m/s2)
 
+      ! ice_data's pointer components are only associated once fm_ice_alloc()
+      ! has run (i.e. when the model actually enables an ice cover). Unlike
+      ! the other call sites in this module (see fm_ice_alloc above), this
+      ! one was missing the is_allocated_icecover() guard, so on a model
+      ! without ice cover, icecover_prepare_output() below unconditionally
+      ! dereferenced unassociated pointer components. gfortran's runtime
+      ! check traps this ("Pointer argument 'icecover' is not associated");
+      ! ifx apparently tolerated it silently.
+      if (.not. is_allocated_icecover(ice_data)) then
+         return
+      end if
+
       ag_fp = real(ag, fp)
 
       allocate (water_level_fp(ndx), water_density(ndx))
