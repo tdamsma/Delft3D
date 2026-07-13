@@ -2444,8 +2444,21 @@ contains
 
    !> Returns the c_ptr for a variable on a lateral location
    function get_pointer_to_lateral_variable(item_name, field_name) result(c_lateral_pointer)
+      ! initialize_flow_parameter/update_flow_parameter are only imported on GNU
+      ! (see guard below). gfortran needs the generic interface names of the
+      ! type-bound "initialize"/"update" targets visible in this scope to
+      ! resolve average_waterlevels_per_lateral%initialize(...)/%update()
+      ! below; ifx resolves them without this import (and m_laterals does not
+      ! export the names for ifx). Same issue documented in
+      ! flow_run_sometimesteps.F90.
+#ifdef __INTEL_COMPILER
       use m_laterals, only: qplat, nnlat, n1latsg, n2latsg, outgoing_lat_concentration, incoming_lat_concentration, apply_transport, &
                             lateral_volume_per_layer, num_layers, average_waterlevels_per_lateral, numlatsg
+#else
+      use m_laterals, only: qplat, nnlat, n1latsg, n2latsg, outgoing_lat_concentration, incoming_lat_concentration, apply_transport, &
+                            lateral_volume_per_layer, num_layers, average_waterlevels_per_lateral, numlatsg, &
+                            initialize_flow_parameter, update_flow_parameter
+#endif
       use m_flow, only: s1
       use string_module, only: str_token, str_tolower
 

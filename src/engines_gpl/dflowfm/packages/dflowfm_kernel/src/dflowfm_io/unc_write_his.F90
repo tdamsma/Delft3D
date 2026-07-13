@@ -349,8 +349,8 @@ contains
          ! NB: Fortran's .and. does not guarantee short-circuit evaluation,
          ! so size(bubblescreen_air_discharge) may be evaluated even when
          ! his_write_settings%bubblescreens <= 0, i.e. before the array is
-         ! ever allocated. Nest the checks instead, and check allocated()
-         ! explicitly.
+         ! ever allocated (same bug class fixed elsewhere in this defect family).
+         ! Nest the checks instead, and check allocated() explicitly.
          if (his_write_settings%bubblescreens > 0) then
             if (allocated(bubblescreen_air_discharge)) then
                if (size(bubblescreen_air_discharge) > 0) then
@@ -724,7 +724,8 @@ contains
             ! NB: Fortran's .and. does not guarantee short-circuit
             ! evaluation, so size(bubblescreens) may be evaluated even when
             ! his_write_settings%bubblescreens <= 0, i.e. before the array
-            ! is ever allocated. Nest the checks instead.
+            ! is ever allocated (same bug class fixed elsewhere in this
+            ! defect family). Nest the checks instead.
             if (his_write_settings%bubblescreens > 0) then
                if (allocated(bubblescreens)) then
                   if (size(bubblescreens) > 0) then
@@ -1437,9 +1438,10 @@ contains
       integer, allocatable :: counts(:) !< NetCDF dimension counts
 
       integer, allocatable :: dim_ids(:)
+      integer :: i !< implied-do loop index for the array constructor below
 
       dim_ids = build_nc_dimension_id_list(nc_dim_ids)
-      counts = [(get_dimid_len(ihisfile, dim_ids(i)), integer :: i=1, size(dim_ids))]
+      counts = [(get_dimid_len(ihisfile, dim_ids(i)), i=1, size(dim_ids))]
       if (nc_dim_ids%timedim) then
          counts(size(counts)) = 1 ! Only write one element for time dimension, which comes last
       end if
@@ -1482,7 +1484,7 @@ contains
       integer, intent(in) :: ihisfile !< The history file id
       integer, intent(in) :: it_his !< The history file time index
 
-      integer :: local_id_var, station_id_index
+      integer :: local_id_var, station_id_index, i
       integer, allocatable :: counts(:), starts(:), positions(:)
       real(kind=dp), allocatable :: transformed_data(:)
 
@@ -1496,7 +1498,7 @@ contains
          counts = build_nc_dimension_id_count_array(nc_dim_ids, ihisfile)
          starts = build_nc_dimension_id_start_array(nc_dim_ids, it_his)
 
-         positions = [(i, integer :: i=1, size(counts))]
+         positions = [(i, i=1, size(counts))]
          station_id_index = findloc(build_nc_dimension_id_list(nc_dim_ids), value=id_statdim, dim=1)
       end associate
 
@@ -1529,13 +1531,17 @@ contains
 
       character(len=strlen_netcdf), dimension(:), allocatable :: structure_names
       integer, dimension(:), allocatable :: indices
+      integer :: i !< implied-do loop index for the array constructors below
+      ! Note: gfortran does not support the F2008 ac-implied-do-control form
+      ! "(expr, integer :: i=1, n)" (locally-typed do-variable); declare "i"
+      ! here instead and use the portable "(expr, i=1, n)" form.
 
       if (allocated(weir2cgen)) then
-         indices = [(weir2cgen(i), integer :: i=1, nweirgen)]
-         structure_names = [(trimexact(cgen_ids(indices(i)), strlen_netcdf), integer :: i=1, nweirgen)]
+         indices = [(weir2cgen(i), i=1, nweirgen)]
+         structure_names = [(trimexact(cgen_ids(indices(i)), strlen_netcdf), i=1, nweirgen)]
       else if (network%sts%numWeirs > 0) then
-         indices = [(network%sts%weirIndices(i), integer :: i=1, nweirgen)]
-         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, nweirgen)]
+         indices = [(network%sts%weirIndices(i), i=1, nweirgen)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), i=1, nweirgen)]
       else
          allocate (structure_names(0))
       end if
@@ -1548,37 +1554,37 @@ contains
       ! evaluates indices(1) even though the implied-do has zero trips,
       ! tripping an out-of-bounds check on a valid empty array.
       if (network%sts%numOrifices > 0) then
-         indices = [(network%sts%orificeIndices(i), integer :: i=1, network%sts%numOrifices)]
-         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numOrifices)]
+         indices = [(network%sts%orificeIndices(i), i=1, network%sts%numOrifices)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), i=1, network%sts%numOrifices)]
       else
          if (allocated(structure_names)) deallocate (structure_names)
          allocate (structure_names(0))
       end if
       call unc_put_his_structure_names(ncid, his_write_settings%orifice, id_orifgen_id, structure_names)
 
-      structure_names = [(pump_ids(i), integer :: i=1, npumpsg)]
+      structure_names = [(pump_ids(i), i=1, npumpsg)]
       call unc_put_his_structure_names(ncid, his_write_settings%pump, id_pump_id, structure_names)
       call unc_put_his_structure_mid_points(ncid, ST_PUMP, his_write_settings%pump, npumpsg, 'line', id_poly_xmid=id_pump_xmid, id_poly_ymid=id_pump_ymid)
 
-      structure_names = [(gate_ids(i), integer :: i=1, ngatesg)]
+      structure_names = [(gate_ids(i), i=1, ngatesg)]
       call unc_put_his_structure_names(ncid, his_write_settings%gate, id_gate_id, structure_names)
 
       if (jaoldstr == 1) then
-         structure_names = [(cgen_ids(i), integer :: i=1, ncgensg)]
+         structure_names = [(cgen_ids(i), i=1, ncgensg)]
       else if (network%sts%numGeneralStructures > 0) then
-         indices = [(network%sts%generalStructureIndices(i), integer :: i=1, ngenstru)]
-         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, ngenstru)]
+         indices = [(network%sts%generalStructureIndices(i), i=1, ngenstru)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), i=1, ngenstru)]
       else
-         indices = [(genstru2cgen(i), integer :: i=1, ngenstru)]
-         structure_names = [(cgen_ids(indices(i)), integer :: i=1, ngenstru)]
+         indices = [(genstru2cgen(i), i=1, ngenstru)]
+         structure_names = [(cgen_ids(indices(i)), i=1, ngenstru)]
       end if
       call unc_put_his_structure_names(ncid, his_write_settings%cgen, id_genstru_id, structure_names)
 
       ! Same zero-count guard as for orifices above, needed for each of
       ! these network%sts%struct(indices(i)) lookups.
       if (network%sts%numuniweirs > 0) then
-         indices = [(network%sts%uniweirIndices(i), integer :: i=1, network%sts%numuniweirs)]
-         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numuniweirs)]
+         indices = [(network%sts%uniweirIndices(i), i=1, network%sts%numuniweirs)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), i=1, network%sts%numuniweirs)]
       else
          if (allocated(structure_names)) deallocate (structure_names)
          allocate (structure_names(0))
@@ -1589,8 +1595,8 @@ contains
       call unc_put_his_structure_names(ncid, his_write_settings%dambreak, id_dambreak_id, structure_names)
 
       if (network%sts%numCulverts > 0) then
-         indices = [(network%sts%culvertIndices(i), integer :: i=1, network%sts%numCulverts)]
-         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numCulverts)]
+         indices = [(network%sts%culvertIndices(i), i=1, network%sts%numCulverts)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), i=1, network%sts%numCulverts)]
       else
          if (allocated(structure_names)) deallocate (structure_names)
          allocate (structure_names(0))
@@ -1598,44 +1604,44 @@ contains
       call unc_put_his_structure_names(ncid, his_write_settings%culvert, id_culvert_id, structure_names)
 
       if (network%sts%numBridges > 0) then
-         indices = [(network%sts%bridgeIndices(i), integer :: i=1, network%sts%numBridges)]
-         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numBridges)]
+         indices = [(network%sts%bridgeIndices(i), i=1, network%sts%numBridges)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), i=1, network%sts%numBridges)]
       else
          if (allocated(structure_names)) deallocate (structure_names)
          allocate (structure_names(0))
       end if
       call unc_put_his_structure_names(ncid, his_write_settings%bridge, id_bridge_id, structure_names)
 
-      structure_names = [(network%cmps%compound(i)%id, integer :: i=1, network%cmps%count)]
+      structure_names = [(network%cmps%compound(i)%id, i=1, network%cmps%count)]
       call unc_put_his_structure_names(ncid, his_write_settings%compound_structure, id_cmpstru_id, structure_names)
 
-      structure_names = [(longculverts(i)%id, integer :: i=1, nlongculverts)]
+      structure_names = [(longculverts(i)%id, i=1, nlongculverts)]
       call unc_put_his_structure_names(ncid, his_write_settings%long_culvert, id_longculvert_id, structure_names)
 
-      structure_names = [(cdam_ids(i), integer :: i=1, ncdamsg)]
+      structure_names = [(cdam_ids(i), i=1, ncdamsg)]
       call unc_put_his_structure_names(ncid, his_write_settings%cdam, id_cdam_id, structure_names)
 
-      structure_names = [(namobs(i), integer :: i=1, numobs + nummovobs)]
+      structure_names = [(namobs(i), i=1, numobs + nummovobs)]
       call unc_put_his_structure_names(ncid, 1, id_statname, structure_names)
 
-      structure_names = [(crs(i)%name, integer :: i=1, ncrs)]
+      structure_names = [(crs(i)%name, i=1, ncrs)]
       call unc_put_his_structure_names(ncid, 1, id_crs_id, structure_names)
 
-      structure_names = [(rug(i)%name, integer :: i=1, num_rugs)]
+      structure_names = [(rug(i)%name, i=1, num_rugs)]
       call unc_put_his_structure_names(ncid, 1, id_rugname, structure_names)
 
       if (allocated(source_sinks%name)) then
          structure_names = pack(source_sinks%name, source_sinks%is_normal)
       else
-         structure_names = [(source_sinks%name(i), integer :: i=1, source_sinks%num_total)]
+         structure_names = [(source_sinks%name(i), i=1, source_sinks%num_total)]
       end if
       ! structure_names = pack(source_sink_name, is_source_sink_real)
       call unc_put_his_structure_names(ncid, his_write_settings%sourcesink, id_srcname, structure_names)
 
       ! bubblescreens is only allocated when the model actually has bubble
-      ! screens.
+      ! screens (same bug class fixed elsewhere in this defect family).
       if (allocated(bubblescreens)) then
-         structure_names = [(bubblescreens(i)%id, integer :: i=1, size(bubblescreens))]
+         structure_names = [(bubblescreens(i)%id, i=1, size(bubblescreens))]
       else
          if (allocated(structure_names)) deallocate (structure_names)
          allocate (structure_names(0))
@@ -1643,16 +1649,16 @@ contains
       call unc_put_his_structure_names(ncid, his_write_settings%bubblescreens, id_bubblescreen_name, structure_names)
 
       if (network%sts%numGates > 0) then
-         indices = [(network%sts%gateIndices(i), integer :: i=1, ngategen)]
-         structure_names = [(trimexact(network%sts%struct(network%sts%gateIndices(i))%id, strlen_netcdf), integer :: i=1, ngategen)]
+         indices = [(network%sts%gateIndices(i), i=1, ngategen)]
+         structure_names = [(trimexact(network%sts%struct(network%sts%gateIndices(i))%id, strlen_netcdf), i=1, ngategen)]
       else
-         indices = [(gate2cgen(i), integer :: i=1, ngategen)]
-         structure_names = [(cgen_ids(indices(i)), integer :: i=1, ngategen)]
+         indices = [(gate2cgen(i), i=1, ngategen)]
+         structure_names = [(cgen_ids(indices(i)), i=1, ngategen)]
       end if
 
       call unc_put_his_structure_names(ncid, his_write_settings%gate, id_gategen_id, structure_names)
 
-      structure_names = [(lat_ids(i), integer :: i=1, numlatsg)]
+      structure_names = [(lat_ids(i), i=1, numlatsg)]
       call unc_put_his_structure_names(ncid, his_write_settings%lateral, id_lat_id, structure_names)
    end subroutine unc_put_his_structure_static_vars
 

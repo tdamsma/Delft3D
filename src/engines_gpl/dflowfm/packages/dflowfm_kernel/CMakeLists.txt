@@ -179,6 +179,7 @@ if (UNIX)
     target_link_libraries(${library_name} PRIVATE
                           interacter_stub
                           PkgConfig::PETSC
+                          MPI::MPI_Fortran
                           uuid
     )
 endif(UNIX)
