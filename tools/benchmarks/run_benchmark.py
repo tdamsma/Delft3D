@@ -180,7 +180,7 @@ def any_failed_repeat(repeats: list[dict]) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--tier", required=True, help="S, M-seq, M-mpi3, M-mpi, L, or L-mpi")
+    parser.add_argument("--tier", required=True, help="any tier key defined in tiers.json (e.g. S, M-seq, M-mpi3, L-mpi-long)")
     parser.add_argument(
         "--ranks",
         type=int,
@@ -211,7 +211,6 @@ def main() -> int:
         ),
     )
     parser.add_argument("--hyperfine-bin", default="hyperfine")
-    parser.add_argument("--keep-run-dir", action="store_true", default=True)
     parser.add_argument(
         "--cleanup",
         action="store_true",
