@@ -664,7 +664,7 @@ contains
     deallocate(iv,il)
 
     success = .true.
-    if (bc%vptyp == BC_VPTYP_PERCBED) then
+    if (bc%vptyp == BC_VPTYP_PERCBED .and. associated(bc%vp)) then
        success = checkAndFixLayers(bc%vp, bc%quantity%name)
     endif
   end function processhdr
