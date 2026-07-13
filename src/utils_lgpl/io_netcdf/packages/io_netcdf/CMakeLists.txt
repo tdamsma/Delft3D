@@ -48,14 +48,36 @@ set_source_files_properties(${fortran_version_file}
 # IO_NETCDF_DLL
 ###############
 string(TOUPPER ${CONFIGURATION_TYPE} configuration_type)
-if ( ${configuration_type} STREQUAL "DFLOWFM" OR
-     ${configuration_type} STREQUAL "DELFT3D4" OR
-     ${configuration_type} STREQUAL "FM-SUITE" OR
-     ${configuration_type} STREQUAL "D3D4-SUITE" OR
-     ${configuration_type} STREQUAL "ALL" OR
-     ${configuration_type} STREQUAL "ALL-TESTBENCH" OR
-     ${configuration_type} STREQUAL "FM-TESTBENCH" OR
-     ${configuration_type} STREQUAL "TOOLS" )
+# Configurations that would otherwise build io_netcdf_dll (kept as a single
+# list so the "build it" and "explain why it was skipped" branches below
+# can't drift apart).
+set(io_netcdf_dll_configs
+    DFLOWFM DELFT3D4 FM-SUITE D3D4-SUITE ALL ALL-TESTBENCH FM-TESTBENCH TOOLS)
+list(FIND io_netcdf_dll_configs ${configuration_type} io_netcdf_dll_config_index)
+if (io_netcdf_dll_config_index EQUAL -1)
+    set(io_netcdf_dll_wanted_for_config FALSE)
+else()
+    set(io_netcdf_dll_wanted_for_config TRUE)
+endif()
+
+if ( NOT (CMAKE_Fortran_COMPILER_ID MATCHES "GNU") AND io_netcdf_dll_wanted_for_config )
+    # io_netcdf_api.F90 exposes several BIND(C) functions whose dummy
+    # arguments are of type t_ug_meta / t_ug_charinfo (utils_lgpl/io_netcdf/
+    # packages/io_netcdf_data/src/ug_meta.f90, ug_charinfo.f90). Those types
+    # have character(len=N>1) components, which the Fortran standard does
+    # not consider C-interoperable; gfortran enforces this strictly and
+    # rejects the BIND(C) procedures, whereas Intel Fortran (the supported
+    # toolchain on both Linux and Windows) accepts it as a lenient
+    # extension. Making the types genuinely interoperable would mean
+    # reworking them to fixed character(kind=c_char) arrays, which ripple
+    # through their many ordinary (non-interop) uses in
+    # io_netcdf.f90/io_ugrid.F90 -- out of scope for the macOS port right
+    # now. This C-callable DLL (for C/C#/Python bindings) is a leaf target
+    # nothing else in this repo depends on, so skip it whenever the
+    # Fortran compiler is GNU (gfortran) -- macOS (always gfortran) and
+    # any GNU-Fortran build on Linux alike -- rather than leave "all"
+    # permanently broken; revisit if/when this target needs to support
+    # gfortran's stricter interoperability checking.
     set(library_name io_netcdf_dll)
     set(library_renamed libio_netcdf.so)
     # Add dynamic io_netcdf library
@@ -83,4 +105,21 @@ if ( ${configuration_type} STREQUAL "DFLOWFM" OR
     install(TARGETS ${library_name} RUNTIME DESTINATION bin
                                     LIBRARY DESTINATION lib
     )
+elseif (CMAKE_Fortran_COMPILER_ID MATCHES "GNU" AND io_netcdf_dll_wanted_for_config)
+    message(STATUS
+        "io_netcdf: SKIPPING io_netcdf_dll for this configuration "
+        "(CMAKE_Fortran_COMPILER_ID=${CMAKE_Fortran_COMPILER_ID}, "
+        "CONFIGURATION_TYPE=${CONFIGURATION_TYPE}). io_netcdf_api.F90's "
+        "BIND(C) procedures pass derived types with "
+        "CHARACTER(len>1) components (t_ug_meta/t_ug_charinfo), which "
+        "gfortran correctly rejects as non-interoperable and Intel Fortran "
+        "accepts only as a lenient extension -- see the comment above this "
+        "message for the full explanation. Nothing else in this repository "
+        "links io_netcdf_dll (dflowfm/dimr/etc. use the ordinary io_netcdf "
+        "Fortran target instead), so this build is not missing a "
+        "dependency -- but no C-callable libio_netcdf shared library is "
+        "produced or installed for external C/C#/Python bindings on this "
+        "configuration. Rework ug_meta.f90/ug_charinfo.f90 to use "
+        "interoperable character(kind=c_char) arrays to lift this "
+        "restriction.")
 endif()
