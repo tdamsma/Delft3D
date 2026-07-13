@@ -15,8 +15,12 @@ if (UNIX)
     set(oss_dependencies ${oss_dependencies_general})
 
     target_link_libraries(${executable_name} PRIVATE
-         ${oss_dependencies}
-         uuid)
+         ${oss_dependencies})
+    if(NOT APPLE)
+        # uuid_generate/uuid_* live in libSystem on macOS: no standalone
+        # "uuid" library to link (see dflowfm_kernel/CMakeLists.txt).
+        target_link_libraries(${executable_name} PRIVATE uuid)
+    endif()
 endif(UNIX)
 
 if (WIN32)

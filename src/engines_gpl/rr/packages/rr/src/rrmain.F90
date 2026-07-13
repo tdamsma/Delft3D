@@ -93,7 +93,7 @@
 !  Iconsole = GetConsoleWindow()
 !  ReturnCode = SetConsoleTextAttribute(Iconsole,COMMON_LVB_REVERSE_VIDEO)
 !  ReturnCode = SetConsoleTextAttribute(Iconsole,FOREGROUND_RED)
-#elif defined(X64)
+#elif defined(X64) && !defined(__GFORTRAN__)
   NrArg = nargs()
 ! For nice Progress bar also in Chinese Windows
 !  ReturnCode = SetConsoleOutputCP(1252)

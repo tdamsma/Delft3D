@@ -25,7 +25,8 @@ target_link_libraries(${library_name} PRIVATE no_compiler_warnings)
 # Add dependencies
 if (UNIX)
     target_link_libraries(${library_name} PRIVATE
-         netCDF::netcdff)
+         netCDF::netcdff
+         MPI::MPI_Fortran)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                         ${version_include_dir})
 
@@ -66,6 +67,26 @@ if (UNIX)
     target_compile_options(${library_name} PRIVATE
                                                   "SHELL:${avx2_flag}")
 endif(UNIX)
+
+# SWAN's fixed-form sources carry inline version-history annotations past
+# column 72 (e.g. "40.51 40.61 ..."), which is fine under Intel's default 132
+# tolerance (it only warns, see mute_unwanted_compiler_warnings / 5268) but is
+# a hard syntax error for gfortran once -ffixed-line-length-132 makes those
+# columns significant. Restrict this target back to the genuine F77 72-column
+# limit under gfortran only; Linux (Intel/IntelLLVM) is untouched.
+target_compile_options(${library_name} PRIVATE
+    "$<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<Fortran_COMPILER_ID:GNU>>:-ffixed-line-length-72>")
+
+# This target (unlike swan_omp) never opts into OpenMP via ${openmp_flag} on
+# Intel/Windows, so its "!$OMP" sentinels are inert there -- e.g. an MPI-only
+# STPNOW()/RETURN sits inside a "!$OMP DO" loop and is legal sequential code
+# when OpenMP is off. gnu.cmake's CMAKE_Fortran_FLAGS unconditionally adds
+# -fopenmp for all GNU Fortran targets though, which activates those sentinels
+# here and gfortran (correctly) rejects the RETURN as branching out of a
+# parallel region. Turn OpenMP back off for this GNU target to match the
+# Intel/Windows behavior this code was written for.
+target_compile_options(${library_name} PRIVATE
+    "$<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<Fortran_COMPILER_ID:GNU>>:-fno-openmp>")
 
 # Define preprocessor definitions 
 if (WIN32)

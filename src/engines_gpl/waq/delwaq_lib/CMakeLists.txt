@@ -45,8 +45,12 @@ if(WIN32)
 endif(WIN32)
 
 if(UNIX)
-        target_link_libraries(${library_name} PRIVATE ${oss_dependencies}
-                uuid)
+        target_link_libraries(${library_name} PRIVATE ${oss_dependencies})
+        if(NOT APPLE)
+            # uuid_generate/uuid_* live in libSystem on macOS: no standalone
+            # "uuid" library to link (see dflowfm_kernel/CMakeLists.txt).
+            target_link_libraries(${library_name} PRIVATE uuid)
+        endif()
         target_link_options(${library_name} PRIVATE ${openmp_flag})
 endif(UNIX)
 

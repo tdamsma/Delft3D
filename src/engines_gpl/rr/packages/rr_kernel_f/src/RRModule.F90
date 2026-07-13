@@ -265,7 +265,10 @@
 ! write logo on screen
   if (in_f90_runner) then
      IScren = 6
-#if (defined(HAVE_CONFIG_H))
+#if (defined(HAVE_CONFIG_H)) || !defined(__INTEL_COMPILER)
+     ! CARRIAGECONTROL='FORTRAN' is an Intel/DEC-only OPEN extension gfortran
+     ! rejects outright (would need -fdec). FORM='FORMATTED' is the portable
+     ! equivalent already used elsewhere in this same file for HAVE_CONFIG_H.
      Open (Iscren,FORM='FORMATTED')
 #else
      Open (Iscren,carriagecontrol='FORTRAN')
