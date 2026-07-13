@@ -342,6 +342,26 @@ def _latest_gfortran(brew_prefix: Path) -> Path:
     )
 
 
+def _xcode_tool_path(tool: str) -> str:
+    """Resolve `tool` through the active Xcode/Command Line Tools toolchain.
+
+    `shutil.which()` would happily return a Homebrew-installed LLVM clang if
+    one is earlier on PATH, which is a real, common setup (e.g. `brew
+    install llvm`). That binary reports itself as upstream LLVM Clang, not
+    Apple Clang, which would silently desync from the `compiler=apple-clang`
+    setting written into the generated profile. `xcrun -f` always resolves
+    to the toolchain selected via `xcode-select`, so use that instead.
+    """
+    try:
+        result = subprocess.run(["xcrun", "-f", tool], capture_output=True, text=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+        raise RuntimeError(
+            f"Could not locate `{tool}` via `xcrun -f {tool}`. Install the Xcode "
+            "Command Line Tools (`xcode-select --install`) first."
+        ) from exc
+    return result.stdout.strip()
+
+
 def _apple_clang_major_version() -> int:
     """Parse the major version out of `clang --version` (Apple Clang only).
 
@@ -351,12 +371,7 @@ def _apple_clang_major_version() -> int:
     (clang-1700.0.13.3)"), so this must read the installed Clang directly
     rather than assume a fixed value.
     """
-    clang = shutil.which("clang")
-    if clang is None:
-        raise RuntimeError(
-            "`clang` not found on PATH. Install the Xcode Command Line Tools "
-            "(`xcode-select --install`) first."
-        )
+    clang = _xcode_tool_path("clang")
     result = subprocess.run([clang, "--version"], capture_output=True, text=True, check=True)
     first_line = result.stdout.splitlines()[0] if result.stdout else ""
     match = re.search(r"version (\d+)", first_line)
@@ -391,8 +406,8 @@ def _generate_macos_profile() -> Path:
     brew_prefix = _brew_prefix()
     gfortran = _latest_gfortran(brew_prefix)
     clang_major = _apple_clang_major_version()
-    clang_path = shutil.which("clang") or "/usr/bin/clang"
-    clangxx_path = shutil.which("clang++") or "/usr/bin/clang++"
+    clang_path = _xcode_tool_path("clang")
+    clangxx_path = _xcode_tool_path("clang++")
     arch = _conan_arch()
 
     profile_text = (
