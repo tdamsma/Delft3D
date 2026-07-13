@@ -33,7 +33,6 @@ module precision_basics
 ! NONE
 !!--declarations----------------------------------------------------------------
    use, intrinsic :: iso_fortran_env, only: int32, int64
-   use, intrinsic :: ieee_arithmetic, only: ieee_is_nan, ieee_is_finite
    use stdlib_kinds, only: sp, dp, xdp, qp
 
    implicit none(type, external)
@@ -280,6 +279,19 @@ contains
 !
 ! Return value
 !
+! NOTE: ieee_arithmetic is imported here, procedure-local, rather than at
+! module scope. gfortran wraps every procedure that can see the
+! ieee_arithmetic/ieee_exceptions intrinsic modules (even transitively, via
+! host/use association) with FPU-state save/restore calls
+! (_gfortrani_get/set_fpu_state, ..._except_flags). A module-scope use here
+! propagated that wrapping through `precision` (which `use precision_basics`s
+! unqualified) to nearly every dflowfm routine, measured at 68-90% of
+! single-thread samples on macOS/gfortran. ifx does not do this, so this is
+! a macOS/gfortran-specific performance fix with no semantic change on any
+! platform: keep this use procedure-local, do not hoist it back to module
+! scope.
+!
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_nan, ieee_is_finite
       integer :: compare
 !
 ! Global variables
@@ -327,6 +339,10 @@ contains
 !
 ! Return value
 !
+! NOTE: ieee_arithmetic is imported procedure-local here, see the comment in
+! comparerealdouble_finite_check above for why.
+!
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_nan, ieee_is_finite
       integer :: compare
 !
 ! Global variables
