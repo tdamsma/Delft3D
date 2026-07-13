@@ -629,6 +629,26 @@ contains
       !
       ! Store the fixed weirs data
       !
+      ! These module arrays are only ever allocated when the model actually
+      ! has fixed weirs; ensure-allocate to size 0 otherwise, same as the
+      ! crs/cache_linklist/cache_ipol handling just below (unconditional
+      ! size() on an unallocated allocatable is undefined behavior: gfortran
+      ! traps it, ifx apparently tolerated it silently).
+      if (.not. allocated(cache_xpl_fixed)) then
+         allocate (cache_xpl_fixed(0))
+      end if
+      if (.not. allocated(cache_ypl_fixed)) then
+         allocate (cache_ypl_fixed(0))
+      end if
+      if (.not. allocated(cache_ilink_fixed)) then
+         allocate (cache_ilink_fixed(0))
+      end if
+      if (.not. allocated(cache_ipol_fixed)) then
+         allocate (cache_ipol_fixed(0))
+      end if
+      if (.not. allocated(cache_dsl_fixed)) then
+         allocate (cache_dsl_fixed(0))
+      end if
       write (lun) section(key_fixed_weirs), size(cache_xpl_fixed), size(cache_ilink_fixed)
 
       if (size(cache_xpl_fixed) > 0) then
@@ -660,6 +680,15 @@ contains
       !
       ! Store data for thin dams
       !
+      ! cached_thin_dams is only populated (via copy_cached_thin_dams's
+      ! counterpart setter) when the model actually has thin dams cached
+      ! from a prior run; ensure-allocate to size 0 otherwise, same as the
+      ! crs/cache_linklist/cache_ipol handling above (unconditional size()
+      ! on an unallocated allocatable is undefined behavior: gfortran traps
+      ! it, ifx apparently tolerated it silently).
+      if (.not. allocated(cached_thin_dams)) then
+         allocate (cached_thin_dams(0))
+      end if
       write (lun) section(key_thin_dams), size(cached_thin_dams, 1)
       call store_thin_dams(lun, cached_thin_dams)
 
@@ -680,8 +709,22 @@ contains
       number_thin_dams = size(thin_dams, 1)
       if (number_thin_dams > 0) then
          do i = 1, number_thin_dams
-            number_flow_links = size(thin_dams(i)%ln)
-            number_polyline_points = size(thin_dams(i)%xp)
+            ! thin_dams(i)%ln/%xp are allocatable components that are only
+            ! allocated when that particular thin dam entry actually has
+            ! flow links / polyline points (lnx>0 / np>0, checked below);
+            ! query size() unconditionally is undefined behavior otherwise
+            ! (same bug class fixed elsewhere in this defect family: gfortran traps
+            ! it, ifx apparently tolerated it silently).
+            if (allocated(thin_dams(i)%ln)) then
+               number_flow_links = size(thin_dams(i)%ln)
+            else
+               number_flow_links = 0
+            end if
+            if (allocated(thin_dams(i)%xp)) then
+               number_polyline_points = size(thin_dams(i)%xp)
+            else
+               number_polyline_points = 0
+            end if
             write (lun) number_flow_links, number_polyline_points
             write (lun) thin_dams(i)%np, thin_dams(i)%lnx
             if (number_polyline_points > 0) then
