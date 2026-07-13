@@ -40,7 +40,7 @@
 
 #include "getputarray.h"
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     #define Sleep usleep
     #define SEC 1000000.0
 #else

@@ -12,7 +12,9 @@ else()
     # On Linux, use CMake's built-in FindGTest to find system-installed Google Test.
     # GLOBAL is required so the gtest/gtest_main ALIAS targets below correctly
     # propagate GTest's usage requirements (include dirs) to consumers in
-    # unrelated directory scopes.
+    # unrelated directory scopes (e.g. Homebrew GTest on macOS, whose headers
+    # are not on the compiler's default search path like system-installed
+    # GTest on Linux typically is).
     find_package(GTest REQUIRED GLOBAL)
     if(NOT TARGET gtest)
         add_library(gtest ALIAS GTest::gtest)

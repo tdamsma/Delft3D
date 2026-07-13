@@ -20,9 +20,34 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
 # Enable OpenMP
+if(APPLE AND NOT OpenMP_CXX_FOUND)
+    # Apple Clang has no bundled OpenMP runtime/headers, and CMake's FindOpenMP
+    # cannot auto-detect the right flags for it (its "-Xclang -fopenmp" compile
+    # test fails with no hints), unlike GNU/Intel on Linux. Point it at
+    # Homebrew's libomp explicitly so find_package(OpenMP) below succeeds for
+    # CXX the same way it already does for Fortran.
+    find_program(BREW_EXECUTABLE brew)
+    if(BREW_EXECUTABLE)
+        execute_process(COMMAND ${BREW_EXECUTABLE} --prefix libomp
+                         OUTPUT_VARIABLE LIBOMP_PREFIX
+                         OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+    if(NOT LIBOMP_PREFIX)
+        # No `brew` on PATH (or it failed): fall back to the default
+        # Homebrew prefix for Apple Silicon. A custom Homebrew prefix
+        # without `brew` on PATH is not auto-detectable here; set
+        # LIBOMP_PREFIX on the CMake command line in that case.
+        set(LIBOMP_PREFIX "/opt/homebrew/opt/libomp")
+    endif()
+    set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${LIBOMP_PREFIX}/include" CACHE STRING "" FORCE)
+    set(OpenMP_CXX_LIB_NAMES "omp" CACHE STRING "" FORCE)
+    set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp -I${LIBOMP_PREFIX}/include" CACHE STRING "" FORCE)
+    set(OpenMP_C_LIB_NAMES "omp" CACHE STRING "" FORCE)
+    set(OpenMP_omp_LIBRARY "${LIBOMP_PREFIX}/lib/libomp.dylib" CACHE FILEPATH "" FORCE)
+endif()
 find_package(OpenMP)
 if(OpenMP_FOUND)
-    add_compile_options("${OpenMP_CXX_FLAGS}")
+    add_compile_options("SHELL:${OpenMP_CXX_FLAGS}")
 endif()
 
 # Boost C++, it is a required package, if not found configuration will abort
@@ -34,8 +59,18 @@ if(WIN32)
   find_package(Boost 1.90 CONFIG REQUIRED COMPONENTS filesystem date_time)
 endif()
 
-if(LINUX)
-   find_package(Boost 1.90 REQUIRED COMPONENTS filesystem)
+if(LINUX OR APPLE)
+   # On APPLE, Homebrew's boost (1.90) and xerces-c CMake config packages are
+   # discovered via CMake's default Homebrew-aware CMAKE_SYSTEM_PREFIX_PATH,
+   # so this mirrors the Linux find_package calls unchanged. date_time is
+   # requested too (APPLE-only need, see LINK_LIBRARIES below): Homebrew's
+   # non-standard prefix means bare "-lboost_date_time" can't be found by the
+   # linker without the imported target's search path.
+   if(APPLE)
+       find_package(Boost 1.90 REQUIRED COMPONENTS filesystem date_time)
+   else()
+       find_package(Boost 1.90 REQUIRED COMPONENTS filesystem)
+   endif()
    find_package(XercesC REQUIRED)
    if(XercesC_FOUND)
       message(STATUS "Found Xerces-C: ${XercesC_VERSION}")
@@ -49,6 +84,13 @@ endif()
 if(MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W3")
     set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG} /W3")
+elseif(APPLE)
+    # No raw "-lboost_..." here (unlike Linux below): Homebrew's non-standard
+    # prefix means these can't be found without an -L path, which the
+    # Boost::filesystem/Boost::date_time imported targets provide instead
+    # (see LINK_LIBRARIES below).
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -std=c++11")
+    set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG} -Wall -std=c++11")
 else()
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -std=c++11 -lboost_filesystem -lboost_date_time")
     set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG} -Wall -std=c++11 -lboost_filesystem -lboost_date_time")
@@ -57,6 +99,9 @@ endif()
 if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /W0")
     set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} /W0")
+elseif(APPLE)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++11")
+    set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -std=c++11")
 else()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++11 -lboost_filesystem -lboost_date_time")
     set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -std=c++11 -lboost_filesystem -lboost_date_time")
@@ -81,7 +126,9 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     include_directories("${PROJECT_SOURCE_DIR}/thirdParty/xsd/xsd-3.3.0-i686-windows/libxsd")
     include_directories("${PROJECT_SOURCE_DIR}/thirdParty/xerces/xerces-c-3.1.1-x86_64-windows-vc-10.0/include")
     link_directories("${PROJECT_SOURCE_DIR}/thirdParty/xerces/xerces-c-3.1.1-x86_64-windows-vc-10.0/lib/")
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR APPLE)
+    # xsd's libxsd runtime support headers are header-only/portable C++;
+    # no macOS-specific vendored copy is needed, reuse the Linux one.
     include_directories("${PROJECT_SOURCE_DIR}/thirdParty/xsd/xsd-3.3.0-x86_64-linux-gnu/libxsd")
 endif()
 
@@ -96,7 +143,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 # Define BMI library
     add_library(FBCTools_BMI SHARED src/rtcToolsBMI.cpp src/bmi.h ${version_include_dir}/fbc_version.rc)
 
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR APPLE)
 # Define FBCTools executable
     add_executable(FBCTools src/rtcTools.cpp)
 
@@ -116,6 +163,18 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
                        dl
                        boost_date_time
                        boost_filesystem)
+elseif(APPLE)
+    # dlopen/dlsym live in libSystem on macOS: no standalone "dl" library to
+    # link. Unlike Linux, Homebrew's boost isn't on the linker's default
+    # search path (non-standard prefix), so bare "-lboost_filesystem"/
+    # "-lboost_date_time" fail to resolve at actual link time (they also leak
+    # in via CMAKE_CXX_FLAGS_RELEASE/_DEBUG above, which is where Linux gets
+    # away with the raw names). Use the imported targets instead, which carry
+    # the right -L path with them.
+    set(LINK_LIBRARIES FBCTools_static
+                       ${XercesC_LIBRARIES}
+                       Boost::date_time
+                       Boost::filesystem)
 endif()
 
 if(OpenMP_CXX_FOUND)

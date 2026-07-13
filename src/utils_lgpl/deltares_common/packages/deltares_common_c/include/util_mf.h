@@ -56,7 +56,7 @@
 
 /* FTN_CAPITAL is assumed to be the default value */
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     #include "config.h"
     #define STDCALL /* nothing */
     #define CUTIL_GETMP FC_FUNC(cutil_getmp, CUTIL_GETMP)

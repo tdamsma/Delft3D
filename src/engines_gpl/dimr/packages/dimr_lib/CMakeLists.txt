@@ -10,7 +10,11 @@ if (UNIX)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake.in ${CMAKE_CURRENT_SOURCE_DIR}/include/config.h)  
     set(configFile "${CMAKE_CURRENT_SOURCE_DIR}/include/config.h") 
 
-    add_definitions(-DD3D_PLUGIN_EXT=".so")
+    if(APPLE)
+        add_definitions(-DD3D_PLUGIN_EXT=".dylib")
+    else()
+        add_definitions(-DD3D_PLUGIN_EXT=".so")
+    endif()
     add_definitions(-DHAVE_STRUCT_TIMESPEC)
 endif(UNIX)
 
@@ -46,6 +50,13 @@ if(UNIX)
                               "${getopt_include_path}")
 
     target_link_libraries(${library_name} PRIVATE ${oss_dependencies})
+    if(APPLE)
+        # On Linux the C++ compiler is an Intel MPI wrapper (mpiicpc/mpicxx)
+        # that already bakes in the mpi.h include path. Apple Clang is not an
+        # MPI wrapper, so dimr.h's "#include <mpi.h>" needs the include path
+        # (and link flags) from the MPI::MPI_CXX imported target explicitly.
+        target_link_libraries(${library_name} PRIVATE MPI::MPI_CXX)
+    endif()
     target_compile_options(${library_name} PRIVATE ${cpp_compiler_flags})
     set_target_properties(${library_name} PROPERTIES OUTPUT_NAME dimr)
 endif()

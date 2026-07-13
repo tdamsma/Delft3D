@@ -2174,10 +2174,6 @@ void Dimr::connectLibs(void)
     // lib        so    dll     dylib
     // module     so    dll     so
 
-#if defined(OSX)
-    // Macintosh:VERY SIMILAR TO LINUX
-    throw Exception(Exception::ERR_OS, "ABORT: %s has not be ported to Apple Mac OS/X yet", exeName);
-#endif
 #ifndef _WIN32
     char* err;
 #endif
@@ -2193,9 +2189,6 @@ void Dimr::connectLibs(void)
         }
 
 #ifndef _WIN32
-        // NB: the buffer was previously sized assuming D3D_PLUGIN_EXT is always
-        // exactly 3 bytes (".so"); size it from the actual macro instead so a
-        // longer plugin extension on another platform can't overflow it.
         char* lib = new char[strlen(componentsList.components[i].library) + 3 + strlen(D3D_PLUGIN_EXT) + 1];
         sprintf(lib, "lib%s%s", componentsList.components[i].library, D3D_PLUGIN_EXT);
         if (strchr(componentsList.components[i].library, '/') != NULL ||
@@ -2461,10 +2454,6 @@ void Dimr::freeLibs(void)
     // lib        so    dll     dylib
     // module     so    dll     so
 
-#if defined(OSX)
-    // Macintosh:VERY SIMILAR TO LINUX
-    throw Exception(Exception::ERR_OS, "ABORT: %s has not be ported to Apple Mac OS/X yet", exeName);
-#endif
 #ifndef _WIN32
     char* err;
 #endif

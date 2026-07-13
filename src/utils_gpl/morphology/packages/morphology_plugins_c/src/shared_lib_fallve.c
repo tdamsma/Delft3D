@@ -39,7 +39,7 @@
     #include <windows.h>
 #elif defined(salford32)
     #include <windows.h>
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include <dlfcn.h>
 #endif
 
@@ -49,7 +49,7 @@
 #elif defined(salford32)
     #define PERFORM_FUNCTION_FALLVE PERF_FUNCTION_FALLVE
     #define STDCALL __stdcall
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include "config.h"
     #define PERFORM_FUNCTION_FALLVE FC_FUNC(perf_function_fallve, PERFORM_FUNCTION_FALLVE)
     #define STDCALL
@@ -66,7 +66,7 @@
 typedef HMODULE DllHandle;
 #elif defined(salford32)
 typedef HMODULE DllHandle;
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
 typedef void* DllHandle;
 #endif
 
@@ -95,7 +95,7 @@ extern "C" PERFORM_FUNCTION_FALLVE(long* sharedDLLHandle, char* function, long* 
                                    double* dll_reals, long* max_reals, char* dll_strings, long* max_strings, double* ws,
                                    char* message, long length_function, long length_dll_strings)
 // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
 long STDCALL PERFORM_FUNCTION_FALLVE(long* sharedDLLHandle, char* function, long* dll_integers, long* max_integers,
                                      double* dll_reals, long* max_reals, char* dll_strings, long* max_strings,
                                      double* ws, char* message, long length_function, long length_dll_strings)
@@ -107,7 +107,7 @@ long STDCALL PERFORM_FUNCTION_FALLVE(long* sharedDLLHandle, char* function, long
 #if defined(WIN32)
     typedef void*(STDCALL * MyProc)(long*, long*, double*, long*, char*, long*, double*, char*, long);
     // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     typedef void*(STDCALL * MyProc)(long*, long*, double*, long*, char*, long*, double*, char*, long);
     // message is a c-string: no length specification added
 #endif
@@ -122,7 +122,7 @@ long STDCALL PERFORM_FUNCTION_FALLVE(long* sharedDLLHandle, char* function, long
     proc = (MyProc)GetProcAddress(sharedDLL->dllHandle, fun_name);
 #elif defined(salford32)
     proc = (MyProc)GetProcAddress(sharedDLL->dllHandle, fun_name);
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     proc = (MyProc)dlsym(sharedDLL->dllHandle, fun_name);
 #endif
 
@@ -133,7 +133,7 @@ long STDCALL PERFORM_FUNCTION_FALLVE(long* sharedDLLHandle, char* function, long
         (void*)(*proc)(dll_integers, max_integers, dll_reals, max_reals, dll_strings, max_strings, ws, message,
                        length_dll_strings);
         // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
         (void*)(*proc)(dll_integers, max_integers, dll_reals, max_reals, dll_strings, max_strings, ws, message,
                        length_dll_strings);
         // message is a c-string: no length specification added

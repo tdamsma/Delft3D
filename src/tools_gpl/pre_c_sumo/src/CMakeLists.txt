@@ -35,6 +35,15 @@ target_link_libraries(pre_c_sumo_lib PUBLIC
 
 target_include_directories(pre_c_sumo_lib PUBLIC ${include_dir})
 
+if(APPLE)
+    # Homebrew's precice 3.4.1 headers (span.hpp) call std::terminate() without
+    # including <exception> themselves, relying on some other standard header
+    # to drag it in transitively. Apple Clang 21's libc++ no longer does that
+    # transitively, so force the include here rather than patch the Homebrew
+    # header.
+    target_compile_options(pre_c_sumo_lib PRIVATE -include exception)
+endif()
+
 add_executable(preC-SUMO main.cpp)
 target_link_libraries(preC-SUMO PRIVATE
     compiler_warnings_settings

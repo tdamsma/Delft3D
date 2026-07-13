@@ -42,7 +42,7 @@
     #include <windows.h>
 #elif defined(salford32)
     #include <windows.h>
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include <dlfcn.h>
 #endif
 
@@ -54,7 +54,7 @@
     #define OPEN_SHARED_LIBRARY OPEN_SHARED_LIBRARY
     #define CLOSE_SHARED_LIBRARY CLOSE_SHARED_LIBRARY
     #define STDCALL __stdcall
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include "config.h"
     #define OPEN_SHARED_LIBRARY FC_FUNC(open_shared_library, OPEN_SHARED_LIBRARY)
     #define CLOSE_SHARED_LIBRARY FC_FUNC(close_shared_library, CLOSE_SHARED_LIBRARY)
@@ -72,7 +72,7 @@
 typedef HMODULE DllHandle;
 #elif defined(salford32)
 typedef HMODULE DllHandle;
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
 typedef void* DllHandle;
 #endif
 
@@ -109,7 +109,7 @@ void RemoveTrailingBlanks_dll(char* String)
 /*
  * ============================================================================
  */
-#if defined(WIN32) || defined(linux)
+#if defined(WIN32) || defined(linux) || defined(__APPLE__)
 long STDCALL OPEN_SHARED_LIBRARY(long long int* sharedDLLHandle, char* library, long length_lib)
 #elif defined(salford32)
 extern "C" OPEN_SHARED_LIBRARY(int64_t* sharedDLLHandle, char* library, long length_lib)
@@ -128,7 +128,7 @@ extern "C" OPEN_SHARED_LIBRARY(int64_t* sharedDLLHandle, char* library, long len
     tmpSharedDLL->dllHandle = LoadLibrary(lib_name);
 #elif defined(salford32)
     tmpSharedDLL->dllHandle = LoadLibrary(lib_name);
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     tmpSharedDLL->dllHandle = dlopen(lib_name, RTLD_LAZY);
 #endif
 
@@ -147,7 +147,7 @@ extern "C" OPEN_SHARED_LIBRARY(int64_t* sharedDLLHandle, char* library, long len
  * ============================================================================
  */
 
-#if defined(WIN32) || defined(linux)
+#if defined(WIN32) || defined(linux) || defined(__APPLE__)
 long STDCALL CLOSE_SHARED_LIBRARY(int64_t* sharedDLLHandle)
 #elif defined(salford32)
 extern "C" CLOSE_SHARED_LIBRARY(int64_t* sharedDLLHandle)
@@ -159,7 +159,7 @@ extern "C" CLOSE_SHARED_LIBRARY(int64_t* sharedDLLHandle)
     (void)FreeLibrary(sharedDLL->dllHandle);
 #elif defined(salford32)
     (void)FreeLibrary(sharedDLL->dllHandle);
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     (void)dlclose(sharedDLL->dllHandle);
 #endif
 

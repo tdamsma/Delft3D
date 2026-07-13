@@ -33,7 +33,11 @@ include_directories(${include_path}
                     ${version_include_dir})
 
 if (UNIX)
-    add_definitions(-DD3D_PLUGIN_EXT=".so")
+    if(APPLE)
+        add_definitions(-DD3D_PLUGIN_EXT=".dylib")
+    else()
+        add_definitions(-DD3D_PLUGIN_EXT=".so")
+    endif()
 endif(UNIX)
 
 # Gather source files

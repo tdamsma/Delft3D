@@ -540,18 +540,11 @@ void DimrExe::openLibrary(void)
     // lib        so    dll     dylib
     // module     so    dll     so
 
-#if defined(OSX)
-    // Macintosh:VERY SIMILAR TO LINUX
-    throw Exception(Exception::ERR_OS, "ABORT: %s has not be ported to Apple Mac OS/X yet", this->exeName);
-#endif
 #ifndef _WIN32
     char* err;
 #endif
 
 #ifndef _WIN32
-    // NB: the fixed size of 14 assumed a hardcoded "libdimr.so" (10 chars) plus
-    // a few bytes of slack; size it from the actual name/extension instead so
-    // a longer plugin extension on another platform can't overflow it.
     this->library = new char[strlen("libdimr") + strlen(D3D_PLUGIN_EXT) + 1];
     sprintf(this->library, "libdimr%s", D3D_PLUGIN_EXT);
 #else
@@ -683,10 +676,6 @@ void DimrExe::freeLib(void)
     // lib        so    dll     dylib
     // module     so    dll     so
 
-#if defined(OSX)
-    // Macintosh:VERY SIMILAR TO LINUX
-    throw Exception(Exception::ERR_OS, "ABORT: %s has not be ported to Apple Mac OS/X yet", this->exeName);
-#endif
 #ifndef _WIN32
     char* err;
 #endif

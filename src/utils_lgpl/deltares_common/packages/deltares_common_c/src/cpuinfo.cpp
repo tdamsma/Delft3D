@@ -1,5 +1,9 @@
 #include "cpuinfo.h"
 
+#ifdef __APPLE__
+    #include <sys/sysctl.h>
+#endif
+
 #ifdef WIN32
 
 unsigned __int64 usCountOverhead, CPUClockSpeed;
@@ -99,6 +103,15 @@ static __inline__ unsigned long long rdtsc(void)
 
 unsigned long long CpuInfo::GetClockSpeed()
 {
+#ifdef __APPLE__
+    uint64_t frequency = 0;
+    size_t size = sizeof(frequency);
+    if (sysctlbyname("hw.cpufrequency", &frequency, &size, nullptr, 0) == 0)
+    {
+        return frequency;
+    }
+    return 0;
+#else
     int n;
     unsigned long long start, end, start_tsc, end_tsc;
     if (!usCountOverhead)
@@ -121,6 +134,7 @@ unsigned long long CpuInfo::GetClockSpeed()
     end_tsc = rdtsc();
     end = GetUsCount();
     return (1000000000000.0 * (end_tsc - start_tsc)) / (end - start - usCountOverhead);
+#endif
 }
 
 int CpuInfo::GetCores() { return sysconf(_SC_NPROCESSORS_ONLN); };

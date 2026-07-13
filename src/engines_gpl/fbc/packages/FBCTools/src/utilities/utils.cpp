@@ -30,7 +30,9 @@
 #ifdef _MSC_VER
     #include <io.h>
 #else
-    #include <sys/io.h>
+    // access() is declared in <unistd.h> on POSIX; <sys/io.h> (x86 I/O port
+    // access) isn't the right header and doesn't exist at all on macOS.
+    #include <unistd.h>
 #endif
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>

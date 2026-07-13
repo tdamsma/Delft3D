@@ -34,7 +34,7 @@
     #include <windows.h>
 #elif defined(salford32)
     #include <windows.h>
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include <dlfcn.h>
 #endif
 
@@ -46,7 +46,7 @@
     #define PERFORM_FUNCTION_EQTRAN PERF_FUNCTION_EQTRAN
     #define PERFORM_FUNCTION_EROSILT PERF_FUNCTION_EROSILT
     #define STDCALL __stdcall
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     #include "config.h"
     #define PERFORM_FUNCTION_EQTRAN FC_FUNC(perf_function_eqtran, PERFORM_FUNCTION_EQTRAN)
     #define PERFORM_FUNCTION_EROSILT FC_FUNC(perf_function_erosilt, PERFORM_FUNCTION_EROSILT)
@@ -64,7 +64,7 @@
 typedef HMODULE DllHandle;
 #elif defined(salford32)
 typedef HMODULE DllHandle;
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
 typedef void* DllHandle;
 #endif
 
@@ -97,7 +97,7 @@ extern "C" PERFORM_FUNCTION_EQTRAN(long* sharedDLLHandle, char* function, long* 
                                    long* equi_conc, double* cesus, double* ssus, double* sswu, double* sswv,
                                    double* t_relax, char* message, long length_function, long length_dll_strings)
 // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
 long STDCALL PERFORM_FUNCTION_EQTRAN(long* sharedDLLHandle, char* function, long* dll_integers, long* max_integers,
                                      double* dll_reals, long* max_reals, char* dll_strings, long* max_strings,
                                      long* sbc_total, double* sbc, double* sbcu, double* sbcv, double* sbwu,
@@ -113,7 +113,7 @@ long STDCALL PERFORM_FUNCTION_EQTRAN(long* sharedDLLHandle, char* function, long
     typedef void*(STDCALL * MyProc)(long*, long*, double*, long*, char*, long*, long*, double*, double*, double*,
                                     double*, double*, long*, double*, double*, double*, double*, double*, char*, long);
     // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     typedef void*(STDCALL * MyProc)(long*, long*, double*, long*, char*, long*, long*, double*, double*, double*,
                                     double*, double*, long*, double*, double*, double*, double*, double*, char*, long);
     // message is a c-string: no length specification added
@@ -129,7 +129,7 @@ long STDCALL PERFORM_FUNCTION_EQTRAN(long* sharedDLLHandle, char* function, long
     proc = (MyProc)GetProcAddress(sharedDLL->dllHandle, fun_name);
 #elif defined(salford32)
     proc = (MyProc)GetProcAddress(sharedDLL->dllHandle, fun_name);
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     proc = (MyProc)dlsym(sharedDLL->dllHandle, fun_name);
 #endif
 
@@ -140,7 +140,7 @@ long STDCALL PERFORM_FUNCTION_EQTRAN(long* sharedDLLHandle, char* function, long
         (void*)(*proc)(dll_integers, max_integers, dll_reals, max_reals, dll_strings, max_strings, sbc_total, sbc, sbcu,
                        sbcv, sbwu, sbwv, equi_conc, cesus, ssus, sswu, sswv, t_relax, message, length_dll_strings);
         // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
         (void*)(*proc)(dll_integers, max_integers, dll_reals, max_reals, dll_strings, max_strings, sbc_total, sbc, sbcu,
                        sbcv, sbwu, sbwv, equi_conc, cesus, ssus, sswu, sswv, t_relax, message, length_dll_strings);
         // message is a c-string: no length specification added
@@ -166,7 +166,7 @@ extern "C" PERFORM_FUNCTION_EROSILT(long* sharedDLLHandle, char* function, long*
                                     double* sink, double* source, char* message, long length_function,
                                     long length_dll_strings)
 // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
 long STDCALL PERFORM_FUNCTION_EROSILT(long* sharedDLLHandle, char* function, long* dll_integers, long* max_integers,
                                       double* dll_reals, long* max_reals, char* dll_strings, long* max_strings,
                                       double* sink, double* source, char* message, long length_function,
@@ -179,7 +179,7 @@ long STDCALL PERFORM_FUNCTION_EROSILT(long* sharedDLLHandle, char* function, lon
 #if defined(WIN32)
     typedef void*(STDCALL * MyProc)(long*, long*, double*, long*, char*, long*, double*, double*, char*, long);
     // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     typedef void*(STDCALL * MyProc)(long*, long*, double*, long*, char*, long*, double*, double*, char*, long);
     // message is a c-string: no length specification added
 #endif
@@ -194,7 +194,7 @@ long STDCALL PERFORM_FUNCTION_EROSILT(long* sharedDLLHandle, char* function, lon
     proc = (MyProc)GetProcAddress(sharedDLL->dllHandle, fun_name);
 #elif defined(salford32)
     proc = (MyProc)GetProcAddress(sharedDLL->dllHandle, fun_name);
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
     proc = (MyProc)dlsym(sharedDLL->dllHandle, fun_name);
 #endif
 
@@ -205,7 +205,7 @@ long STDCALL PERFORM_FUNCTION_EROSILT(long* sharedDLLHandle, char* function, lon
         (void*)(*proc)(dll_integers, max_integers, dll_reals, max_reals, dll_strings, max_strings, sink, source,
                        message, length_dll_strings);
         // message is a c-string: no length specification added
-#elif defined(linux)
+#elif defined(linux) || defined(__APPLE__)
         (void*)(*proc)(dll_integers, max_integers, dll_reals, max_reals, dll_strings, max_strings, sink, source,
                        message, length_dll_strings);
         // message is a c-string: no length specification added

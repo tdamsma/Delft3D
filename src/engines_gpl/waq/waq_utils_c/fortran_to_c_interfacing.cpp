@@ -34,7 +34,7 @@
 
     #include <windows.h>
 
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
     #include <dlfcn.h>
 #endif
 
@@ -50,7 +50,7 @@
     #define PERFORM_FUNCTION perf_function_
     #define LOAD____FUNCTION load_function_
     #define STDCALL
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
     #define OPEN_SHARED_LIBRARY open_shared_library_
     #define CLOSE_SHARED_LIBRARY close_shared_library_
     #define PERFORM_FUNCTION perf_function_
@@ -66,7 +66,7 @@
 
 #if defined(WIN32) || defined(SALF)
 typedef HINSTANCE DllHandle;
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
 typedef void* DllHandle;
 #endif
 
@@ -112,7 +112,7 @@ extern "C" {
 long STDCALL PERFORM_FUNCTION(DllHandle* sharedDLLHandle, char* function, float* pmsa, float* fl, long* ipoint,
                               long* increm, long* noseg, long* noflux, long* iexpnt, long* iknmrk, long* noq1,
                               long* noq2, long* noq3, long* noq4, long length_function)
-#elif defined(__linux__) || defined(SALF)
+#elif defined(__linux__) || defined(__APPLE__) || defined(SALF)
 /* TODO: This requires thinking about! */
 long STDCALL PERFORM_FUNCTION(long* sharedDLLHandle, char* function, float* pmsa, float* fl, long* ipoint, long* increm,
                               long* noseg, long* noflux, long* iexpnt, long* iknmrk, long* noq1, long* noq2, long* noq3,
@@ -133,7 +133,7 @@ long STDCALL PERFORM_FUNCTION(long* sharedDLLHandle, char* function, float* pmsa
 
 #if defined(WIN32) || defined(SALF)
         proc = (MyProc)GetProcAddress(sharedDLL->dllHandle, fun_name);
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
         proc = (MyProc)dlsym(sharedDLL->dllHandle, fun_name);
 #endif
 
