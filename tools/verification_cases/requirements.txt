@@ -1,0 +1,10 @@
+# Same environment as tools/output_validation/requirements.txt (see that
+# file's header comment); this suite adds no new direct dependencies.
+# scipy/pandas showed up transitively (via dfm-tools) in the pinned
+# baseline_tools/dfm-validation environment and are *not* required by any
+# script in this suite -- every comparator here is numpy/xarray/xugrid only,
+# by design (see README "Design notes").
+dfm-tools==0.47.0
+hydrolib-core==1.0.1
+meshkernel==8.3.0
+xugrid==0.15.3
