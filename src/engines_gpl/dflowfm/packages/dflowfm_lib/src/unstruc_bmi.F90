@@ -1489,7 +1489,7 @@ contains
                if (c_value(i) == c_null_char) exit
                threadsString(i:i) = c_value(i)
             end do
-            read (threadsString, '(I)', iostat=ierr) md_numthreads
+            read (threadsString, *, iostat=ierr) md_numthreads
             if (ierr == 0) then
                ! Activate the new OpenMP threads setting
                ierr = init_openmp(md_numthreads, jampi)
