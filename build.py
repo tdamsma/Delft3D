@@ -35,7 +35,7 @@ ROOT = Path(__file__).resolve().parent
 
 
 def build_dir_name(config: str, build_type: str) -> str:
-    """Build directory name: on Linux includes build type, on Windows does not (multi-config)."""
+    """Build directory name: single-config platforms include build type; Windows does not."""
     if platform.system() == "Windows":
         return f"build_{config}"
     return f"build_{config}_{build_type.lower()}"
@@ -132,7 +132,7 @@ def run_cmake_configure(
         if vs_year and vs_year in VS_GENERATORS:
             cmd += ["-G", VS_GENERATORS[vs_year]]
     else:
-        # On Linux, single-config generator; pass build type directly
+        # On Linux and macOS, use a single-config generator.
         cmd += [f"-DCMAKE_BUILD_TYPE={build_type}"]
 
     print(f"Running CMake configure for {config}...")
