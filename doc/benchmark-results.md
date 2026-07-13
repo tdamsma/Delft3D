@@ -35,7 +35,7 @@ identical step counts on both machines):**
 
 | Config | Mac (M3 Ultra) | Ryzen 3800X |
 |---|---|---|
-| Sequential, optimized | 191.17 s (before IEEE fix) -> 24.27 s (after) | -- |
+| Sequential, optimized | 670.04 s (326.2 ms/step) | 1341.36 s (653.1 ms/step) |
 | Best MPI config | 47.1 s @ 24 ranks (the exact P-core count; rel sigma 0.25%) | 434.3 s @ 8 ranks (the physical core count) |
 
 The Ryzen's MPI scaling flatlines at ~3.1-3.7x from 4 ranks on -- a
@@ -110,7 +110,7 @@ machine was available to measure directly.
 
 ```bash
 python tools/benchmarks/run_benchmark.py --tier M-seq
-python tools/benchmarks/run_benchmark.py --tier L-long --mode mpi_direct --ranks 24
+python tools/benchmarks/run_benchmark.py --tier L-mpi-long --ranks 24
 ```
 
 See `tools/benchmarks/README.md` for the full tier catalog (S, M-seq,
