@@ -63,7 +63,16 @@ contains
       end if
 
       nopenbndsect = nopenbndsect + 1
-      maxopenbnd = max(size(nopenbndlin), int(1.2 * nopenbndsect) + 1, 5)
+      ! nopenbndlin is not allocated yet when the very first open boundary
+      ! section is being added; querying size() on it unconditionally is
+      ! undefined behavior (same class of bug fixed elsewhere in this
+      ! defect family: gfortran traps it under -fcheck, ifx silently
+      ! tolerated it).
+      if (allocated(nopenbndlin)) then
+         maxopenbnd = max(size(nopenbndlin), int(1.2 * nopenbndsect) + 1, 5)
+      else
+         maxopenbnd = max(int(1.2 * nopenbndsect) + 1, 5)
+      end if
       call realloc(openbndname, maxopenbnd, fill=' ')
       call realloc(openbndfile, maxopenbnd, fill=' ')
       call realloc(openbndtype, maxopenbnd, fill=IBNDTP_UNKNOWN)

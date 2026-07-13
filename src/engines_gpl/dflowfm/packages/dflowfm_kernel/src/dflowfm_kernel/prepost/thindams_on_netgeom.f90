@@ -184,7 +184,11 @@ contains
             call delpol()
          end if
 
-         call cache_thin_dams(thd)
+         ! thd is grown with spare capacity by increaseCRSPaths/increaseThinDams
+         ! (size(thd) may exceed nthd); only thd(1:nthd) holds meaningful,
+         ! fully-populated entries, so only cache that slice rather than the
+         ! whole over-allocated array.
+         call cache_thin_dams(thd(1:nthd))
 
       end if ! if (.not. cache_read) then
 
