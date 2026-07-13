@@ -9,8 +9,11 @@ if(WIN32)
     set_target_properties(gtest PROPERTIES FOLDER third_party_open/googletest)
     set_target_properties(gtest_main PROPERTIES FOLDER third_party_open/googletest)
 else()
-    # On Linux, use CMake's built-in FindGTest to find system-installed Google Test
-    find_package(GTest REQUIRED)
+    # On Linux, use CMake's built-in FindGTest to find system-installed Google Test.
+    # GLOBAL is required so the gtest/gtest_main ALIAS targets below correctly
+    # propagate GTest's usage requirements (include dirs) to consumers in
+    # unrelated directory scopes.
+    find_package(GTest REQUIRED GLOBAL)
     if(NOT TARGET gtest)
         add_library(gtest ALIAS GTest::gtest)
         add_library(gtest_main ALIAS GTest::gtest_main)
