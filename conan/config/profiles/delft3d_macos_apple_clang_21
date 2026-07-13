@@ -1,0 +1,26 @@
+# Documented example only -- NOT what run_conan.py actually uses to build.
+#
+# On macOS, run_conan.py detects the Homebrew prefix, the latest installed
+# gfortran-NN, and the Apple Clang major version on the machine running the
+# build (see _generate_macos_profile() in run_conan.py) and writes a fresh
+# profile to conan/.generated/delft3d_macos_detected (gitignored) instead of
+# using this file. That replaced an earlier version of this file which
+# hard-coded one developer's home directory and Xcode version, breaking for
+# any other user, Homebrew prefix (/opt/homebrew vs /usr/local vs a custom
+# prefix), or Apple Clang update.
+#
+# This file is kept as a worked example of the generated profile's shape,
+# for an Apple Silicon Mac with Homebrew under a custom prefix
+# (/opt/homebrew is the default location for a fresh Homebrew install),
+# gfortran-16, and Apple Clang 21 -- useful for understanding the format,
+# but not consumed by the build.
+[settings]
+arch=armv8
+compiler=apple-clang
+compiler.cppstd=20
+compiler.libcxx=libc++
+compiler.version=21
+os=Macos
+
+[conf]
+tools.build:compiler_executables={"c": "/usr/bin/clang", "cpp": "/usr/bin/clang++", "fortran": "/path/to/homebrew/bin/gfortran-16"}

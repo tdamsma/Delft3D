@@ -6,6 +6,7 @@ import enum
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -18,10 +19,23 @@ from typing import Any, Iterator
 WINDOWS_PROFILE = "delft3d_windows_msvc_194"
 LINUX_PROFILE = "delft3d_alma8_intel_2024"
 
+# macOS has no single fixed profile name: the Homebrew prefix, the
+# installed gfortran-NN version, and the Apple Clang major version all
+# vary per machine (and per Homebrew upgrade). `delft3d_macos_apple_clang_21`
+# below is kept as a documented, human-readable *example* of what a
+# generated profile looks like -- the actual profile used at
+# install/lock time is generated fresh for the current host by
+# `_generate_macos_profile()` (see MACOS_GENERATED_PROFILE).
+MACOS_EXAMPLE_PROFILE = "delft3d_macos_apple_clang_21"
+
 ROOT = Path(__file__).resolve().parent
 CONFIG_DIR = ROOT / "conan/config"
 RECIPES_DIR = ROOT / "conan/recipes"
 LOCKFILE = ROOT / "conan.lock"
+
+# Host-specific, not checked in (see .gitignore): regenerated on every run
+# from whatever Homebrew/gfortran/Apple Clang happen to be installed.
+MACOS_GENERATED_PROFILE = ROOT / "conan/.generated/delft3d_macos_detected"
 
 
 @dataclass(frozen=True)
@@ -266,17 +280,164 @@ def upload_new_packages(remote: str, *, ci: bool = False) -> None:
     print(f"\nDone. Uploaded: {uploaded}, skipped: {skipped}")
 
 
+def _brew_prefix() -> Path:
+    """Locate the Homebrew prefix, without assuming any particular user account.
+
+    Tries `brew --prefix` first (correct on both Apple Silicon and Intel,
+    and for non-default install locations); falls back to the two
+    well-known default prefixes if `brew` itself is not on PATH.
+    """
+    brew = shutil.which("brew")
+    if brew is not None:
+        result = subprocess.run([brew, "--prefix"], capture_output=True, text=True)
+        if result.returncode == 0:
+            prefix = Path(result.stdout.strip())
+            if prefix.is_dir():
+                return prefix
+
+    for candidate in (Path("/opt/homebrew"), Path("/usr/local")):
+        if (candidate / "bin").is_dir():
+            return candidate
+
+    raise RuntimeError(
+        "Could not locate a Homebrew installation (tried `brew --prefix`, "
+        "then /opt/homebrew and /usr/local). Install Homebrew "
+        "(https://brew.sh) and a Fortran compiler (`brew install gcc`) first."
+    )
+
+
+def _gfortran_version_key(path: Path) -> int:
+    """Extract the trailing version number from e.g. 'gfortran-16' -> 16."""
+    suffix = path.name.rsplit("-", 1)[-1]
+    return int(suffix) if suffix.isdigit() else -1
+
+
+def _latest_gfortran(brew_prefix: Path) -> Path:
+    """Pick the newest Homebrew gfortran-NN under `brew_prefix/bin`.
+
+    Delft3D FM needs a real Fortran compiler; Apple Clang has no Fortran
+    front end, so this is always a Homebrew (or similarly installed) GNU
+    toolchain, never the system Clang. Picking the *latest* installed
+    version (rather than pinning one) keeps this working across gfortran
+    upgrades without editing this file.
+    """
+    candidates = sorted(
+        (p for p in brew_prefix.glob("bin/gfortran-*") if p.is_file() or p.is_symlink()),
+        key=_gfortran_version_key,
+    )
+    if candidates:
+        return candidates[-1]
+
+    bare = brew_prefix / "bin" / "gfortran"
+    if bare.exists():
+        return bare
+
+    raise RuntimeError(
+        f"No gfortran found under {brew_prefix}/bin (looked for 'gfortran-NN' "
+        "and a bare 'gfortran'). Install one with `brew install gcc`."
+    )
+
+
+def _apple_clang_major_version() -> int:
+    """Parse the major version out of `clang --version` (Apple Clang only).
+
+    Apple Clang's version numbering is independent of upstream LLVM's, and
+    Conan's `compiler.version` setting for `apple-clang` expects Apple's
+    own major version (e.g. the "17" in "Apple clang version 17.0.0
+    (clang-1700.0.13.3)"), so this must read the installed Clang directly
+    rather than assume a fixed value.
+    """
+    clang = shutil.which("clang")
+    if clang is None:
+        raise RuntimeError(
+            "`clang` not found on PATH. Install the Xcode Command Line Tools "
+            "(`xcode-select --install`) first."
+        )
+    result = subprocess.run([clang, "--version"], capture_output=True, text=True, check=True)
+    first_line = result.stdout.splitlines()[0] if result.stdout else ""
+    match = re.search(r"version (\d+)", first_line)
+    if not match:
+        raise RuntimeError(
+            f"Could not parse an Apple Clang version from `clang --version` output: "
+            f"{first_line!r}"
+        )
+    return int(match.group(1))
+
+
+def _conan_arch() -> str:
+    machine = platform.machine()
+    if machine in ("arm64", "aarch64"):
+        return "armv8"
+    if machine in ("x86_64", "AMD64"):
+        return "x86_64"
+    raise RuntimeError(f"Unrecognized macOS architecture from platform.machine(): {machine!r}")
+
+
+def _generate_macos_profile() -> Path:
+    """Detect this Mac's toolchain and (re)write a Conan profile for it.
+
+    Replaces a single checked-in profile that pinned one developer's home
+    directory and exact Apple Clang major version: those are properties of
+    the machine running the build, not of the Delft3D source tree, so they
+    are detected here every time instead of being committed.
+    `MACOS_EXAMPLE_PROFILE` in conan/config/profiles/ remains as a worked
+    example of the resulting file for anyone reading the repo without
+    running this script.
+    """
+    brew_prefix = _brew_prefix()
+    gfortran = _latest_gfortran(brew_prefix)
+    clang_major = _apple_clang_major_version()
+    clang_path = shutil.which("clang") or "/usr/bin/clang"
+    clangxx_path = shutil.which("clang++") or "/usr/bin/clang++"
+    arch = _conan_arch()
+
+    profile_text = (
+        "# Generated by run_conan.py's _generate_macos_profile() -- do not edit by\n"
+        "# hand, it is overwritten on every run. See conan/config/profiles/"
+        f"{MACOS_EXAMPLE_PROFILE} for a documented, checked-in example.\n"
+        "[settings]\n"
+        f"arch={arch}\n"
+        "compiler=apple-clang\n"
+        "compiler.cppstd=20\n"
+        "compiler.libcxx=libc++\n"
+        f"compiler.version={clang_major}\n"
+        "os=Macos\n"
+        "\n"
+        "[conf]\n"
+        "tools.build:compiler_executables="
+        f'{{"c": "{clang_path}", "cpp": "{clangxx_path}", "fortran": "{gfortran}"}}\n'
+    )
+
+    MACOS_GENERATED_PROFILE.parent.mkdir(parents=True, exist_ok=True)
+    MACOS_GENERATED_PROFILE.write_text(profile_text)
+    return MACOS_GENERATED_PROFILE
+
+
 def _get_profile() -> str:
     os_name = platform.system()
     if os_name == "Windows":
         return WINDOWS_PROFILE
     elif os_name == "Linux":
         return LINUX_PROFILE
+    elif os_name == "Darwin":
+        try:
+            return str(_generate_macos_profile())
+        except RuntimeError as exc:
+            sys.exit(f"ERROR: {exc}")
     else:
         raise RuntimeError(f"Unsupported OS: {os_name}")
 
 
 def _require_profile(profile: str) -> None:
+    profile_path = Path(profile)
+    if profile_path.is_absolute():
+        # Darwin: `profile` is a path to a freshly generated file (see
+        # _generate_macos_profile), not a name registered with `conan
+        # config install` -- just confirm it is actually there.
+        if not profile_path.is_file():
+            sys.exit(f"ERROR: expected generated Conan profile at '{profile}', but it is missing.")
+        return
+
     result = subprocess.run(
         ["conan", "profile", "path", profile],
         capture_output=True,

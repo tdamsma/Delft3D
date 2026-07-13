@@ -71,6 +71,16 @@ class NetcdfConan(ConanFile):
         tc.variables["BUILD_UTILITIES"] = False
         tc.variables["ENABLE_TESTS"] = False
         tc.variables["ENABLE_FILTER_TESTING"] = False
+        if self.settings.os == "Macos":
+            # netCDF's optional filter plugins use HDF5 private APIs that are
+            # not exported by the macOS shared library. Delft3D only consumes
+            # the core netCDF library, so do not build these plugin modules.
+            tc.variables["ENABLE_PLUGINS"] = False
+            # Avoid discovering Homebrew's optional compression libraries.
+            # Their global include directory contains an MPI-enabled hdf5.h,
+            # which can shadow the serial HDF5 headers supplied by Conan.
+            for package in ("Szip", "Bz2", "Blosc", "Zstd"):
+                tc.cache_variables[f"CMAKE_DISABLE_FIND_PACKAGE_{package}"] = True
 
         tc.variables["ENABLE_NETCDF_4"] = self.options.netcdf4
         tc.variables["ENABLE_CDF5"] = self.options.cdf5
