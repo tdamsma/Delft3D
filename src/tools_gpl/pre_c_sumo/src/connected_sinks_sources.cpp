@@ -3,6 +3,7 @@
 #include <connected_sinks_sources.hpp>
 
 #include <print>
+#include <stdexcept>
 
 namespace pre_c_sumo
 {
@@ -70,6 +71,19 @@ namespace pre_c_sumo
     void ConnectedSinkSources::write_to_precice(precice::Participant& participant, std::string_view mesh_name,
                                                 std::vector<int> precice_ids)
     {
+        // precice_ids must name exactly one mesh vertex per accrued entry: the caller's
+        // mesh is currently fixed-size (see setCoordinatesDimension()), while the number
+        // of entries here depends on what was converted from the NF2FF files. A mismatch
+        // means preCICE's writeData below would silently misattribute or reject data, so
+        // fail loudly instead. Proper fix is just-in-time remeshing (see caller TODO).
+        if (precice_ids.size() != size())
+        {
+            throw std::runtime_error(
+                "ConnectedSinkSources::write_to_precice: precice_ids size (" + std::to_string(precice_ids.size()) +
+                ") does not match the number of accrued sink/source entries (" + std::to_string(size()) +
+                "); the mesh vertex count must match until just-in-time remeshing is implemented.");
+        }
+
         participant.writeData(mesh_name, "sinks_x", precice_ids, sink_x_vector);
         participant.writeData(mesh_name, "sinks_y", precice_ids, sink_y_vector);
         participant.writeData(mesh_name, "sinks_z_min", precice_ids, sink_z_bottom_vector);
