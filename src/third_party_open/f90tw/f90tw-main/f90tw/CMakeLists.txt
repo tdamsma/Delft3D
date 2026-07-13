@@ -43,7 +43,13 @@ function(F90TWFPP INFILE OUTFILE)
         find_program(TR_EXE NAMES "tr" REQUIRED)
         add_custom_command(
             OUTPUT "${OUTFILE}"
-            COMMAND "${FPP_EXE}" ${FPPOPTS} ${FPPDEFS} ${FPPINCL} "${INFILE}" | ${SED_EXE} "/^[ \\t]*#/d" | ${TR_EXE} "\\;" "\\n" | ${SED_EXE} "s/^[ \\t]*//;s/[ \\t]*$//;/^$/d" > "${OUTFILE}"
+            # NOTE: use the POSIX [[:blank:]] class rather than a literal
+            # "\t" escape inside a bracket expression: BSD sed (macOS) does
+            # not expand "\t" to a tab there (it matches a literal 't'
+            # instead), which used to silently eat trailing 't' characters
+            # from unrelated tokens (e.g. truncating "assertions_gtest" to
+            # "assertions_gtes"). [[:blank:]] behaves identically on GNU sed.
+            COMMAND "${FPP_EXE}" ${FPPOPTS} ${FPPDEFS} ${FPPINCL} "${INFILE}" | ${SED_EXE} "/^[[:blank:]]*#/d" | ${TR_EXE} "\\;" "\\n" | ${SED_EXE} "s/^[[:blank:]]*//;s/[[:blank:]]*$//;/^$/d" > "${OUTFILE}"
             DEPENDS "${INFILE}" ${FPP_DEPENDS}
             COMMENT "precompile ${INFILE}"
             VERBATIM
