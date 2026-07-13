@@ -256,12 +256,21 @@ contains
 !  local timestepping
       time_dtmax = -1.0_dp ! cfl-numbers not evaluated
       nsubsteps = 1
-      ndeltasteps = 1
-      jaupdatehorflux = 1
+      ! ndeltasteps/jaupdatehorflux/jaupdateconst are allocated (with these
+      ! same fill values) by alloc_transport() above, but only when
+      ! allocate_transport was true. On a model with no constituents at all
+      ! (numconst==0, e.g. this example), alloc_transport() is never called
+      ! and these remain unallocated, so the unconditional resets below are
+      ! undefined behavior (unallocated-array whole assignment, same bug
+      ! class fixed elsewhere in this defect family). Guard them; when they *are*
+      ! allocated (from this call or a previous one) the reset is still
+      ! applied exactly as before.
+      if (allocated(ndeltasteps)) ndeltasteps = 1
+      if (allocated(jaupdatehorflux)) jaupdatehorflux = 1
       numnonglobal = 0
 
 !  sediment advection velocity
-      jaupdateconst = 1
+      if (allocated(jaupdateconst)) jaupdateconst = 1
 
       if (stm_included) then
          if (stmpar%lsedsus > 0) then
