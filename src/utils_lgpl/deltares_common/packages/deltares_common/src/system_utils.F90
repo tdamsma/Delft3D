@@ -98,13 +98,16 @@ contains
       call split_filename(exe_full_path, exe_path, exe_name)
    end subroutine
 
-   !> Linux backup routine in case get_command_argument fails, using /proc/self/exe symlink method
+   !> Backup routine in case get_command_argument fails: Linux uses the /proc/self/exe
+   !> symlink, macOS uses _NSGetExecutablePath(). On other platforms this is a no-op
+   !> that reports failure (ierr /= 0) rather than silently returning an empty path.
    subroutine get_executable_path_symlink(exe_full_path, ierr)
       use iso_c_binding
       character(len=*), intent(out) :: exe_full_path !< The full path of the calling executable
       integer, intent(out) :: ierr !< error code, 0 = success
       character(kind=c_char) :: c_buffer(1024)
       integer(c_size_t) :: path_length
+      integer(c_int32_t) :: buf_size32
       integer :: i
 
       interface
@@ -115,6 +118,12 @@ contains
             integer(c_size_t), value :: bufsize
             integer(c_size_t) :: readlink
          end function readlink
+         function ns_get_executable_path(buf, bufsize) bind(C, name='_NSGetExecutablePath')
+            import :: c_char, c_int32_t
+            character(kind=c_char) :: buf(*)
+            integer(c_int32_t) :: bufsize
+            integer(c_int32_t) :: ns_get_executable_path
+         end function ns_get_executable_path
       end interface
 
       ierr = 0
@@ -128,6 +137,19 @@ contains
       do i = 1, path_length
          exe_full_path(i:i) = c_buffer(i)
       end do
+#elif (defined(__APPLE__))
+      buf_size32 = int(size(c_buffer), kind=c_int32_t)
+      if (ns_get_executable_path(c_buffer, buf_size32) /= 0) then
+         ierr = -1 ! buffer too small; c_buffer is generously sized so this is not expected
+         return ! handle error at the call site
+      end if
+      i = 1
+      do while (i <= int(buf_size32) .and. c_buffer(i) /= c_null_char)
+         exe_full_path(i:i) = c_buffer(i)
+         i = i + 1
+      end do
+#else
+      ierr = -1 ! no backup implementation on this platform
 #endif
    end subroutine get_executable_path_symlink
 
