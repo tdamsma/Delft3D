@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate, (optionally) run, and verify the Phase 5b analytic verification suite.
+"""Generate, (optionally) run, and verify the analytic verification suite.
 
 Mirrors the reporting discipline of tools/output_validation/validate_examples.py:
 a single JSON report with package versions and a per-case status/result dict.
