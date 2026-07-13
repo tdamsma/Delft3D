@@ -52,6 +52,7 @@ if (UNIX)
                             io_netcdf_data
                             nefis
                             netCDF::netcdff
+                            MPI::MPI_Fortran
     )
 
     target_link_libraries(${library_name} ${oss_dependencies})

@@ -13,6 +13,9 @@ set_source_files_properties(src/dfbroadc.f90
                             PROPERTIES COMPILE_OPTIONS "${file_preprocessor_flag}")
 
 target_link_libraries(${library_name} PRIVATE deltares_common)
+if(UNIX)
+    target_link_libraries(${library_name} PRIVATE MPI::MPI_Fortran)
+endif()
 
 # Create the folder structure in vfproj
 set_target_properties (${library_name} PROPERTIES FOLDER utils_lgpl/deltares_common)

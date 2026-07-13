@@ -31,6 +31,13 @@ target_link_libraries(${library_name} PRIVATE
                       netCDF::netcdff
 )
 
+if(UNIX)
+    # unstruc_bmi.F90 does "use mpi" directly. dflowfm_kernel links
+    # MPI::MPI_Fortran PRIVATE, so its module include path does not
+    # propagate here; link it directly too (mirrors dflowfm_kernel/CMakeLists.txt).
+    target_link_libraries(${library_name} PRIVATE MPI::MPI_Fortran)
+endif(UNIX)
+
 # Define additional compilation flags
 set_source_files_properties(${source} PROPERTIES COMPILE_OPTIONS "${file_preprocessor_flag}")
 
