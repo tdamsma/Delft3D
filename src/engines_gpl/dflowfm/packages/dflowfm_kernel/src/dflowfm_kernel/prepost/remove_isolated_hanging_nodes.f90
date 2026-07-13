@@ -67,7 +67,7 @@ contains
             Lother = Linkbrother(L)
             if (Lother > 0) then
 !           check if other link is 2D
-               if (kn(3, L) == LINK_2D) then
+               if (kn(3, Lother) == LINK_2D) then
 
 !              find common node
                   call find_common_node(L, Lother, k)
