@@ -10,11 +10,11 @@ Moving the import from module scope into the only two procedures that actually u
 
 | Platform / compiler | Config | Before | After | Speedup |
 |---|---|---|---|---|
-| macOS arm64, gfortran (Apple Silicon) | M tier, 6,532 steps | 191.2 s | 24.3 s | **7.9x** |
+| macOS arm64, gfortran (Apple Silicon) | M tier, 6,532 steps | 191.2 s | 24.3 s | **7.9x**\* |
 | Linux x86_64, gfortran (Ryzen 3800X) | M tier, 1,663-step window | 222.0 s | 7.6 s | **28.75x** (window-specific, see "Magnitude") |
 | Linux x86_64, ifx (control) | M tier, 6,532 steps | 44.7 s | 44.9 s | none (expected) |
 
-The ratio depends on the workload window (the wrapper tax is per-procedure-call, so call-dense phases of the simulation pay more -- see "Magnitude"); at the canonical full-length config on a clean, verified-idle machine the effect is **7.88x**, and the 28.75x figure on Linux is a genuinely measured but shorter-window ratio. Outputs are unchanged in every A/B: field-level diffs at machine-precision level, identical timestep counts everywhere, the full unit-test suite and a 5-case analytic verification suite pass identically before and after.
+The ratio depends on the workload window (the wrapper tax is per-procedure-call, so call-dense phases of the simulation pay more -- see "Magnitude"); at the canonical full-length config on a clean, verified-idle machine the effect is **7.88x** measured together with this fork's Release-flag tuning (`-O3 -mcpu` class; the isolated fix accounts for ~7.3x of it, the flags for ~6%), and the 28.75x figure on Linux is a genuinely measured but shorter-window ratio for the isolated fix. Outputs are unchanged in every A/B: field-level diffs at machine-precision level, identical timestep counts everywhere, the full unit-test suite and a 5-case analytic verification suite pass identically before and after.
 
 **Whole-machine context:** with this fix plus the rest of this fork's build/parallelism work, an Apple Silicon workstation's best MPI configuration runs a mid-size tidal model **9.22x faster (loop time)** than an 8-core Ryzen 3800X's best MPI configuration on the same input, verified at matched step counts on both machines; decomposed as roughly 2.0x per-core throughput times 3x more real cores times ~1.5x better relative parallel efficiency at that config. This is whole-machine, best-vs-best context for the two-line change above -- not a claim that the IEEE fix alone accounts for it.
 
@@ -62,7 +62,7 @@ Intel ifx does not generate equivalent per-procedure wrappers here, which is why
 
 The wrapper tax is paid **per procedure call**, so the speedup ratio tracks the call density of the simulated window, not the platform:
 
-- At the canonical full-length M config (6,532 steps), on a clean verified-idle machine, the fix is worth **7.88x** end-to-end.
+- At the canonical full-length M config (6,532 steps), on a clean verified-idle machine, the fix together with this fork's Release-flag tuning is worth **7.88x** end-to-end (\*the table row above measures the same pairing; the isolated fix measured 7.32x wall / 7.11x loop under matched conditions).
 - A shorter 1,663-step window of the same model on Linux shows a larger ratio (28.75x) because per-step cost for the fixed binary is lower early in the run than at full length (the tidal signal, and with it per-step cost, develops over the run) -- i.e. that window is *more* call-overhead-dominated relative to its own per-step cost, which is why its ratio is larger. Both numbers are real measurements; they answer slightly different questions, and mixing windows when comparing across platforms is a documented pitfall (see "Correction history").
 - Cross-platform, per-timestep, at the matched full-length config, the fixed gfortran build on Apple Silicon runs somewhat faster per step than the fixed gfortran build on the Ryzen -- consistent with hardware expectations for single-core throughput on these two parts.
 
