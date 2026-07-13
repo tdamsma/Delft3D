@@ -276,7 +276,7 @@ end subroutine check_output_flags
 function is_allocated_icecover(icecover) result(flag)
    type (icecover_type), intent(in) :: icecover !< data structure containing ice cover data
    
-   integer :: flag !< logical flag for allocation
+   logical :: flag !< logical flag for allocation
    
    flag = associated(icecover%ice_area_fraction)
 end function is_allocated_icecover
