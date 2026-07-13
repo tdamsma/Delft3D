@@ -89,7 +89,7 @@ type nc_att_set
    integer                                   :: size = 0      !< Actual size of attribute set
    integer                                   :: growsby = 1   !< Increment for attribute set
    integer                                   :: count = 0     !< Actual number of attributes in set
-   type(ug_nc_attribute), pointer, dimension(:) :: atts          !< Buffered array with the nc_attribute elements
+   type(ug_nc_attribute), pointer, dimension(:) :: atts => null() !< Buffered array with the nc_attribute elements
 end type nc_att_set
 
 interface ncu_set_att
