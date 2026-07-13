@@ -329,9 +329,13 @@ inside the run dir).
    regression tracking via `compare_benchmarks.py` but not for
    memory-bandwidth-level precision (that's what Instruments' Counters/
    Allocations profiling is for).
-7. **The L tier is a placeholder.** `tiers.json`'s `"L"` entry has
-   `"status": "pending"` and no `source_dir`; `run_benchmark.py --tier L`
-   will raise a clear `SystemExit` until it is filled in.
+7. **The L tier's `source_dir` is a generated, gitignored artifact.**
+   `tiers.json`'s `"L"`/`"L-long"` entries are filled in (`"status":
+   "ready"`, concrete `source_dir` under `baseline_runs/l-tier/`), but that
+   directory is produced locally by `tools/benchmarks/l_tier/generate_l_model.py`
+   (see `l_tier/README.md`) and is not checked in. Run the generator first;
+   `run_benchmark.py --tier L` will raise a clear `SystemExit` if the
+   `source_dir` doesn't exist yet.
 
 ## Validation runs (plumbing check, not baselines)
 
