@@ -611,8 +611,8 @@ contains
 !
 !==============================================================================
    pure function string_to_char_array(string, length)
-      character(len=length), intent(in) :: string
       integer(c_int), intent(in) :: length
+      character(len=length), intent(in) :: string
       character(kind=c_char, len=1) :: string_to_char_array(length + 1)
       integer :: i
       do i = 1, length

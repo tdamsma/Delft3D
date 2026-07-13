@@ -92,7 +92,7 @@
          endif
       endif
 !
-#elif defined(X64)
+#elif defined(X64) && !defined(__GFORTRAN__)
       if (icheck .eq. 1) then
          if (iform .eq. 1) then
             OPEN (newunit=iunit, FILE=Name, STATUS='Old',ACTION='READ')

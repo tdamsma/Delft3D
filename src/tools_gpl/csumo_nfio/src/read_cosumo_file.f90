@@ -260,12 +260,17 @@ subroutine find_n()
     !
     ! Locals
     integer :: idis
+    ! gfortran cannot disambiguate the nearest_neighbour() generic (dbl vs.
+    ! real specifics) when a bare, unmolded NULL() actual is passed for the
+    ! optional mask pointer argument; ifort has no trouble with this. A
+    ! typed null pointer variable resolves unambiguously on both compilers.
+    integer, pointer :: no_mask(:) => null()
     !
     ! Body
-    call nearest_neighbour(nf_num_dif, x_diff  , y_diff  , null(), n_diff  , Huge(1.d0), fm_xzw, fm_yzw, fm_ndx, 0, 0)
-    call nearest_neighbour(nf_num_dif, x_intake, y_intake, null(), n_intake, Huge(1.d0), fm_xzw, fm_yzw, fm_ndx, 0, 0)
+    call nearest_neighbour(nf_num_dif, x_diff  , y_diff  , no_mask, n_diff  , Huge(1.d0), fm_xzw, fm_yzw, fm_ndx, 0, 0)
+    call nearest_neighbour(nf_num_dif, x_intake, y_intake, no_mask, n_intake, Huge(1.d0), fm_xzw, fm_yzw, fm_ndx, 0, 0)
     do idis = 1, nf_num_dif
-        call nearest_neighbour(no_amb(idis), x_amb(idis,:), y_amb(idis,:), null(), n_amb(idis,:), Huge(1.d0), fm_xzw, fm_yzw, fm_ndx, 0, 0)
+        call nearest_neighbour(no_amb(idis), x_amb(idis,:), y_amb(idis,:), no_mask, n_amb(idis,:), Huge(1.d0), fm_xzw, fm_yzw, fm_ndx, 0, 0)
     enddo
 end subroutine find_n
 

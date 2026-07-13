@@ -86,6 +86,13 @@ if (UNIX)
                                                   "SHELL:${flush_to_zero_flag}")
 endif(UNIX)
 
+# SWAN's fixed-form sources carry inline version-history annotations past
+# column 72, tolerated (warning-only) by Intel's 132-column default but a hard
+# syntax error for gfortran once those columns become significant. Restrict
+# this target back to the genuine F77 72-column limit under gfortran only.
+target_compile_options(${executable_name} PRIVATE
+    "$<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<Fortran_COMPILER_ID:GNU>>:-ffixed-line-length-72>")
+
 # Define preprocessor definitions
 if (WIN32)
     target_compile_definitions(${executable_name} PRIVATE "WIN32;SWANEXE")
