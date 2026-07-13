@@ -1,4 +1,4 @@
-# syntax=containers.deltares.nl/docker-proxy/docker/dockerfile:1.4
+# syntax=docker/dockerfile:1.4
 
 # note that although the BASE_IMAGE_URL argument allows you to easily change the base image,
 # all the following code assumes that you're running an Alma Linux or compatible environment.
