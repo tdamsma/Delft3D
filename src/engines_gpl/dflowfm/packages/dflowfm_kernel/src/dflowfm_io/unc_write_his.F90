@@ -346,10 +346,19 @@ contains
             ierr = unc_addcoordatts(ihisfile, id_srcx, id_srcy, jsferic)
          end if
 
-         if (his_write_settings%bubblescreens > 0 .and. size(bubblescreen_air_discharge) > 0) then
-            ierr = unc_def_his_structure_static_vars(ihisfile, ST_BUBBLE_SCREEN, 1, size(bubblescreen_air_discharge), 'point', nNodesBubbleScreen, id_strlendim, &
-                                                id_bubblescreendim, id_bubblescreen_name, id_bubblescreengeom_node_count, id_bubblescreengeom_node_coordx, id_bubblescreengeom_node_coordy, &
-                                                id_poly_xmid=id_bubblescreen_xmid, id_poly_ymid=id_bubblescreen_ymid)               
+         ! NB: Fortran's .and. does not guarantee short-circuit evaluation,
+         ! so size(bubblescreen_air_discharge) may be evaluated even when
+         ! his_write_settings%bubblescreens <= 0, i.e. before the array is
+         ! ever allocated. Nest the checks instead, and check allocated()
+         ! explicitly.
+         if (his_write_settings%bubblescreens > 0) then
+            if (allocated(bubblescreen_air_discharge)) then
+               if (size(bubblescreen_air_discharge) > 0) then
+                  ierr = unc_def_his_structure_static_vars(ihisfile, ST_BUBBLE_SCREEN, 1, size(bubblescreen_air_discharge), 'point', nNodesBubbleScreen, id_strlendim, &
+                                                      id_bubblescreendim, id_bubblescreen_name, id_bubblescreengeom_node_count, id_bubblescreengeom_node_coordx, id_bubblescreengeom_node_coordy, &
+                                                      id_poly_xmid=id_bubblescreen_xmid, id_poly_ymid=id_bubblescreen_ymid)
+               end if
+            end if
          end if
 
          if (timon) then
@@ -712,10 +721,18 @@ contains
                call check_netcdf_error(nf90_put_var(ihisfile, id_srcgeom_node_count, nodeCountSourceSink))
             end if
 
-            if (his_write_settings%bubblescreens > 0 .and. size(bubblescreens) > 0) then
-               call check_netcdf_error(nf90_put_var(ihisfile, id_bubblescreengeom_node_coordx, geomXBubbleScreen))
-               call check_netcdf_error(nf90_put_var(ihisfile, id_bubblescreengeom_node_coordy, geomYBubbleScreen))
-               call check_netcdf_error(nf90_put_var(ihisfile, id_bubblescreengeom_node_count, nodeCountBubbleScreen))
+            ! NB: Fortran's .and. does not guarantee short-circuit
+            ! evaluation, so size(bubblescreens) may be evaluated even when
+            ! his_write_settings%bubblescreens <= 0, i.e. before the array
+            ! is ever allocated. Nest the checks instead.
+            if (his_write_settings%bubblescreens > 0) then
+               if (allocated(bubblescreens)) then
+                  if (size(bubblescreens) > 0) then
+                     call check_netcdf_error(nf90_put_var(ihisfile, id_bubblescreengeom_node_coordx, geomXBubbleScreen))
+                     call check_netcdf_error(nf90_put_var(ihisfile, id_bubblescreengeom_node_coordy, geomYBubbleScreen))
+                     call check_netcdf_error(nf90_put_var(ihisfile, id_bubblescreengeom_node_count, nodeCountBubbleScreen))
+                  end if
+               end if
             end if
 
             ! Lateral discharges
@@ -1524,8 +1541,19 @@ contains
       end if
       call unc_put_his_structure_names(ncid, his_write_settings%weir, id_weirgen_id, structure_names)
 
-      indices = [(network%sts%orificeIndices(i), integer :: i=1, network%sts%numOrifices)]
-      structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numOrifices)]
+      ! Guard the zero-orifice case explicitly (mirrors the weir handling
+      ! above): with numOrifices==0, indices is allocated to size 0 by the
+      ! array constructor below, and gfortran's -fcheck=bounds instrumentation
+      ! for the second (structure_names) array constructor's implied-do
+      ! evaluates indices(1) even though the implied-do has zero trips,
+      ! tripping an out-of-bounds check on a valid empty array.
+      if (network%sts%numOrifices > 0) then
+         indices = [(network%sts%orificeIndices(i), integer :: i=1, network%sts%numOrifices)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numOrifices)]
+      else
+         if (allocated(structure_names)) deallocate (structure_names)
+         allocate (structure_names(0))
+      end if
       call unc_put_his_structure_names(ncid, his_write_settings%orifice, id_orifgen_id, structure_names)
 
       structure_names = [(pump_ids(i), integer :: i=1, npumpsg)]
@@ -1546,19 +1574,36 @@ contains
       end if
       call unc_put_his_structure_names(ncid, his_write_settings%cgen, id_genstru_id, structure_names)
 
-      indices = [(network%sts%uniweirIndices(i), integer :: i=1, network%sts%numuniweirs)]
-      structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numuniweirs)]
+      ! Same zero-count guard as for orifices above, needed for each of
+      ! these network%sts%struct(indices(i)) lookups.
+      if (network%sts%numuniweirs > 0) then
+         indices = [(network%sts%uniweirIndices(i), integer :: i=1, network%sts%numuniweirs)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numuniweirs)]
+      else
+         if (allocated(structure_names)) deallocate (structure_names)
+         allocate (structure_names(0))
+      end if
       call unc_put_his_structure_names(ncid, his_write_settings%universal_weir, id_uniweir_id, structure_names)
 
       structure_names = get_dambreak_names()
       call unc_put_his_structure_names(ncid, his_write_settings%dambreak, id_dambreak_id, structure_names)
 
-      indices = [(network%sts%culvertIndices(i), integer :: i=1, network%sts%numCulverts)]
-      structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numCulverts)]
+      if (network%sts%numCulverts > 0) then
+         indices = [(network%sts%culvertIndices(i), integer :: i=1, network%sts%numCulverts)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numCulverts)]
+      else
+         if (allocated(structure_names)) deallocate (structure_names)
+         allocate (structure_names(0))
+      end if
       call unc_put_his_structure_names(ncid, his_write_settings%culvert, id_culvert_id, structure_names)
 
-      indices = [(network%sts%bridgeIndices(i), integer :: i=1, network%sts%numBridges)]
-      structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numBridges)]
+      if (network%sts%numBridges > 0) then
+         indices = [(network%sts%bridgeIndices(i), integer :: i=1, network%sts%numBridges)]
+         structure_names = [(trimexact(network%sts%struct(indices(i))%id, strlen_netcdf), integer :: i=1, network%sts%numBridges)]
+      else
+         if (allocated(structure_names)) deallocate (structure_names)
+         allocate (structure_names(0))
+      end if
       call unc_put_his_structure_names(ncid, his_write_settings%bridge, id_bridge_id, structure_names)
 
       structure_names = [(network%cmps%compound(i)%id, integer :: i=1, network%cmps%count)]
@@ -1587,7 +1632,14 @@ contains
       ! structure_names = pack(source_sink_name, is_source_sink_real)
       call unc_put_his_structure_names(ncid, his_write_settings%sourcesink, id_srcname, structure_names)
 
-      structure_names = [(bubblescreens(i)%id, integer :: i=1, size(bubblescreens))]
+      ! bubblescreens is only allocated when the model actually has bubble
+      ! screens.
+      if (allocated(bubblescreens)) then
+         structure_names = [(bubblescreens(i)%id, integer :: i=1, size(bubblescreens))]
+      else
+         if (allocated(structure_names)) deallocate (structure_names)
+         allocate (structure_names(0))
+      end if
       call unc_put_his_structure_names(ncid, his_write_settings%bubblescreens, id_bubblescreen_name, structure_names)
 
       if (network%sts%numGates > 0) then
