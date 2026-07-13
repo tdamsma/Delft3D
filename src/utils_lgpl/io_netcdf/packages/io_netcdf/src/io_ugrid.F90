@@ -850,16 +850,29 @@ contains
       character(len=ug_idsLongNamesLen), optional, allocatable :: nnodelongnames(:), nbranchlongnames(:), nodelongnames(:)
       character(len=*), optional :: network1dname
 
-      ierr = ug_write_mesh_arrays(ncid, meshids, meshgeom%meshName, meshgeom%dim, UG_LOC_ALL2D, meshgeom%numNode, meshgeom%numEdge, meshgeom%numFace, meshgeom%maxNumFaceNodes, &
-                                  meshgeom%edge_nodes, meshgeom%face_nodes, meshgeom%edge_faces, meshgeom%face_edges, meshgeom%face_links, meshgeom%nodex, meshgeom%nodey, & ! meshgeom%nodez, &
-                                  meshgeom%edgex, meshgeom%edgey, meshgeom%facex, meshgeom%facey, &
-                                  crs, -999, -999d0, meshgeom%start_index, meshgeom%num_layers, meshgeom%layertype, meshgeom%layer_zs, meshgeom%interface_zs, &
-                                  networkids, network1dname, meshgeom%nnodex, meshgeom%nnodey, nnodeids, nnodelongnames, &
-                                  meshgeom%nedge_nodes(1, :), meshgeom%nedge_nodes(2, :), nbranchids, nbranchlongnames, meshgeom%nbranchlengths, meshgeom%nbranchgeometrynodes, meshgeom%nbranches, &
-                                  meshgeom%ngeopointx, meshgeom%ngeopointy, meshgeom%ngeometry, &
-                                  meshgeom%nbranchorder, &
-                                  nodeids, nodelongnames, meshgeom%nodebranchidx, meshgeom%nodeoffsets, meshgeom%edgebranchidx, meshgeom%edgeoffsets, &
-                                  zn=meshgeom%nodez, nsigma_opt=meshgeom%numtopsig)
+      ! meshgeom%nedge_nodes is a pointer that is only associated for meshes that have an
+      ! underlying 1D network (branches). Slicing it (meshgeom%nedge_nodes(1, :)/(2, :)) to build
+      ! the sourceNodeId/targetNodeId actual arguments requires it to be associated -- for a plain
+      ! 2D/3D mesh (no 1D network) it is disassociated, so that slice must not be evaluated at all.
+      ! Guard on association status and only forward the 1D-network-related arguments when present.
+      if (associated(meshgeom%nedge_nodes)) then
+         ierr = ug_write_mesh_arrays(ncid, meshids, meshgeom%meshName, meshgeom%dim, UG_LOC_ALL2D, meshgeom%numNode, meshgeom%numEdge, meshgeom%numFace, meshgeom%maxNumFaceNodes, &
+                                     meshgeom%edge_nodes, meshgeom%face_nodes, meshgeom%edge_faces, meshgeom%face_edges, meshgeom%face_links, meshgeom%nodex, meshgeom%nodey, & ! meshgeom%nodez, &
+                                     meshgeom%edgex, meshgeom%edgey, meshgeom%facex, meshgeom%facey, &
+                                     crs, -999, -999d0, meshgeom%start_index, meshgeom%num_layers, meshgeom%layertype, meshgeom%layer_zs, meshgeom%interface_zs, &
+                                     networkids, network1dname, meshgeom%nnodex, meshgeom%nnodey, nnodeids, nnodelongnames, &
+                                     meshgeom%nedge_nodes(1, :), meshgeom%nedge_nodes(2, :), nbranchids, nbranchlongnames, meshgeom%nbranchlengths, meshgeom%nbranchgeometrynodes, meshgeom%nbranches, &
+                                     meshgeom%ngeopointx, meshgeom%ngeopointy, meshgeom%ngeometry, &
+                                     meshgeom%nbranchorder, &
+                                     nodeids, nodelongnames, meshgeom%nodebranchidx, meshgeom%nodeoffsets, meshgeom%edgebranchidx, meshgeom%edgeoffsets, &
+                                     zn=meshgeom%nodez, nsigma_opt=meshgeom%numtopsig)
+      else
+         ierr = ug_write_mesh_arrays(ncid, meshids, meshgeom%meshName, meshgeom%dim, UG_LOC_ALL2D, meshgeom%numNode, meshgeom%numEdge, meshgeom%numFace, meshgeom%maxNumFaceNodes, &
+                                     meshgeom%edge_nodes, meshgeom%face_nodes, meshgeom%edge_faces, meshgeom%face_edges, meshgeom%face_links, meshgeom%nodex, meshgeom%nodey, & ! meshgeom%nodez, &
+                                     meshgeom%edgex, meshgeom%edgey, meshgeom%facex, meshgeom%facey, &
+                                     crs, -999, -999d0, meshgeom%start_index, meshgeom%num_layers, meshgeom%layertype, meshgeom%layer_zs, meshgeom%interface_zs, &
+                                     zn=meshgeom%nodez, nsigma_opt=meshgeom%numtopsig)
+      end if
 
    end function ug_write_mesh_struct
 
@@ -4198,6 +4211,11 @@ contains
       if (ierr /= nf90_noerr) then
          call check_ug_error(UG_SOMEERR, 'Could not read contact, assuming default topology dimensions')
       end if
+      ! contact_name (allocatable) is never assigned from the just-read temp (fixed-length);
+      ! concatenating an unallocated deferred-length character variable is invalid ("Assignment
+      ! of scalar to unallocated array"-style behaviour applied to character length) and
+      ! crashes under gfortran, while ifx silently tolerates it as an empty string.
+      contact_name = trim(temp)
       error_message = ' from mesh topology contacts "'//contact_name//'", assuming defaults.'
 
       ! Get the contact attribute value
