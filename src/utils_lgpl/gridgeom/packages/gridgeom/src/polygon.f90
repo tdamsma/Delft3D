@@ -106,7 +106,13 @@
          if ( len.gt.1 .and. iend.le.NPL ) then
             num = num+1
 !           reallocate polyline
-            if ( num.gt.size(pli) .or. .not.allocated(pli) ) then
+!           NB: Fortran's .or. does not guarantee short-circuit evaluation,
+!           so size(pli) may be evaluated even when pli is not allocated;
+!           check allocated() first in its own branch instead (same class
+!           of bug as gridoperations.F90's xz/xzw/ba checks).
+            if ( .not.allocated(pli) ) then
+               call realloc_tpoly(pli, max(int(1.2d0*dble(num)),1))
+            else if ( num.gt.size(pli) ) then
                call realloc_tpoly(pli, max(int(1.2d0*dble(num)),1))
             end if
 !           fill polyline
