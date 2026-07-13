@@ -159,8 +159,16 @@ contains
       nf_numsour = 0
       nf_numsink = 0
       source_sinks%num_nearfield = 0
-      nf_entr_start = 0
-      nf_entr_end = 0
+      ! nf_entr_start/nf_entr_end are only allocated once nearfield/COSUMO
+      ! diffuser data has actually been received (see addNearfieldData below,
+      ! which allocates them via realloc()). On a plain model (re)init with no
+      ! nearfield coupling, this reset runs before any allocation has ever
+      ! happened, so guard the whole-array assignment: assigning a scalar to
+      ! an unallocated allocatable array is undefined behavior (not just a
+      ! silent no-op), and gfortran deferences the (null) data pointer here
+      ! and segfaults, whereas ifx happened to tolerate it.
+      if (allocated(nf_entr_start)) nf_entr_start = 0
+      if (allocated(nf_entr_end)) nf_entr_end = 0
       !
       ! Pointers to data inside COSUMO_BMI
       !

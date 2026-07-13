@@ -368,12 +368,22 @@ contains
 
       integer :: npoly, i
       integer, allocatable :: cellmask(:) !< (nump) Mask array for net cells
+      character(len=*), parameter :: invalid_polyline_msg = 'Invalid polyline input'
 
-      error = ''
+      ! error is intent(out), so it starts deallocated on entry, which is exactly the
+      ! "no error" state documented above and relied upon at call sites (they check
+      ! allocated(error)). Do not assign to it here: whole-array assignment of a scalar
+      ! (including an empty string) to an unallocated allocatable array is invalid
+      ! ("Assignment of scalar to unallocated array"); gfortran's runtime checks catch
+      ! this, ifx silently tolerates it. Only allocate error, one character per element,
+      ! on the actual error path(s) below.
 
       npoly = size(xpoly)
       if (any(xpoly == dmiss) .or. any(ypoly == dmiss)) then
-         error = 'Invalid polyline input'
+         allocate (error(len(invalid_polyline_msg)))
+         do i = 1, len(invalid_polyline_msg)
+            error(i) = invalid_polyline_msg(i:i)
+         end do
          return
       end if
       
