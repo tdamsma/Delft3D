@@ -175,8 +175,13 @@ if (UNIX)
     target_link_libraries(${library_name} PRIVATE
                           interacter_stub
                           MPI::MPI_Fortran
-                          uuid
     )
+    if(NOT APPLE)
+        # libuuid lives in libSystem on macOS with no standalone library to
+        # link; uuid_generate/uuid_* resolve there automatically, so only
+        # link the standalone uuid library on non-Apple Unix.
+        target_link_libraries(${library_name} PRIVATE uuid)
+    endif()
 endif(UNIX)
 
 if (WIN32)

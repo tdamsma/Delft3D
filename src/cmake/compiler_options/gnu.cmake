@@ -10,29 +10,59 @@ if (UNIX)
     # Set optional flags:
     message(STATUS "Setting Fortran compiler flags in Unix")
 
-    set(CMAKE_CXX_FLAGS_RELEASE      "-O2 -fPIC -fopenmp")
-    set(CMAKE_C_FLAGS_RELEASE        "-O2 -fPIC -fopenmp")
+    if(APPLE)
+        # Apple's Clang does not provide an OpenMP runtime. OpenMP is used
+        # by the GNU Fortran targets and is enabled there via openmp_flag
+        # below; the C/C++ sides on macOS build without it rather than
+        # requiring a separate libomp installation for a handful of
+        # translation units.
+        set(CMAKE_CXX_FLAGS_RELEASE  "-O2 -fPIC")
+        set(CMAKE_C_FLAGS_RELEASE    "-O2 -fPIC")
+        set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -fPIC")
+        set(CMAKE_C_FLAGS_DEBUG      "-g -O0 -fPIC")
+    else()
+        set(CMAKE_CXX_FLAGS_RELEASE  "-O2 -fPIC -fopenmp")
+        set(CMAKE_C_FLAGS_RELEASE    "-O2 -fPIC -fopenmp")
+        set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -fPIC -fopenmp")
+        set(CMAKE_C_FLAGS_DEBUG      "-g -O0 -fPIC -fopenmp")
+    endif()
     # -ffree-line-length-none: some sources (e.g. long "use ... only:" lists)
     # exceed the previous 512-column cap; gfortran has no perf/behavior reason
     # to cap it, so drop the limit entirely rather than chase each long line.
     set(CMAKE_Fortran_FLAGS          "-O2 -fPIC -fopenmp -ffixed-line-length-132 -ffree-line-length-none -fallow-argument-mismatch")
-    set(CMAKE_CXX_FLAGS_DEBUG        "-g -O0 -fPIC -fopenmp")
-    set(CMAKE_C_FLAGS_DEBUG          "-g -O0 -fPIC -fopenmp")
 
-    # gfortran's Fortran front end predefines no platform macro (verified:
-    # no __APPLE__, __linux__, __unix__, __MACH__ come out of
-    # `gfortran -cpp -dM -E` for a real .F90 compile on any UNIX platform --
-    # only a stdin-fed invocation, which dispatches through the generic C
-    # preprocessor front end instead, shows them). The tree is full of
-    # "#if defined(__linux__) ... #else <windows-only code> #endif" guards
-    # (system_utils.F90 being the load-bearing example: ARCH/FILESEP/
-    # SHARED_LIB_EXTENSION) that "worked" before only because the
-    # previously-supported toolchain there was Intel ifx, which does
-    # predefine __linux__ for Fortran. Define it explicitly for GNU Fortran
-    # so those guards take the (correct, already-written) Unix-like path
-    # instead of silently falling into the Windows branch. Dead code on the
-    # ifx-on-Linux toolchain, which predefines __linux__ itself.
-    set(CMAKE_Fortran_FLAGS      "${CMAKE_Fortran_FLAGS} -D__linux__")
+    if(APPLE)
+        # Unlike a full C/C++ compiler driver, gfortran's Fortran front end
+        # does not predefine ANY platform macro (verified: no __APPLE__,
+        # __linux__, __unix__, __MACH__ come out of `gfortran -cpp -dM -E`
+        # on either platform). The tree is full of "#if defined(__linux__)
+        # ... #else <windows-only code> #endif" guards (system_utils.F90
+        # being the load-bearing example: ARCH/FILESEP/SHARED_LIB_EXTENSION)
+        # that "worked" on Linux only because that toolchain is Intel ifx,
+        # which does predefine __linux__ for Fortran. Under gfortran on
+        # macOS every one of those guards silently fell into the Windows
+        # branch. Define __APPLE__ explicitly so they take the (correct,
+        # already-written) Unix-like path instead.
+        set(CMAKE_Fortran_FLAGS      "${CMAKE_Fortran_FLAGS} -D__APPLE__")
+
+        # -flto is deliberately absent here: gfortran 16.1.0 hits an
+        # internal compiler error in the LTO streamer (write_symbol,
+        # lto-streamer-out.cc:3096) on dflowfm_kernel's
+        # fm_external_forcings_update.f90. Re-evaluate on a newer gfortran.
+    else()
+        # Same mechanism as the __APPLE__ block above, verified on Linux
+        # too (gfortran's Fortran front end predefines no platform macro
+        # for a real .F90 file on any UNIX platform -- only a stdin-fed
+        # invocation, which dispatches through the generic C preprocessor
+        # front end instead, shows __linux__/__APPLE__/etc.). Without this,
+        # a GNU-Fortran build on Linux falls into the same
+        # "#if defined(__linux__) ... #else <Windows-only> #endif" guard's
+        # Windows branch that motivated the __APPLE__ fix (e.g.
+        # system_utils.F90's FILESEP/ARCH/SHARED_LIB_EXTENSION). Dead code
+        # on the ifx-on-Linux toolchain, which predefines __linux__ itself
+        # and never includes this file.
+        set(CMAKE_Fortran_FLAGS      "${CMAKE_Fortran_FLAGS} -D__linux__")
+    endif()
 
     # Release optimization flags. Portable by default: CMake's built-in GNU
     # default for CMAKE_Fortran_FLAGS_RELEASE is already "-O3", and
