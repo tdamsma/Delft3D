@@ -104,7 +104,7 @@ module m_ec_typedefs
       integer :: from_line = -1 !< Data for this block start linenumber in temporary string buffer
       integer :: thru_line = -1 !< Data for this block final linenumber in temporary string buffer
       integer :: func
-      integer :: timecolumn !< Number of the column holding the time strings, compul
+      integer :: timecolumn = 0 !< Number of the column holding the time strings, compul. 0: no time column (e.g. BC_FUNC_CONSTANT), consistent with the "n_col_time>0"/"iq==bc%timecolumn" checks in ec_bcreader.f90.
       character(len=50) :: timeunit !< netcdf-convention time unit definition
       logical :: periodic = .False. !< should a timeseries be rewinded beyond the last entry ?
       integer :: timeint !< Type of time interpolation

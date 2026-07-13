@@ -185,8 +185,21 @@ contains
       ! Parameters
       class(SourceSinks), intent(inout) :: self
       integer, intent(in) :: new_size
+      logical :: needs_resize
 
-      if (new_size > size(self%name)) then
+      ! self%name (and the other components resized below) are not
+      ! allocated until the very first call to resize_source_sinks();
+      ! querying size() on it unconditionally is undefined behavior (same
+      ! bug class fixed elsewhere in this defect family: gfortran traps it, ifx
+      ! apparently tolerated it silently). NB: use a nested if rather than
+      ! ".not. allocated(x) .or. new_size > size(x)" since Fortran's .or.
+      ! does not guarantee short-circuit evaluation either.
+      if (.not. allocated(self%name)) then
+         needs_resize = .true.
+      else
+         needs_resize = new_size > size(self%name)
+      end if
+      if (needs_resize) then
          ! Resize global source/sink arrays.
          call realloc(source_sink_all_discharges, [numconst+1, new_size], keepExisting=.true., fill=0.0_dp)
          call realloc(source_sink_reduction, [2*(numconst+1), new_size], keepExisting=.true., fill=0.0_dp)

@@ -473,7 +473,14 @@ contains
       IPNT_QMAG = ivalpoint(IVAL_QMAG, kmx, nlyrs)
       IPNT_TRA1 = ivalpoint(IVAL_TRA1, kmx, nlyrs)
       IPNT_HWQ1 = ivalpoint(IVAL_HWQ1, kmx, nlyrs)
-      IPNT_WQB3D1 = ivalpoint(IVAL_WQB3D1, kmx, nlyrs)
+      ! IVAL_WQB3D1 stays at its default 0 ("not set") whenever wqbot3d output was not
+      ! actually counted (see the numwqbots>0 .and. his_write_settings%wqbot3d==1 guard
+      ! above). Passing 0 straight into ivalpoint() is ambiguous with its "give me the
+      ! grand total" convention (ivar==0), which would silently produce an out-of-range
+      ! pointer (one past the end of valobs) instead of a safe "not applicable" 0.
+      ! conditional_ivalpoint() (already used for the optional ice variables above)
+      ! guards against exactly this.
+      IPNT_WQB3D1 = conditional_ivalpoint(IVAL_WQB3D1, kmx, nlyrs)
       IPNT_SF1 = ivalpoint(IVAL_SF1, kmx, nlyrs)
       IPNT_SFN = ivalpoint(IVAL_SFN, kmx, nlyrs)
       IPNT_SED = ivalpoint(IVAL_SED, kmx, nlyrs)

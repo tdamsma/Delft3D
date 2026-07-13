@@ -235,8 +235,15 @@ contains
          end do
       end if
 
-      if (size(bubblescreen_air_discharge) > 0) then
-         call get_timespace_value_by_item_and_consider_success_value(item_bubblescreen_discharge, time_in_seconds)
+      ! bubblescreen_air_discharge is only allocated when the model actually
+      ! has bubble screens; querying size() unconditionally on it is
+      ! undefined behavior otherwise (same bug class fixed elsewhere in
+      ! this defect family: gfortran traps/segfaults, ifx silently
+      ! tolerated it).
+      if (allocated(bubblescreen_air_discharge)) then
+         if (size(bubblescreen_air_discharge) > 0) then
+            call get_timespace_value_by_item_and_consider_success_value(item_bubblescreen_discharge, time_in_seconds)
+         end if
       end if
 
       if (jasubsupl > 0) then

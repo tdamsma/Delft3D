@@ -104,8 +104,18 @@ contains
       timembastart = tstart_user ! when DFM doesn't start at t=0.0_dp??
       timembastarttot = timembastart
 
-      flxdmp = 0.0
-      flxdmptot = 0.0
+      ! flxdmp/flxdmptot (m_fm_wq_processes) are reset here before the unconditional
+      ! realloc(..., fill=0.0_dp) below (re)allocates them. On the very first mba_init
+      ! call, flxdmp is defensively pre-allocated to a zero-size array by
+      ! fm_wq_processes_ini_proc(), but flxdmptot has no such guarantee and may still be
+      ! unallocated at this point; whole-array assignment to an unallocated allocatable
+      ! is undefined behaviour, so guard both.
+      if (allocated(flxdmp)) then
+         flxdmp = 0.0
+      end if
+      if (allocated(flxdmptot)) then
+         flxdmptot = 0.0
+      end if
 
 !  Allocate the mass names, balance flux and derivative arrays
       nombs = numconst + numwqbots
@@ -2768,9 +2778,13 @@ contains
 
       return
 
-1     format(a',', a',', a',', a',')
+! NB: each "a','" group below is a character edit descriptor immediately
+! followed by a comma literal, with the required separating comma between
+! the two descriptors omitted. ifx tolerates this non-standard form; gfortran
+! rejects it ("Missing comma between descriptors"). Insert the missing commas.
+1     format(a, ',', a, ',', a, ',', a, ',')
 2     format(a, es16.8e3, ',', es16.8e3)
-3     format(a, a',', a',', es16.8e3, ',', es16.8e3, ',', es16.8e3)
+3     format(a, a, ',', a, ',', es16.8e3, ',', es16.8e3, ',', es16.8e3)
 
    end subroutine mba_write_csv_time_step
 

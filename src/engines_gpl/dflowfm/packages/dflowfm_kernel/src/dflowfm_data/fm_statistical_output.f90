@@ -2452,8 +2452,17 @@ contains
          call add_stat_output_items(output_set, output_config_set%configs(IDX_HIS_SOURCE_SINK_DISCHARGE_AVERAGE), null(), function_pointer)
       end if
 
-      if (his_write_settings%bubblescreens > 0 .and. size(bubblescreen_air_discharge) > 0) then
-         call add_stat_output_items(output_set, output_config_set%configs(IDX_HIS_BUBBLE_SCREEN_AIR_DISCHARGE), bubblescreen_air_discharge)
+      ! NB: Fortran's .and. does not guarantee short-circuit evaluation, so
+      ! size(bubblescreen_air_discharge) may be evaluated even when
+      ! his_write_settings%bubblescreens <= 0, i.e. before the array is ever
+      ! allocated (same bug class fixed elsewhere in this defect family). Nest the
+      ! checks instead, and check allocated() explicitly to be safe.
+      if (his_write_settings%bubblescreens > 0) then
+         if (allocated(bubblescreen_air_discharge)) then
+            if (size(bubblescreen_air_discharge) > 0) then
+               call add_stat_output_items(output_set, output_config_set%configs(IDX_HIS_BUBBLE_SCREEN_AIR_DISCHARGE), bubblescreen_air_discharge)
+            end if
+         end if
       end if
 
       !
@@ -3022,7 +3031,12 @@ contains
          if (numwqbots > 0) then
             call add_station_wqbot_configs(output_config_set, idx_wqbot_stations)
             call add_station_wqbot_output_items(output_set, output_config_set, idx_wqbot_stations)
-            if (model_is_3D()) then
+            ! The IPNT_WQB3D1 pointer (and the valobs columns it points into) is only set
+            ! up when wqbot3d output was actually requested (see the matching
+            ! numwqbots>0 .and. his_write_settings%wqbot3d==1 guard in
+            ! init_valobs_pointers/m_observations.f90). Checking model_is_3D() alone is not
+            ! sufficient and could index valobs one past its allocated extent.
+            if (model_is_3D() .and. his_write_settings%wqbot3d == 1) then
                call add_station_wqbot3D_configs(output_config_set, idx_wqbot3D_stations)
                call add_station_wqbot3D_output_items(output_set, output_config_set, idx_wqbot3D_stations)
             end if

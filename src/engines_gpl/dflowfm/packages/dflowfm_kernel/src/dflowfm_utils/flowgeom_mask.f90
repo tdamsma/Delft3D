@@ -68,10 +68,10 @@ contains
          num_elements = lnx
       end select
 
-      if (size(mask) /= num_elements) then
-         if (allocated(mask)) then
-            deallocate(mask)
-         end if
+      if (.not. allocated(mask)) then
+         allocate(mask(num_elements))
+      else if (size(mask) /= num_elements) then
+         deallocate(mask)
          allocate(mask(num_elements))
       end if
 
