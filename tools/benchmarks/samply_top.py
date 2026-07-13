@@ -63,6 +63,11 @@ def main():
         if i < 0:
             return (f"0x{address:x}", lib_name)
         end, name = info[i]
+        if end != rvas[i] and address >= end:
+            # size was recorded (end != start) and the address falls past
+            # this symbol's [start, end) range: don't misattribute it to
+            # the nearest preceding symbol.
+            return (f"0x{address:x}", lib_name)
         return (demangle(name), lib_name)
 
     self_w = defaultdict(float)
