@@ -408,7 +408,24 @@ if(${configuration_type} STREQUAL ${d3d4-suite_configuration})
     include(configurations/suites/d3d4_configuration.cmake)
 endif()
 
-if(UNIX)
+# install_linux_libs (copy_libs.sh + set_rpath) is Linux-ELF-specific
+# machinery, not merely "UNIX": copy_libs.sh shells out to `ldd` (no macOS
+# equivalent -- Mach-O uses `otool -L`/`dyld_info`) and several GNU-coreutils-
+# only long flags (`--parents`, `--invert-match`, `--no-run-if-empty`,
+# `--preserve=links`, plus GNU `realpath --canonicalize-missing`, which BSD
+# realpath on macOS rejects outright); set_rpath() in functions.cmake shells
+# out to `patchelf`, which only understands ELF and has no macOS/Mach-O
+# build. None of this is a one-line portability gap to paper over -- it is
+# the Linux shared-library/RPATH install strategy end to end, and macOS
+# binaries here already carry correct absolute @rpath entries baked in at
+# link time (set by the linker at build time; DYLD_LIBRARY_PATH is
+# additionally needed for dlopen-based plugin loading, e.g. dimr), so this
+# step has no macOS equivalent to perform yet. Gating
+# here (APPLE only; Linux keeps exactly its previous UNIX condition) avoids
+# forking or half-porting Linux-only shared infrastructure; a real macOS
+# install story (dylib copy + install_name_tool rpath rewrite) is tracked as
+# follow-up work, not attempted here.
+if(UNIX AND NOT APPLE)
     add_subdirectory(${checkout_src_root}/${install_linux_libs_module} install_linux_libs)
 endif()
 

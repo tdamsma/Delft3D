@@ -30,7 +30,11 @@ add_executable(${executable_name}   ${source}
 target_link_libraries(${executable_name} PRIVATE ${executable_name}_rc)
 
 if(UNIX)
-   add_definitions(-DD3D_PLUGIN_EXT=".so")
+   if(APPLE)
+      add_definitions(-DD3D_PLUGIN_EXT=".dylib")
+   else()
+      add_definitions(-DD3D_PLUGIN_EXT=".so")
+   endif()
 
    set(oss_dependencies    deltares_common_c
                            getopt
@@ -46,6 +50,13 @@ if(UNIX)
                               "${getopt_include_path}")
 
     target_link_libraries(${executable_name} PRIVATE ${oss_dependencies} ${CMAKE_DL_LIBS})
+    if(APPLE)
+        # See dimr_lib/CMakeLists.txt: Apple Clang is not an MPI compiler
+        # wrapper, so this target's own "#include <mpi.h>" (dimr_exe.h,
+        # dimr_lib/src/log.cpp compiled again here) needs the MPI::MPI_CXX
+        # imported target's include path explicitly.
+        target_link_libraries(${executable_name} PRIVATE MPI::MPI_CXX)
+    endif()
 
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)

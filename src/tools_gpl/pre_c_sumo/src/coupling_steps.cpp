@@ -82,10 +82,15 @@ namespace pre_c_sumo
         const std::vector<std::string> constituent_names = {"temperature", "salinity",
                                                             "tracer"}; // TODO: derive from settings
 
-        for (const auto& [index, diffuser] : csumo_settings.diffusers() | std::views::enumerate)
+        // NOTE: plain indexed loops instead of `... | std::views::enumerate` here and below:
+        // Apple's libc++ (Apple Clang 21) does not yet implement std::views::enumerate even
+        // under -std=c++23, unlike the GCC/libstdc++ toolchain used on Linux.
+        const auto& diffusers = csumo_settings.diffusers();
+        for (std::size_t index = 0; index < diffusers.size(); ++index)
         {
+            const auto& diffuser = diffusers[index];
             const auto subgrid_model_nr = static_cast<int>(index + 1);
-            const auto mapping_index = static_cast<std::size_t>(index);
+            const auto mapping_index = index;
             DiffuserMapping& mapping = csumo_2d_mesh.forward_map[mapping_index];
 
             //// Lambda function to obtain the value of a 2D quantity for an ambient point, given the quantity name and
@@ -109,10 +114,10 @@ namespace pre_c_sumo
 
             // Collect all data for the ambient points
             std::vector<FarFieldPoint2D> ambient_points{};
-            for (const auto& [position_index, ambient_point] : diffuser.ambient_positions | std::views::enumerate)
+            for (std::size_t position_index = 0; position_index < diffuser.ambient_positions.size();
+                 ++position_index)
             {
-                const std::size_t ambient_index =
-                    static_cast<std::size_t>(position_index) + mapping.first_ambient_point_index;
+                const std::size_t ambient_index = position_index + mapping.first_ambient_point_index;
                 ambient_points.emplace_back(makePoint(
                     ambient_index, (ambient_index)*csumo_3d_mesh.number_of_zcoordinates, csumo_2d_mesh, csumo_3d_mesh));
             }

@@ -80,11 +80,17 @@ elseif (WIN32)
 endif()
 
 install(PROGRAMS ${CMAKE_SOURCE_DIR}/../engines_gpl/wave/scripts/run_dwaves.${platform_extension}  DESTINATION bin)
-if (UNIX)
+if(UNIX AND NOT APPLE)
     install(PROGRAMS ${CMAKE_SOURCE_DIR}/../third_party_open/esmf/lnx64/scripts/ESMF_RegridWeightGen_in_Delft3D-WAVE.sh DESTINATION bin)
     find_program(ESMF_REGRIDWEIGHTGEN_EXECUTABLE ESMF_RegridWeightGen REQUIRED)
     install(PROGRAMS ${ESMF_REGRIDWEIGHTGEN_EXECUTABLE} DESTINATION bin)
-endif(UNIX)
+elseif(APPLE)
+    # ESMF has no macOS path: no Homebrew formula, and the repo only vendors
+    # win64/lnx64 ESMF_RegridWeightGen binaries. WAVE's ESMF-based curvilinear
+    # regridding is deferred on macOS until ESMF is ported/built natively;
+    # skip installing the wrapper script and the (unfindable) executable
+    # rather than fail configure on a REQUIRED find_program.
+endif()
 if(WIN32)
     install(PROGRAMS ${CMAKE_SOURCE_DIR}/../third_party_open/esmf/win64/scripts/ESMF_RegridWeightGen_in_Delft3D-WAVE.bat DESTINATION bin)
     install (DIRECTORY ${CMAKE_SOURCE_DIR}/../third_party_open/esmf/win64/bin/ DESTINATION bin

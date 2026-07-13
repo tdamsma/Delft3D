@@ -268,15 +268,7 @@ DeltaresHydro::DeltaresHydro(int argc, char* argv[], char* envp[])
     // module     so    dll     so
 
     #if defined(HAVE_CONFIG_H)
-        #if defined(OSX)
-    // Macintosh:VERY SIMILAR TO LINUX
-    throw new Exception("ABORT: %s has not be ported to Apple Mac OS/X yet", this->exeName);
-
-        #else
-    // LINUX
-    // NB: the buffer was previously sized assuming D3D_PLUGIN_EXT is always
-    // exactly 3 bytes (".so"); size it from the actual macro instead so a
-    // longer plugin extension on another platform can't overflow it.
+    // LINUX / macOS
     char lib[strlen(library) + 3 + strlen(D3D_PLUGIN_EXT) + 1];
     if (strchr(library, '/') == NULL && strchr(library, '.') == NULL)
     {
@@ -295,7 +287,6 @@ DeltaresHydro::DeltaresHydro(int argc, char* argv[], char* envp[])
 
     this->log->Write(Log::DETAIL, "Calling entry function in start library");
     this->ready = entryPoint(this);
-        #endif
     #elif defined(WIN32)
     char* lib = new char[strlen(library) + 4 + 1];
     if (strchr(library, '/') == NULL && strchr(library, '\\') == NULL && strchr(library, '.') == NULL)
