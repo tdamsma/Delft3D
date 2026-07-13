@@ -1,4 +1,4 @@
-"""Common D-Flow FM .mdu settings shared by all Phase 5b verification cases.
+"""Common D-Flow FM .mdu settings shared by all verification cases.
 
 The numerics/physics defaults mirror the bundled public example
 (baseline_artifacts/deltares-examples/extracted/examples/01_dflowfm_sequential/dflowfm/f34.mdu)

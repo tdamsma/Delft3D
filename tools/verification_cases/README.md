@@ -1,16 +1,12 @@
 # D-Flow FM analytic verification suite
 
-Phase 5b of the macOS port plan (`doc/macos-port-plan.md`): a small,
-committed, **outsider-verifiable** suite of D-Flow FM shallow-water cases
-with closed-form exact solutions. No reference data, no Deltares-internal
-testbench access needed -- every case is generated programmatically
-(hydrolib-core + meshkernel) and checked by a Python comparator directly
-against the mathematics. It is meant to outlive the port: it is the durable
-answer to "how do we know the code computes the right physics" for anyone
-who can clone this repo, independent of platform.
-
-Design brief and constraints are in `doc/macos-port-plan.md`, section
-"5b. Analytic benchmark mini-suite".
+A small, committed, **outsider-verifiable** suite of D-Flow FM shallow-water
+cases with closed-form exact solutions. No reference data, no
+Deltares-internal testbench access needed -- every case is generated
+programmatically (hydrolib-core + meshkernel) and checked by a Python
+comparator directly against the mathematics. It is meant to be durable: it
+is the answer to "how do we know the code computes the right physics" for
+anyone who can clone this repo, independent of platform.
 
 ## Status
 
@@ -171,7 +167,7 @@ assumed:
 
 ## The five cases
 
-Easiest first, matching the plan. `g = 9.81 m/s²` throughout. Every
+Ordered from easiest to hardest. `g = 9.81 m/s²` throughout. Every
 `generate.py` module docstring/inline comments repeat the case-specific
 parts of this derivation next to the code that implements them.
 
@@ -369,10 +365,10 @@ non-equilibrium IC in `normal_depth_channel` above.
 
 ### 5. Thacker oscillating basin, planar case (`thacker_basin/`)
 
-**Physics under test**: the hardest and most valuable case in the suite (per
-the plan) -- an exact periodic solution *including moving wetting/drying
-fronts*, exercising the flooding/drying logic that the (inaccessible)
-internal regression data would normally cover.
+**Physics under test**: the hardest and most valuable case in the suite -- an
+exact periodic solution *including moving wetting/drying fronts*,
+exercising the flooding/drying logic that the (inaccessible) internal
+regression data would normally cover.
 
 **Setup**: parabolic-bowl channel (1D-in-x, y-invariant -- "planar" as
 opposed to the radially-symmetric 2D case), using **SWASHES's own reference
@@ -429,9 +425,9 @@ error there despite a small absolute one).
 **Tolerance policy**: period within 3% (relative); shoreline position
 within 6 cells (`6 dx = 0.12 m`); field RMS within 6% of `h0` (depth),
 `0.16 m/s` (velocity). *Justification*: wetting/drying fronts are the
-hardest feature in this suite for a finite-volume code to track exactly
-(this is explicitly why the plan calls this case "hardest and most
-valuable"), so tolerances are deliberately looser here than any other case.
+hardest feature in this suite for a finite-volume code to track exactly --
+exactly why this is the hardest and most valuable case in the suite -- so
+tolerances are deliberately looser here than any other case.
 These are no longer provisional guesses: a real Linux run (see "Linux
 verification run" below) measured a genuine, quantified, growing
 depth/velocity RMS error across the 3 simulated periods under default
@@ -469,17 +465,17 @@ from-data period measurement.
 | thacker_basin | velocity RMS | `0.16 m/s` (was `0.05 m/s`) | absolute |
 
 Linux and macOS should be run through the exact same tolerances (this suite
-doubles as a parity case per the plan): a case passing on Linux but failing
-on macOS (or vice versa) is worth investigating as a potential port-specific
-issue before simply loosening the number -- this now applies with real,
-tuned tolerances rather than provisional guesses, so a macOS-only failure
-is a stronger signal than it would have been before this Linux run.
+doubles as a cross-platform parity check): a case passing on Linux but
+failing on macOS (or vice versa) is worth investigating as a potential
+port-specific issue before simply loosening the number -- this now applies
+with real, tuned tolerances rather than provisional guesses, so a
+macOS-only failure is a stronger signal than it would have been before this
+Linux run.
 
 ## Smoke-test result (historical, macOS build tree, superseded below)
 
-Per instructions, a smoke run of the simplest case (`lake_at_rest`) was
-attempted at the end of the original authoring session, against
-`build_dflowfm_release/dflowfm_cli_exe/dflowfm`:
+An early smoke run of the simplest case (`lake_at_rest`) was attempted
+against `build_dflowfm_release/dflowfm_cli_exe/dflowfm`:
 
 ```
 dflowfm --autostartstop lake_at_rest.mdu
@@ -665,14 +661,14 @@ remaining more than 10x tighter than the bugged (pre-fix) states, which
 produced e.g. 25+ dx shoreline error and up to 1.57 m/s velocity error from
 an entirely non-oscillating basin. This is not a masking of a real defect:
 wetting/drying numerical dissipation under default settings is exactly what
-this case exists to characterize (per the plan's own framing, "the hardest
-and most valuable case in the suite"), and the measured magnitude is
+this case exists to characterize -- it is the hardest and most valuable case
+in the suite for exactly this reason -- and the measured magnitude is
 recorded here with numbers for anyone revisiting `epsHu` sensitivity later.
 `epsHu` itself was deliberately left unchanged (still the hydrolib-core/
 D-Flow FM default), since changing it would be tuning the physics under
 test rather than the test's tolerance on it.
 
-## Assumptions and open questions for the manager
+## Assumptions and open questions
 
 1. ~~All numerical tolerances are provisional~~ **Resolved**: all five cases
    have now been run and verified against a real Linux `dflowfm` build, and
@@ -693,14 +689,13 @@ test rather than the test's tolerance on it.
    mechanism supports those quantities in this checkout -- flagged in case a
    future case in this suite needs them. (Still open -- unrelated to the
    Linux run above.)
-4. **Linux parity**: exercised for this session (see "Linux verification
-   run" above, `baseline_logs/verification-cases-linux.json`). **Still
-   open**: this suite has not yet been run on macOS with the same
-   `--json-out` naming convention (`verification-cases-macos.json`) so
-   `doc/macos-port-status.md` can diff the two directly, matching the 5a
-   field-diff convention -- worth doing once a working macOS `dflowfm`
-   build exists. A case passing on Linux but failing on macOS (or vice
-   versa) against these now-real-data-tuned tolerances would be a
+4. **Linux parity**: this suite has been run on Linux (see "Linux
+   verification run" above, `baseline_logs/verification-cases-linux.json`).
+   **Still open**: this suite has not yet been run on macOS with the same
+   `--json-out` naming convention (`verification-cases-macos.json`) to allow
+   a direct diff between the two -- worth doing once a working macOS
+   `dflowfm` build exists. A case passing on Linux but failing on macOS (or
+   vice versa) against these now-real-data-tuned tolerances would be a
    meaningfully stronger signal of a port-specific issue than it would have
    been against the original provisional numbers.
 5. **`normal_depth_channel`'s residence-time margin** (domain length vs.

@@ -4,8 +4,8 @@
 See ../README.md, section "Thacker oscillating basin (planar)", for the full
 exact periodic solution (from Delestre et al. 2013, SWASHES, Sec.4.2.1,
 itself citing Thacker 1981) reproduced in :func:`thacker_solution` below.
-This is the "hardest and most valuable" case in the suite (per the Phase 5b
-plan): it is the only one exercising the flooding/drying logic.
+This is the hardest and most valuable case in the suite: it is the only one
+exercising the flooding/drying logic.
 """
 
 from __future__ import annotations
