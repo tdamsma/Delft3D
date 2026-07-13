@@ -179,7 +179,13 @@ contains
       wy = 0.0_dp
       wdsu_x = 0.0_dp
       wdsu_y = 0.0_dp
-      wcharnock = 0.0_dp
+      ! wcharnock is only allocated (in fm_external_forcings_init.f90) when a
+      ! spatially variable Charnock coefficient is actually used; for a
+      ! model without it, resetting it unconditionally is undefined
+      ! behavior on an unallocated allocatable array (same bug class fixed
+      ! elsewhere in this defect family: gfortran segfaults, ifx silently
+      ! tolerated it).
+      if (allocated(wcharnock)) wcharnock = 0.0_dp
       call initialize_array_with_zero(ec_pwxwy_x)
       call initialize_array_with_zero(ec_pwxwy_y)
 
