@@ -776,6 +776,7 @@ contains
          end if
       end if
 
+      if (allocated(kck)) deallocate (kck)
       allocate (KCK(NUMK))
       if (need_to_allocate_kc) then
          allocate (kc(numk))
@@ -786,6 +787,7 @@ contains
          kc = 0
       end if
 
+      if (allocated(kn_new)) deallocate (kn_new)
       allocate (kn_new(3, NUML)); kn_new = 0 ! RESERVE KN
 
       jathindams = 0
@@ -842,6 +844,7 @@ contains
       NUML1D = num_1d_links + num_1d2d_links
       NUML = NUML1D + num_2d_links
 
+      if (allocated(KC2)) deallocate (KC2)
       allocate (KC2(NUMK))
       KK = 0
       do K = 1, NUMK ! NODES AANSCHUIVEN
@@ -1023,19 +1026,40 @@ contains
          ! We can safely ignore it here, but won't, because this saves some
          ! realloc costs for xz, yz in flow_geominit.
          numc = max(ndx, nump1d2d)
-         if ((numc > size(xz)) .or. (.not. allocated(xz))) then
+         ! NB: Fortran's `.or.` does not guarantee short-circuit evaluation
+         ! (unlike C's `||`): a compiler may legally evaluate size(xz) even
+         ! when .not. allocated(xz) is the operand that ends up making the
+         ! expression true. Writing "size(x) .or. .not. allocated(x)" is
+         ! therefore undefined behavior on first use, before x is ever
+         ! allocated. gfortran evaluates both operands and traps this with
+         ! -fcheck; ifx apparently did not. Check allocated() first in its
+         ! own branch so size() is only ever called once known-allocated.
+         if (.not. allocated(xz)) then
+            call realloc(xz, numc, stat=ierr, keepExisting=.false.)
+            call aerr('xz(numc)', IERR, numc)
+            call realloc(yz, numc, stat=ierr, keepExisting=.false.)
+            call aerr('yz(numc)', IERR, numc)
+         else if (numc > size(xz)) then
             call realloc(xz, numc, stat=ierr, keepExisting=.false.)
             call aerr('xz(numc)', IERR, numc)
             call realloc(yz, numc, stat=ierr, keepExisting=.false.)
             call aerr('yz(numc)', IERR, numc)
          end if
-         if ((numc > size(xzw)) .or. (.not. allocated(xzw))) then
+         if (.not. allocated(xzw)) then
+            call realloc(xzw, numc, stat=ierr, keepExisting=.false.)
+            call aerr('xzw(numc)', IERR, numc)
+            call realloc(yzw, numc, stat=ierr, keepExisting=.false.)
+            call aerr('yzw(numc)', IERR, numc)
+         else if (numc > size(xzw)) then
             call realloc(xzw, numc, stat=ierr, keepExisting=.false.)
             call aerr('xzw(numc)', IERR, numc)
             call realloc(yzw, numc, stat=ierr, keepExisting=.false.)
             call aerr('yzw(numc)', IERR, numc)
          end if
-         if ((numc > size(ba)) .or. (.not. allocated(ba))) then
+         if (.not. allocated(ba)) then
+            call realloc(ba, numc, stat=ierr, keepExisting=.false.)
+            call aerr('ba(numc)', IERR, numc)
+         else if (numc > size(ba)) then
             call realloc(ba, numc, stat=ierr, keepExisting=.false.)
             call aerr('ba(numc)', IERR, numc)
          end if
