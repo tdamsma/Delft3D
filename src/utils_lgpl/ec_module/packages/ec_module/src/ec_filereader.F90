@@ -114,7 +114,11 @@ module m_ec_filereader
          !
          if (index(fileReader%fileName, '.nc') > 0) then
             continue
-         else
+         else if (fileReader%fileHandle > 0) then
+            ! fileHandle stays at its ec_undef_int sentinel value for FileReaders that never
+            ! opened a plain Fortran unit themselves (e.g. bc-file based readers, which are
+            ! read via m_ec_bcreader's own file handling). INQUIRE/CLOSE on that sentinel unit
+            ! number is not meaningful and must be skipped.
             inquire(fileReader%fileHandle,opened=opened)
             if (opened) then
                close(fileReader%fileHandle, iostat = istat)
