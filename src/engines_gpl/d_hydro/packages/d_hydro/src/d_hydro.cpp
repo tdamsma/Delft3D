@@ -274,7 +274,10 @@ DeltaresHydro::DeltaresHydro(int argc, char* argv[], char* envp[])
 
         #else
     // LINUX
-    char lib[strlen(library) + 3 + 3 + 1];
+    // NB: the buffer was previously sized assuming D3D_PLUGIN_EXT is always
+    // exactly 3 bytes (".so"); size it from the actual macro instead so a
+    // longer plugin extension on another platform can't overflow it.
+    char lib[strlen(library) + 3 + strlen(D3D_PLUGIN_EXT) + 1];
     if (strchr(library, '/') == NULL && strchr(library, '.') == NULL)
     {
         sprintf(lib, "lib%s%s", library, D3D_PLUGIN_EXT);
