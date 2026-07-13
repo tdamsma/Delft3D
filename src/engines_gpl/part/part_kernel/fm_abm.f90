@@ -580,7 +580,7 @@ contains
             if (ipart == 27) write(88,*)' start loop Particle 27, m, cellnr =', mpart(ipart), abs(cell2nod(mpart(ipart)))
             m = abs(cell2nod(mpart(ipart)))            !Cellnumber , Second grid index of the current particle
             if (m > nosegl) then
-                write (88, '(a34,1x,i)')' m reference larger than allowed: ', m  !TEMPORARY TO AVOID CRASH DDRING DEBUG, WILL NEED TO BE REMOVED
+                write (88, '(a34,1x,i0)')' m reference larger than allowed: ', m  !TEMPORARY TO AVOID CRASH DDRING DEBUG, WILL NEED TO BE REMOVED
 !                exit
             endif
             
@@ -590,7 +590,7 @@ contains
             z = hpart(ipart)            !The z value within the gridcell (0.0 - 1.0)
             iseg = abs(cell2nod(mpart(ipart))) + nosegl * (k - 1)         !The grid number (conc array), corrected for the layer where the particle is
 
-            if(debug) write(88, '(a24, 5(i, x))')'     iseg, m, z, k, kb :', iseg, m, z, k, kb
+            if(debug) write(88, '(a24, 5(i0, x))')'     iseg, m, z, k, kb :', iseg, m, z, k, kb
 
             if (iseg > 0) then    !If the segment numer is larger than 0 and the particle is within model domain
 
@@ -608,7 +608,7 @@ contains
                 isegb = abs(cell2nod(mpart(ipart))) + nosegl * (kmx - 1)    !Segment number 3d of the particle on the bottom., will need to be checked how it is used
                 !partcell =abs(cell2nod(mpart(ipart))) * (1.0 + laypart(ipart)
 !                write(88, *) ' Calculated particle cll inlayer 1): ', partcell)
-                write(88, '(a43,1x,6(i,1x), f5.2)' )' m, k, kmx, nosegl ,ndx, h0 with iseg,  is:', m, k, kmx, nosegl, iseg, ndx, h0(iseg)
+                write(88, '(a43,1x,6(i0,1x), f5.2)' )' m, k, kmx, nosegl ,ndx, h0 with iseg,  is:', m, k, kmx, nosegl, iseg, ndx, h0(iseg)
                 laydep = h0(m)                 !Depth of the layer 1 in the column in which the particle is positioned (is used for substraction)
                 ilayer =1
                 totdep = laydep
