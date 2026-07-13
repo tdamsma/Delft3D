@@ -1792,7 +1792,7 @@ contains
                   k = index(localvalue, '#')
                   if (k > 0) then
                      localvalue = localvalue(1:k - 1)
-                     if (deprecate_pound_wrapped_values == .true.) then
+                     if (deprecate_pound_wrapped_values) then
                         call mess(LEVEL_WARN, "Encountered value '#" // localvalue // "#'. Parsing values enclosed in '#' is " &
                            //"deprecated and will be removed in a future release. Please remove the '#' characters to ensure compatibility.")
                      end if

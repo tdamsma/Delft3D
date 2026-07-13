@@ -891,7 +891,7 @@ contains
 
       !$OMP SIMD
       do L = lnx1D + 1, lnx
-         if (jasfer3D) then
+         if (jasfer3D == 1) then
             ucx_link_1 = +csb_1(L) * ucx_1(L) + snb_1(L) * ucy_1(L)
             ucy_link_1 = -snb_1(L) * ucx_1(L) + csb_1(L) * ucy_1(L)
             ucx_link_2 = +csb_2(L) * ucx_2(L) + snb_2(L) * ucy_2(L)

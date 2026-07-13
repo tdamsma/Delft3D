@@ -29,6 +29,25 @@ module test_mdu_file_read_write
 
 contains
 
+   !> Portable replacement for Intel-only ifport's CHANGEDIRQQ: changes the
+   !! current working directory to `dir` and reports success as a logical,
+   !! using the POSIX chdir() C function directly so it works with any
+   !! compiler (Intel or GNU) on any Unix-like platform.
+   logical function CHANGEDIRQQ(dir) result(success)
+      use iso_c_binding, only: c_char, c_int, c_null_char
+      character(len=*), intent(in) :: dir
+
+      interface
+         function c_chdir(path) bind(C, name="chdir") result(ierr)
+            import :: c_char, c_int
+            character(kind=c_char), intent(in) :: path(*)
+            integer(c_int) :: ierr
+         end function c_chdir
+      end interface
+
+      success = c_chdir(trim(dir)//c_null_char) == 0
+   end function CHANGEDIRQQ
+
    !$f90tw TESTCODE(TEST, test_mdu_file_read_write, test_mdu_read_write_read, test_mdu_read_write_read,
    !> Tests if a mdu file can succesfully be read, written, and re-read. Also checks if the obsfile and crsfile is unchanged after read-write-read cycle
    subroutine test_mdu_read_write_read() bind(C)
@@ -36,7 +55,6 @@ contains
       use unstruc_model, only: readMDUFile, md_obsfile, writeMDUFile, md_crsfile
       use dfm_error, only: DFM_NOERR
       use m_partitioninfo, only: jampi
-      use ifport, only: CHANGEDIRQQ
       use m_resetfullflowmodel, only: resetFullFlowModel
 
       character(len=1024) :: tm_md_obsfile
@@ -81,7 +99,6 @@ contains
       use unstruc_model, only: readMDUFile
       use dfm_error, only: DFM_NOERR
       use m_partitioninfo, only: jampi
-      use ifport, only: CHANGEDIRQQ
       use m_resetfullflowmodel, only: resetFullFlowModel
 
       integer :: ierr
@@ -106,7 +123,6 @@ contains
       use unstruc_model, only: readMDUFile
       use dfm_error, only: DFM_NOERR
       use m_partitioninfo, only: jampi
-      use ifport, only: CHANGEDIRQQ
       use m_resetfullflowmodel, only: resetFullFlowModel
 
       integer :: ierr
@@ -131,7 +147,6 @@ contains
       use unstruc_model, only: readMDUFile
       use dfm_error, only: DFM_NOERR
       use m_partitioninfo, only: jampi
-      use ifport, only: CHANGEDIRQQ
       use m_resetfullflowmodel, only: resetFullFlowModel
       use m_flow, only: laycof
       use precision, only: dp

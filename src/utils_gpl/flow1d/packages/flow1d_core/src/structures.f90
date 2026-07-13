@@ -468,10 +468,12 @@ end subroutine deallocstructure
    pure function GetStrucType_from_string(string) result(istrtype)
       use string_module, only: str_lower
 
-      character(len=*), value :: string
+      character(len=*), intent(in) :: string
+      character(len=len(string)) :: lower_string
       integer :: istrtype
-      call str_lower(string, 999)
-      select case(trim(string))
+      lower_string = string
+      call str_lower(lower_string, 999)
+      select case(trim(lower_string))
       case ('pump')
          istrtype = ST_PUMP
       case ('generalstructure')
@@ -1044,4 +1046,4 @@ end subroutine deallocstructure
 
    end subroutine update_bedlevels_for_bridges
 end module m_1d_structures
-   
+

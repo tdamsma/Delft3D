@@ -78,8 +78,8 @@ contains
             lineno2 = lineno2 + 1
          end do
 
-         write (linestr1, '(i)') lineno1
-         write (linestr2, '(i)') lineno2
+         write (linestr1, '(i0)') lineno1
+         write (linestr2, '(i0)') lineno2
 
          if (ios1 /= 0 .or. ios2 /= 0) exit
 

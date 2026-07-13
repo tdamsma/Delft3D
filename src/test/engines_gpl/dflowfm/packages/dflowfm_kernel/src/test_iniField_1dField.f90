@@ -67,7 +67,7 @@ subroutine test_iniField1dField
     use unstruc_channel_flow
     use m_inquire_flowgeom
     use dfm_error
-    use ifport
+    use chdir_mod, only: CHANGEDIRQQ
     use m_flow_modelinit, only: flow_modelinit
     use m_resetfullflowmodel, only: resetfullflowmodel
     !
@@ -180,7 +180,7 @@ subroutine test_iniField1dField_waterdepth
     use m_netw
     use unstruc_model
     use dfm_error
-    use ifport
+    use chdir_mod, only: CHANGEDIRQQ
     use m_flow_modelinit, only: flow_modelinit
     use m_resetfullflowmodel, only: resetfullflowmodel
 
@@ -380,7 +380,7 @@ subroutine test_iniField1dField_waterlevel
     use m_netw
     use unstruc_model
     use dfm_error
-    use ifport
+    use chdir_mod, only: CHANGEDIRQQ
     use m_flow_modelinit, only: flow_modelinit
     use m_resetfullflowmodel, only: resetfullflowmodel
     !
@@ -580,7 +580,7 @@ subroutine test_iniField1dField_waterdepth_cross_sections
     use m_netw
     use unstruc_model
     use dfm_error
-    use ifport
+    use chdir_mod, only: CHANGEDIRQQ
     use m_flow_modelinit, only: flow_modelinit
     use m_resetfullflowmodel, only: resetfullflowmodel
     !
@@ -630,7 +630,7 @@ subroutine two_branch_water_depth_and_level_combination(level_first_branch, leve
     use m_flowgeom, only: bl
     use m_netw
     use unstruc_model
-    use ifport
+    use chdir_mod, only: CHANGEDIRQQ
     use m_flow_modelinit, only: flow_modelinit
     use m_resetfullflowmodel, only: resetfullflowmodel
 
@@ -726,7 +726,7 @@ subroutine test_iniField1d_waterlevel_2d_points_not_set()
     use m_partitioninfo, only: jampi
     use m_netw
     use unstruc_model
-    use ifport
+    use chdir_mod, only: CHANGEDIRQQ
     use m_flow_modelinit, only: flow_modelinit
     use m_resetfullflowmodel, only: resetfullflowmodel
 

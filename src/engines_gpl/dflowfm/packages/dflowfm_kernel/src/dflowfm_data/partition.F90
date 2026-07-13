@@ -6421,7 +6421,7 @@ contains
 
       ierror = 0
       allval = val
-      if (jampi) then
+      if (jampi /= 0) then
 #ifdef HAVE_MPI
          call mpi_allreduce(val, allval, 1, MPI_LOGICAL, MPI_LAND, DFM_COMM_DFMWORLD, ierror)
 #endif

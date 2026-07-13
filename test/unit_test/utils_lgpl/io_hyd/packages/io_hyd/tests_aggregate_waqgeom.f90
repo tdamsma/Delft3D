@@ -411,7 +411,7 @@ contains
          return
       end if
 
-      if (associated(ugrid1%layer_zs) /= associated(ugrid2%layer_zs)) then
+      if (associated(ugrid1%layer_zs) .neqv. associated(ugrid2%layer_zs)) then
          is_equal = .false.
          return
       end if
@@ -428,7 +428,7 @@ contains
          end do
       end if
 
-      if (associated(ugrid1%interface_zs) /= associated(ugrid2%interface_zs)) then
+      if (associated(ugrid1%interface_zs) .neqv. associated(ugrid2%interface_zs)) then
          is_equal = .false.
          return
       end if
