@@ -34,6 +34,15 @@ target_include_directories(test_pre_c_sumo_lib PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
+if(APPLE)
+    # Homebrew's precice 3.4.1 headers (span.hpp) call std::terminate() without
+    # including <exception> themselves, relying on some other standard header
+    # to drag it in transitively. Apple Clang 21's libc++ no longer does that
+    # transitively, so force the include here rather than patch the Homebrew
+    # header.
+    target_compile_options(test_pre_c_sumo_lib PRIVATE -include exception)
+endif()
+
 if(WIN32)
     # Copy runtime DLLs to test directory for test discovery
     add_custom_command(TARGET test_pre_c_sumo_lib POST_BUILD

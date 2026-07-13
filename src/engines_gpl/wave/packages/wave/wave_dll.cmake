@@ -51,8 +51,13 @@ if(UNIX)
     # the `pkg_check_modules` function is created with this call
     find_package(PkgConfig REQUIRED)
 
-    # these calls create special `PkgConfig::<MODULE>` variables
-    pkg_check_modules(NETCDF REQUIRED IMPORTED_TARGET netcdf)
+    if(NOT APPLE)
+        # these calls create special `PkgConfig::<MODULE>` variables
+        # Conan's macOS netcdf package installs no .pc file, and nothing here
+        # actually consumes the PkgConfig::NETCDF result: linking is done via
+        # Conan's netCDF::netcdff target below. Skip on APPLE.
+        pkg_check_modules(NETCDF REQUIRED IMPORTED_TARGET netcdf)
+    endif()
 
     set(library_dependencies    wave_data
                                 delftio

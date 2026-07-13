@@ -310,8 +310,12 @@ namespace pre_c_sumo
     const std::vector<std::filesystem::path> CSumoSettingsReader::ff2nfFilepaths(double current_time_seconds) const
     {
         std::vector<std::filesystem::path> ff2nf_filepaths{};
-        for (const auto& [index, diffuser] : diffusers_ | std::views::enumerate)
+        // Plain indexed loop instead of `... | std::views::enumerate`: Apple's libc++
+        // (Apple Clang 21) does not yet implement std::views::enumerate even under
+        // -std=c++23, unlike the GCC/libstdc++ toolchain used on Linux.
+        for (std::size_t index = 0; index < diffusers_.size(); ++index)
         {
+            const auto& diffuser = diffusers_[index];
             const int subgrid_model_nr = static_cast<int>(index + 1);
             ff2nf_filepaths.emplace_back(diffuser.ff2nfFilepath(subgrid_model_nr, current_time_seconds));
         }
@@ -321,8 +325,9 @@ namespace pre_c_sumo
     const std::vector<std::filesystem::path> CSumoSettingsReader::nf2ffFilepaths(double current_time_seconds) const
     {
         std::vector<std::filesystem::path> nf2ff_filepaths{};
-        for (const auto& [index, diffuser] : diffusers_ | std::views::enumerate)
+        for (std::size_t index = 0; index < diffusers_.size(); ++index)
         {
+            const auto& diffuser = diffusers_[index];
             const int subgrid_model_nr = static_cast<int>(index + 1);
             nf2ff_filepaths.emplace_back(diffuser.nf2ffFilepath(subgrid_model_nr, current_time_seconds));
         }

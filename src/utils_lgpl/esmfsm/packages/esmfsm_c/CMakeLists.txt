@@ -12,7 +12,11 @@ if (UNIX)
     set(configFile "${CMAKE_CURRENT_SOURCE_DIR}/include/config.h") 
     
     add_definitions(-DHAVE_CONFIG_H)
-    add_definitions(-DD3D_PLUGIN_EXT=".so")
+    if(APPLE)
+        add_definitions(-DD3D_PLUGIN_EXT=".dylib")
+    else()
+        add_definitions(-DD3D_PLUGIN_EXT=".so")
+    endif()
     add_definitions(-DHAVE_STRUCT_TIMESPEC)
 endif(UNIX)
 
