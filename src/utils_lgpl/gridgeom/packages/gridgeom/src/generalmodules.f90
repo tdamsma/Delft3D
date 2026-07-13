@@ -155,8 +155,25 @@ contains
       integer :: maxpolcur
       integer :: ierr
 
-      maxpolcur = size(xpl)
-      if (N <= maxpolcur) then
+      ! xpl is not allocated until the first ever call to increasepol()
+      ! (or restorepol()); querying size() on it beforehand is undefined
+      ! behavior per the standard. gfortran's runtime check flags this
+      ! ("Allocatable argument 'xpl' is not allocated"); without checks
+      ! enabled it silently reads a garbage extent from the unallocated
+      ! array descriptor, which corrupts MAXPOL/the subsequent realloc()
+      ! calls below and manifests as memory corruption much later. ifx
+      ! apparently tolerates the same unchecked read as if size()==0.
+      if (allocated(xpl)) then
+         maxpolcur = size(xpl)
+      else
+         maxpolcur = 0
+      end if
+      ! Some callers (e.g. inidat(), unstruc_api.F90) call increasepol(MAXPOL, 0) to
+      ! just ensure a default-sized xpl/ypl/zpl exists, where MAXPOL is this same
+      ! module's own (possibly still-zero, pre-first-call) size variable. Guard the
+      ! early return with allocated(xpl) too, so that genuinely first-ever call
+      ! (maxpolcur==0) always proceeds to allocate below, even when N<=0.
+      if (allocated(xpl) .and. N <= maxpolcur) then
          return
       end if
       MAXPOL = max(100000, int(5d0 * N))
