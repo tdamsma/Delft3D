@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "_comment": "Tier definitions for the macOS D-Flow FM benchmark harness. Paths are relative to the repository root. See tools/benchmarks/README.md for usage and the noise policy. \"mpirun\" is deliberately the bare command name, resolved via PATH at run time (see bench_lib.resolve_mpirun) -- override with the D3D_BENCH_MPIRUN environment variable if mpirun isn't on PATH or a specific build must be selected.",
+  "tiers": {
+    "S": {
+      "description": "Example 01 (222 cells). Seconds-scale sanity/regression tier.",
+      "source_dir": "baseline_artifacts/deltares-examples/extracted/examples/01_dflowfm_sequential",
+      "case_subdir": "dflowfm",
+      "mdu": "f34.mdu",
+      "mode": "sequential",
+      "binary": "baseline_runs/bin-snapshot/dflowfm",
+      "args": ["--autostartstop", "{mdu}"],
+      "ranks": 1,
+      "dia_path_template": "dflowfmoutput/f34.dia"
+    },
+    "M-seq": {
+      "description": "Example 02 mesh, Western Scheldt (8,355 cells), run sequentially -- unpartitioned westerscheldt.mdu, zero tweaks (verified on Linux). Minutes-scale scaling workhorse, sequential baseline.",
+      "source_dir": "baseline_artifacts/deltares-examples/extracted/examples/02_dflowfm_parallel",
+      "case_subdir": "dflowfm",
+      "mdu": "westerscheldt.mdu",
+      "mode": "sequential",
+      "binary": "baseline_runs/bin-snapshot/dflowfm",
+      "args": ["--autostartstop", "{mdu}"],
+      "ranks": 1,
+      "dia_path_template": "dflowfmoutput/westerscheldt.dia"
+    },
+    "M-mpi3": {
+      "description": "Example 02 mesh, Western Scheldt (8,355 cells), 3-rank MPI via dimr. Minutes-scale scaling workhorse, parallel variant.",
+      "source_dir": "baseline_artifacts/deltares-examples/extracted/examples/02_dflowfm_parallel",
+      "case_subdir": "dflowfm",
+      "mdu": "westerscheldt.mdu",
+      "mode": "mpi",
+      "ranks": 3,
+      "partition": {
+        "binary": "baseline_runs/bin-snapshot/dflowfm",
+        "args": ["--nodisplay", "--autostartstop", "--partition:ndomains=3:icgsolver=6", "{mdu}"],
+        "_comment": "Run once (untimed setup, not part of the hyperfine measurement) from within case_subdir before the timed repeats. Produces westerscheldt_0000..0002.mdu/_net.nc/.cache. Matches baseline_runs/02_dflowfm_parallel's real invocation (see baseline_logs/example-02-partition-macos.log)."
+      },
+      "dimr_config": "dimr_config.xml",
+      "dimr_binary": "build_fm-suite_release/dimr/dimr",
+      "dflowfm_lib_dir": "build_fm-suite_release/dflowfm_lib",
+      "mpirun": "mpirun",
+      "mpirun_args": ["--bind-to", "none", "-np", "3", "-x", "DYLD_LIBRARY_PATH"],
+      "dia_path_template": "dflowfmoutput/westerscheldt_0000.dia",
+      "_dyld_comment": "dimr dlopen()s libdflowfm.dylib as a runtime plugin -- it is not a linked dependency of the dimr executable (confirmed absent from `otool -L build_fm-suite_release/dimr/dimr`), so DYLD_LIBRARY_PATH must include dflowfm_lib_dir or dimr aborts with 'Cannot load component library libdflowfm.dylib'. Verified empirically 2026-07-11: dimr run against a real dimr_config.xml fails without it and succeeds with DYLD_LIBRARY_PATH=<repo>/build_fm-suite_release/dflowfm_lib. The standalone dflowfm binary needs no DYLD_LIBRARY_PATH at all (its @rpath entries are baked in absolute at link time). A second gotcha, also verified empirically: setting DYLD_LIBRARY_PATH in the mpirun process's own environment is NOT enough -- Open MPI does not forward arbitrary environment variables to the launched rank processes by default, so mpirun_args must include '-x DYLD_LIBRARY_PATH' to export it; without '-x' all 3 ranks fail identically with the same dlopen error even though mpirun itself has the variable set."
+    },
+    "M-mpi": {
+      "description": "Example 02 mesh, Western Scheldt (8,355 cells), N-rank MPI via dimr -- generic rank-count-parameterized twin of M-mpi3 added for the rank-count scaling sweep. Default ranks below is a placeholder; override at run time with `run_benchmark.py --tier M-mpi --ranks N` (N in {1,2,4,8,16,24,32}), which rewrites the partition ndomains, the mpirun -np, and (post-stage) the dimr_config.xml <process> list to match N. Verified empirically 2026-07-11: dflowfm's partition step accepts ndomains=1 (degenerate but valid, produces westerscheldt_0000.mdu only) and the rank-file zero-padding is a fixed 4 digits regardless of ndomains (checked at ndomains=1 and 8).",
+      "source_dir": "baseline_artifacts/deltares-examples/extracted/examples/02_dflowfm_parallel",
+      "case_subdir": "dflowfm",
+      "mdu": "westerscheldt.mdu",
+      "mode": "mpi",
+      "ranks": 3,
+      "partition": {
+        "binary": "baseline_runs/bin-snapshot/dflowfm",
+        "args": ["--nodisplay", "--autostartstop", "--partition:ndomains=3:icgsolver=6", "{mdu}"],
+        "_comment": "ndomains=3 here is only the placeholder default; run_benchmark.py --ranks N rewrites it in-memory before staging."
+      },
+      "dimr_config": "dimr_config.xml",
+      "dimr_binary": "build_fm-suite_release/dimr/dimr",
+      "dflowfm_lib_dir": "build_fm-suite_release/dflowfm_lib",
+      "mpirun": "mpirun",
+      "mpirun_args": ["--bind-to", "none", "-np", "3", "-x", "DYLD_LIBRARY_PATH", "-x", "OMP_NUM_THREADS"],
+      "dia_path_template": "dflowfmoutput/westerscheldt_0000.dia",
+      "_dyld_comment": "See M-mpi3._dyld_comment -- identical requirement.",
+      "_omp_comment": "run_once.py's mode='mpi' branch defaults OMP_NUM_THREADS=1 (setdefault, mirroring the mpi_direct branch's fix) because each dimr rank still hosts dflowfm's own OpenMP runtime via the dlopen'd libdflowfm.dylib. '-x OMP_NUM_THREADS' is required here for the same reason DYLD_LIBRARY_PATH needs it (see _dyld_comment): Open MPI does not forward arbitrary parent-process env vars to launched rank processes without an explicit -x, verified empirically 2026-07-11 -- without it, OMP_NUM_THREADS=1 set in run_once.py's own env is invisible to the dimr child ranks and they default back to 32 threads each."
+    },
+    "L": {
+      "status": "ready",
+      "description": "Large memory-resident tier: synthetic meandering-channel mesh, 576,000 cells (2880x200, 28.8 km x 2 km), generated via tools/benchmarks/l_tier/generate_l_model.py --cells 576000 --out-dir baseline_runs/l-tier/large. Sequential/OpenMP only in this tier definition -- see L-mpi below for the MPI variant. ~11 min wall single-threaded, ~7.5 min at 8 OpenMP threads for the calibrated 900 sim-s TStop (see tools/benchmarks/l_tier/README.md, 'Verified sizes'); TStop reduced to 300 s for these rank-sweep measurements, see l_tier.mdu's own comment. NOTE: at TStop=300s the fastest config (24-rank MPI) has only a ~3.6s step-loop, below the run-length policy's 60s/10x-init floor -- this tier is kept for quick regression/dev checks only; use L-long for publishable numbers.",
+      "source_dir": "baseline_runs/l-tier/large",
+      "case_subdir": ".",
+      "mdu": "l_tier.mdu",
+      "mode": "sequential",
+      "binary": "baseline_runs/bin-snapshot/dflowfm",
+      "args": ["--autostartstop", "{mdu}"],
+      "ranks": 1,
+      "dia_path_template": "dflowfmoutput/l_tier.dia"
+    },
+    "L-mpi": {
+      "description": "L tier (576,000-cell synthetic tidal channel), N-rank MPI -- direct dflowfm, NOT dimr (this model ships no dimr_config.xml, per l_tier/README's scope note that the tier was generator-authored sequential/OpenMP-only; this MPI variant was added on top). Mode 'mpi_direct' (distinct from M-mpi's 'mpi', which goes through dimr) runs `mpirun --bind-to none -np N dflowfm --autostartstop l_tier.mdu` directly from the run dir root (case_subdir '.'). Verified empirically 2026-07-11 at N=2: dflowfm, invoked under MPI with the plain unpartitioned mdu name on argv, auto-loads the ndomains=N-partitioned l_tier_0000..N-1.mdu files itself (no dimr needed to drive multi-rank dflowfm) and writes per-rank dflowfmoutput/l_tier_NNNN.dia/_map.nc (rank 0 additionally gets _his.nc, the merged/global one, same convention as M-mpi's dimr path). No DYLD_LIBRARY_PATH export needed here (unlike M-mpi/M-mpi3): the standalone dflowfm binary's @rpath entries are baked in absolute at link time (same as the S/M-seq/L sequential tiers) -- it does not dlopen() dflowfm as a runtime plugin the way dimr does. Default ranks below is 24, the winning config found by tuning OMP_NUM_THREADS: run_once.py's mpi_direct branch defaults OMP_NUM_THREADS=1 (unset previously let each rank's OpenMP runtime spawn omp_get_num_procs()=32 threads, which -- not any inherent Open MPI/macOS scheduler wall -- was the actual cause of an 8-24-rank 'spin-wait valley' observed before the fix); with the fix, 24 ranks is the fastest point in the whole scan (~3.6s step-loop time vs 68.8s before the fix and 7.8-9.2s at 32 ranks), matching the machine's 24 P-cores with zero E-core involvement. Override at run time with `run_benchmark.py --tier L-mpi --ranks N` (N in {2,4,8,16,24,32}; rank 1 is not run through this tier -- reuse the L tier's existing sequential single-thread numbers as the rank=1 reference point).",
+      "source_dir": "baseline_runs/l-tier/large",
+      "case_subdir": ".",
+      "mdu": "l_tier.mdu",
+      "mode": "mpi_direct",
+      "ranks": 24,
+      "partition": {
+        "binary": "baseline_runs/bin-snapshot/dflowfm",
+        "args": ["--nodisplay", "--autostartstop", "--partition:ndomains=24:icgsolver=6", "{mdu}"],
+        "_comment": "ndomains=24 here is the winning-config default (see L-mpi's top-level description); run_benchmark.py --ranks N rewrites it in-memory before staging. Partition step itself is fast relative to the run -- informally timed at ~1.7s wall for ndomains=2 on this mesh (2026-07-11), not itself part of the hyperfine measurement."
+      },
+      "binary": "baseline_runs/bin-snapshot/dflowfm",
+      "args": ["--autostartstop", "{mdu}"],
+      "mpirun": "mpirun",
+      "mpirun_args": ["--bind-to", "none", "-np", "24"],
+      "dia_path_template": "dflowfmoutput/l_tier_0000.dia",
+      "_run_length_note": "At TStop=300s this config's step-loop is only ~3.6s, below the run-length policy's 60s/10x-init floor -- kept for quick regression/dev checks only; use L-mpi-long for publishable numbers."
+    },
+    "L-long": {
+      "status": "ready",
+      "description": "Run-length-policy fix for the L tier: same 576,000-cell synthetic meandering-channel mesh as 'L', but TStop=3000s (10x the 300s canonical-L config) so the fastest config (24-rank MPI, see L-mpi-long) has a step-loop time well above the run-length policy's 60s/10x-init floor -- the 300s config's 24-rank loop was only ~3.6s. Sequential/OpenMP variant of this longer config; see L-mpi-long for the MPI counterpart. This is now the canonical L-tier config for publishable whole-machine/rank-scan numbers; the original 300s 'L'/'L-mpi' tiers are kept for quick regression/dev checks only.",
+      "source_dir": "baseline_runs/l-tier/large-long",
+      "case_subdir": ".",
+      "mdu": "l_tier.mdu",
+      "mode": "sequential",
+      "binary": "baseline_runs/bin-snapshot/dflowfm",
+      "args": ["--autostartstop", "{mdu}"],
+      "ranks": 1,
+      "dia_path_template": "dflowfmoutput/l_tier.dia"
+    },
+    "L-mpi-long": {
+      "description": "Run-length-policy fix, MPI counterpart of L-long: same 576,000-cell mesh as L-mpi, TStop=3000s (10x) instead of 300s, ~1470 timesteps instead of 147. Same mode 'mpi_direct' convention as L-mpi (direct dflowfm under mpirun, no dimr, OMP_NUM_THREADS=1 default). This is now the canonical L-tier MPI config for publishable numbers. Default ranks 24 (the winning config from L-mpi's tuning, re-confirmed at this run length).",
+      "source_dir": "baseline_runs/l-tier/large-long",
+      "case_subdir": ".",
+      "mdu": "l_tier.mdu",
+      "mode": "mpi_direct",
+      "ranks": 24,
+      "partition": {
+        "binary": "baseline_runs/bin-snapshot/dflowfm",
+        "args": ["--nodisplay", "--autostartstop", "--partition:ndomains=24:icgsolver=6", "{mdu}"],
+        "_comment": "ndomains=24 here is the winning-config default (see L-mpi's top-level description); run_benchmark.py --ranks N rewrites it in-memory before staging."
+      },
+      "binary": "baseline_runs/bin-snapshot/dflowfm",
+      "args": ["--autostartstop", "{mdu}"],
+      "mpirun": "mpirun",
+      "mpirun_args": ["--bind-to", "none", "-np", "24"],
+      "dia_path_template": "dflowfmoutput/l_tier_0000.dia"
+    }
+  }
+}
