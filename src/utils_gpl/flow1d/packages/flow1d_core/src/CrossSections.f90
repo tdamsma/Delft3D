@@ -182,7 +182,7 @@ module m_CrossSections
 
       !--- additional data for river profiles
       double precision :: plains(3) = 0.0d0 !< 1: main channel, 2: floopplain 1, 3: floodplain 2
-      integer :: plainsLocation(3) !< locations (widths) of the main channel and floodplains
+      integer :: plainsLocation(3) = 0 !< locations (widths) of the main channel and floodplains
       !--- information for Summerdikes
       type(t_summerdike), pointer :: summerdike => null() !< pointer to the summerdike data
 
@@ -1897,6 +1897,16 @@ contains
          if (crossDef%plains(1) == 0d0) then
             crossDef%plains(1) = huge(1d0)
             crossDef%plainslocation(1) = crossDef%levelsCount
+            ! No real main/floodplain1/floodplain2 split was ever configured for this
+            ! cross section (e.g. cross sections built programmatically via
+            ! AddTabCrossSectionDefinition, such as for long culverts, never go through
+            ! readCrossSections.f90's full plainsLocation(1:3) initialization). Sections
+            ! 2 and 3 are unused in that case (mirroring the plainsLocation(2)=0,
+            ! plainsLocation(3)=0 defaulting done there), so set them explicitly here too:
+            ! plainsLocation has no default initializer, so leaving them unset would read
+            ! as uninitialized garbage in the isec=2,3 loop iterations below.
+            crossDef%plainslocation(2) = 0
+            crossDef%plainslocation(3) = 0
          end if
 
          widths => crossDef%flowWidth
