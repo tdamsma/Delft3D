@@ -547,20 +547,27 @@ contains
          end if
       end if
 
-      do i_ext = 1, size(extfile_new_list)
-         if (len(trim(extfile_new_list(i_ext))) > 0) then
-            inquire (file=trim(extfile_new_list(i_ext)), exist=jawel)
+      ! extfile_new_list is only allocated when the MDU actually lists new-style
+      ! (*.ext) forcing files; a model without any (e.g. minimal unit-test
+      ! setups) leaves it unallocated, and size()/trim() on an unallocated
+      ! allocatable is undefined behaviour that segfaults under gfortran (ifx
+      ! happened to tolerate it).
+      if (allocated(extfile_new_list)) then
+         do i_ext = 1, size(extfile_new_list)
+            if (len(trim(extfile_new_list(i_ext))) > 0) then
+               inquire (file=trim(extfile_new_list(i_ext)), exist=jawel)
 
-            if (jawel) then
-               ext_force_bnd_used = .true.
-            else
-               call qnerror('External forcing file '''//trim(extfile_new_list(i_ext))//''' not found.', '  ', ' ')
-               write (msgbuf, '(a,a,a)') 'Boundary external forcing file ''', trim(extfile_new_list(i_ext)), ''' not found.'
-               call err_flush()
+               if (jawel) then
+                  ext_force_bnd_used = .true.
+               else
+                  call qnerror('External forcing file '''//trim(extfile_new_list(i_ext))//''' not found.', '  ', ' ')
+                  write (msgbuf, '(a,a,a)') 'Boundary external forcing file ''', trim(extfile_new_list(i_ext)), ''' not found.'
+                  call err_flush()
+               end if
+
             end if
-
-         end if
-      end do
+         end do
+      end if
 
       if (allocated(xe)) then
          deallocate (xe, ye, xyen) ! centre points of all net links, also needed for opening closed boundaries

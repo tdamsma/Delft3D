@@ -1726,7 +1726,14 @@ contains
       ! Initialization
       is_successful = .false.
 
-      ! Find the bubblescreen with matching id
+      ! Find the bubblescreen with matching id.
+      ! bubblescreens is only allocated when the model actually defines bubble
+      ! screens; size()/element access on an unallocated allocatable is
+      ! undefined behaviour that segfaults under gfortran (ifx tolerated it).
+      if (.not. allocated(bubblescreens)) then
+         is_successful = .true.
+         return
+      end if
       do i = 1, size(bubblescreens)
 
          bubblescreen_source_sink_count = 0
