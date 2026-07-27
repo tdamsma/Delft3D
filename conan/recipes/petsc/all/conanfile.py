@@ -41,6 +41,14 @@ class PetscConan(ConanFile):
         compiler = str(self.settings.compiler)
         fortran = self.settings.get_safe("fortran_compiler")
 
+        if self.settings.os == "Macos":
+            # macOS is built against Homebrew's Open MPI compiler wrappers,
+            # which wrap clang/clang++/gfortran. The custom fortran_compiler
+            # setting only enumerates ifx (the Intel toolchain), so it is not
+            # consulted here -- the Fortran compiler is whatever gfortran the
+            # Homebrew mpif90 wrapper was built against.
+            return "mpicc", "mpicxx", "mpif90"
+
         if self.settings.os == "Windows":
             c_map = {
                 "msvc": ("win32fe_cl", "win32fe_cl"),
@@ -66,9 +74,9 @@ class PetscConan(ConanFile):
         return cc, cxx, f_map[fortran]
 
     def validate(self):
-        if self.settings.os not in ("Linux", "Windows"):
+        if self.settings.os not in ("Linux", "Windows", "Macos"):
             raise ConanInvalidConfiguration(
-                "The petsc recipe currently supports Linux and Windows only."
+                "The petsc recipe currently supports Linux, Windows and macOS only."
             )
         # Validate the compiler / fortran_compiler combination
         _ = self._wrappers()
@@ -133,8 +141,29 @@ class PetscConan(ConanFile):
             f"--with-64-bit-indices={1 if self.options.with_64_bit_indices else 0}",
         ]
 
+        if self.settings.os == "Macos":
+            # No MKL on macOS (that comes from Intel oneAPI on Linux). Prefer a
+            # Homebrew OpenBLAS if installed; otherwise fall back to Apple's
+            # Accelerate framework, which is always present.
+            args += self._macos_blaslapack_args()
+
         self.run(f"./configure {' '.join(args)}", cwd=self.source_folder)
         self.run("make", cwd=self.source_folder)
+
+    def _macos_blaslapack_args(self):
+        import shutil
+        import subprocess
+
+        brew = shutil.which("brew")
+        if brew is not None:
+            result = subprocess.run(
+                [brew, "--prefix", "openblas"], capture_output=True, text=True
+            )
+            prefix = result.stdout.strip()
+            if result.returncode == 0 and prefix and os.path.isdir(prefix):
+                return [f"--with-blaslapack-dir={prefix}"]
+
+        return ['--with-blaslapack-lib="-framework Accelerate"']
 
     _petsc_arch = "arch-mswin-c-opt"
 
