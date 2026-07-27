@@ -66,6 +66,16 @@ contains
       real(kind=dp), pointer :: lonn(:), latn(:)
       integer :: make_latlon
 
+      ! A local pointer without an explicit initializer has an *undefined*
+      ! (not necessarily disassociated) association status on entry per the
+      ! Fortran standard. The reallocP() call below queries associated(lonn)
+      ! to decide whether to (de)allocate, so an undefined status here can
+      ! make it try to deallocate memory that was never allocated. This went
+      ! unnoticed under ifx (which happens to zero-init locals) but segfaults
+      ! (gfortran, garbage non-null pointer) or aborts (malloc: pointer being
+      ! freed was not allocated) depending on what garbage the stack holds.
+      nullify (lonn, latn)
+
       ierr = DFM_NOERR
 
       make_latlon = 0
