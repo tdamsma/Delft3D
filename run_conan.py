@@ -173,6 +173,7 @@ def conan_install(
     consumer_build_type: str | None = None,
     ci: bool = False,
     build_policy: BuildPolicy = BuildPolicy.NONE,
+    lockfile: Path = LOCKFILE,
 ) -> None:
     cmd = [
         "conan",
@@ -181,7 +182,7 @@ def conan_install(
         "--settings:all",
         f"build_type={build_type}",
         f"--output-folder={output_folder}",
-        f"--lockfile={LOCKFILE}",
+        f"--lockfile={lockfile}",
         # Large source archives can exceed Conan's default 60-second read timeout.
         "--core-conf",
         "core.net.http:timeout=300",
@@ -474,6 +475,48 @@ def _require_profile(profile: str) -> None:
             )
 
 
+def _macos_lockfile(profile: str, output_folder: Path) -> Path:
+    """Regenerate a macOS lockfile from the local recipes, into the build folder.
+
+    The committed conan.lock pins Deltares-Nexus recipe revisions that do not
+    exist for macOS (there are no prebuilt macOS dependency binaries). Rather
+    than diverge the committed lock, resolve a macOS-specific one from the
+    version-pinned local recipes so the build is self-contained and
+    reproducible on any Mac. It is written next to the build output (not
+    tracked in git) and reused on incremental builds.
+
+    conan would otherwise pick up the committed conan.lock as the resolve base
+    and re-pin its Nexus revisions, so an empty base lockfile is passed
+    explicitly to force a fresh resolve from the local recipes.
+    """
+    output_folder.mkdir(parents=True, exist_ok=True)
+    lockfile = output_folder / "conan-macos.lock"
+    if lockfile.exists():
+        return lockfile
+
+    empty_lock = output_folder / "conan-macos-empty.lock"
+    empty_lock.write_text(
+        '{"version": "0.5", "requires": [], "build_requires": [], '
+        '"python_requires": [], "config_requires": []}'
+    )
+    cmd = [
+        "conan",
+        "lock",
+        "create",
+        str(ROOT / "conanfile.py"),
+        f"--profile:all={profile}",
+        "--settings:all",
+        "build_type=Release",
+        f"--lockfile={empty_lock}",
+        f"--lockfile-out={lockfile}",
+        "--build=missing",
+    ]
+    print(f"Generating macOS lockfile {lockfile} from local recipes...")
+    subprocess.run(cmd, check=True)
+    empty_lock.unlink(missing_ok=True)
+    return lockfile
+
+
 def _do_install(
     profile: str,
     output_folder: Path,
@@ -510,6 +553,9 @@ def _do_install(
     else:
         # Single-config generator: one install for the requested build type.
         # Packages are always built as Release; consumer_build_type controls the CMakeDeps output.
+        lockfile = LOCKFILE
+        if os_name == "Darwin":
+            lockfile = _macos_lockfile(profile, output_folder)
         conan_install(
             profile,
             output_folder,
@@ -517,6 +563,7 @@ def _do_install(
             consumer_build_type=build_type,
             ci=ci,
             build_policy=build_policy,
+            lockfile=lockfile,
         )
 
 
