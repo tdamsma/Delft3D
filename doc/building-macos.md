@@ -13,26 +13,48 @@ known limitations shared with the Linux GNU build.
 Xcode Command Line Tools (for Apple Clang) and Homebrew, then:
 
 ```bash
-brew install gfortran cmake ninja open-mpi petsc boost libxml2 precice hyperfine
+brew install gcc cmake ninja open-mpi openblas boost libxml2 precice
+# optional, only for the benchmarking scripts:
+brew install hyperfine
 ```
 
-- **gfortran**: the only Fortran compiler available for Apple Silicon
-  (there is no Intel Fortran for arm64 macOS).
-- **open-mpi**: `find_package(MPI)` finds it on the standard UNIX path.
-- **petsc**: must expose a `lib/pkgconfig/PETSc.pc` (Homebrew's package
-  does).
-- **precice**: if the formula fails to build, build preCICE from source;
-  as a last resort an `APPLE`-guarded option to exclude the preCICE
-  coupling targets could be added, but was not needed on Apple Silicon.
+- **gcc**: provides `gfortran`, the only Fortran compiler available for
+  Apple Silicon (there is no Intel Fortran for arm64 macOS).
+- **open-mpi**: `find_package(MPI)` finds it on the standard UNIX path; it
+  is also the MPI that the PETSc dependency is configured against.
+- **openblas**: the BLAS/LAPACK the PETSc dependency is built against
+  (Apple's Accelerate framework is used as a fallback if OpenBLAS is
+  absent).
+- **PETSc is not installed from Homebrew.** Current upstream pulls PETSc
+  in as a Conan dependency, and this fork's PETSc recipe adds a macOS
+  branch that builds it from source against the Open MPI wrappers and
+  OpenBLAS above. It is built automatically by the `--build-dependencies`
+  step below, so no `brew install petsc` is needed.
+- **precice**: if the formula fails to build, build preCICE from source.
 - **libuuid** is not a separate Homebrew dependency: `uuid_generate`
   lives in libSystem on macOS and is linked automatically.
 
 ## Build
 
 ```bash
-python run_conan.py initialize deltares   # or: external, if Nexus access is unavailable
-python build.py --config fm-suite --build --build-type Release
+python run_conan.py initialize external
+python build.py --config fm-suite --build --build-type Release --build-dependencies
 ```
+
+Use `initialize external` on macOS: the Deltares Nexus only hosts prebuilt
+Linux/Windows dependency binaries, so on a Mac the third-party libraries
+(PETSc, netCDF, HDF5, GDAL, ...) are built from source from the recipes in
+[conan/recipes](../conan/recipes). `--build-dependencies` on the first
+build (or after a recipe change) does that; it is slow the first time and
+cached afterwards.
+
+The committed `conan.lock` pins the Deltares-built dependency revisions,
+which do not exist for macOS. `run_conan.py` therefore regenerates a
+macOS-specific lockfile from the local recipes into the (gitignored) build
+folder and builds against that, so the build is self-contained and
+reproducible on any Mac -- the committed `conan.lock` stays exactly as
+upstream ships it and nothing macOS-specific has to be committed to make
+the build work.
 
 `run_conan.py` detects the Homebrew prefix, the latest installed
 `gfortran-NN`, and the installed Apple Clang major version on the machine
